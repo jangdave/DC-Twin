@@ -1,0 +1,42 @@
+# 웹 보기 화면의 자동 시험 (docs/19 M15 중 웹 부분). 배포는 하지 않는다.
+name: web-viewer
+
+on:
+  pull_request:
+    paths:
+      - 'web/viewer/**'
+      - '.github/workflows/web-viewer.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/viewer/**'
+      - '.github/workflows/web-viewer.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-viewer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web/viewer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # package.json engines의 최소 버전
+          cache: npm
+          cache-dependency-path: web/viewer/package-lock.json
+      - run: npm ci
+      - name: 단위 시험
+        run: npm test
+      - name: 빌드와 용량 점검(첫 로딩 gzip 1.5 MB 이하)
+        run: npm run build
+      - name: 의존성 취약점 점검(높음 이상)
+        run: npm audit --audit-level=high
