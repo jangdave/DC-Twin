@@ -1,13 +1,13 @@
 cells:            574500
-smoothSolver:  Solving for Ux, Initial residual = 1, Final residual = 0.0570292, No Iterations 1
-smoothSolver:  Solving for Uy, Initial residual = 1, Final residual = 4.821589e-06, No Iterations 1
-smoothSolver:  Solving for Uz, Initial residual = 1, Final residual = 0.06294515, No Iterations 1
-smoothSolver:  Solving for T, Initial residual = 1, Final residual = 0.09628458, No Iterations 3
-with errorcode 1.
-
-NOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.
-You may or may not see output from other processes, depending on
-exactly when Open MPI kills them.
---------------------------------------------------------------------------
-[DESKTOP-1:04224] 15 more processes have sent help message help-mpi-api.txt / mpi-abort
-[DESKTOP-1:04224] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
+smoothSolver:  Solving for Uz, Initial residual = 2.613759e-06, Final residual = 3.502529e-08, No Iterations 2
+smoothSolver:  Solving for T, Initial residual = 3.135727e-05, Final residual = 2.584486e-06, No Iterations 3
+GAMG:  Solving for p_rgh, Initial residual = 0.001058, Final residual = 5.101806e-05, No Iterations 2
+smoothSolver:  Solving for epsilon, Initial residual = 2.927995e-05, Final residual = 1.571736e-06, No Iterations 1
+smoothSolver:  Solving for k, Initial residual = 3.243681e-05, Final residual = 3.228067e-06, No Iterations 1
+smoothSolver:  Solving for Ux, Initial residual = 2.622655e-06, Final residual = 3.297099e-08, No Iterations 2
+smoothSolver:  Solving for Uy, Initial residual = 3.847685e-07, Final residual = 3.399065e-08, No Iterations 1
+smoothSolver:  Solving for Uz, Initial residual = 2.607944e-06, Final residual = 3.494798e-08, No Iterations 2
+smoothSolver:  Solving for T, Initial residual = 3.136045e-05, Final residual = 2.582093e-06, No Iterations 3
+GAMG:  Solving for p_rgh, Initial residual = 0.001063109, Final residual = 5.112032e-05, No Iterations 2
+smoothSolver:  Solving for epsilon, Initial residual = 2.892459e-05, Final residual = 1.559114e-06, No Iterations 1
+smoothSolver:  Solving for k, Initial residual = 3.23049e-05, Final residual = 3.217508e-06, No Iterations 1
