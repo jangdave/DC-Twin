@@ -20,6 +20,10 @@ npm run build          # dist/ 만들기 + 용량 기준 점검
   node src/index.js --manifest ../sim/out/sensor_manifest.json --replay ../sim/out/recordings/fan_fault_l2.jsonl --time-scale 5 --loop
   ```
 
+## 공개 주소 (GitHub Pages)
+
+https://jangdave.github.io/Portfolio_DT/ — `web/viewer`가 main에 병합되면 자동으로 다시 배포한다(`.github/workflows/web-viewer-pages.yml`). 녹화 재생만 된다. 라이브 모드는 이 컴퓨터의 게이트웨이(`ws://127.0.0.1`)로만 붙는다.
+
 ## 정적 자료 다시 만들기
 
 `public/data/`는 만들어서 저장소에 올려 둔 파일이다. 원본(`sim/out`, `experiments/openfoam_baseline/layout.json`)이 바뀌면 다시 만든다.
