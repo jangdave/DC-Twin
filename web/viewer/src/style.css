@@ -142,3 +142,10 @@ dialog ul { padding-left: 18px; }
 #exterior-card .muted { margin: 0 0 8px; font-size: 12px; }
 #enter-btn { width: 100%; padding: 6px 10px; border-color: var(--accent); color: var(--accent); }
 #stage[data-stage="exterior"] canvas.over-building { cursor: pointer; }
+
+/* 좁은 화면: 외관 카드를 얇은 띠로 줄여 건물을 가리지 않게 한다 */
+@media (max-width: 700px) {
+  #exterior-card { width: calc(100% - 20px); padding: 6px 10px 8px; }
+  #exterior-card h2, #exterior-card .muted { display: none; }
+  #exterior-card dl { grid-template-columns: auto 1fr auto 1fr; gap: 2px 10px; margin-bottom: 6px; }
+}

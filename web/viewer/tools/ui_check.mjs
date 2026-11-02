@@ -186,6 +186,19 @@ const p4 = await browser.newPage();
 await p4.goto(`${base}?stage=hall&scenario=cooling_failure&t=200&view=power`, { waitUntil: 'networkidle0' });
 await p4.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 ok('FR-84 주소 매개변수로 홀에서 시작', (await p4.evaluate(() => window.__viewer.state.stage)) === 'hall' && (await p4.$eval('#exterior-card', (e) => e.hidden)));
+await p3.evaluate(() => window.__viewer.queue.pending.length === 0 && window.__viewer.flow.stage);
+await sleep(1200);
+await p3.setViewport({ width: 390, height: 844 });
+await sleep(600);
+const mx = await p3.evaluate(() => {
+  const c = document.getElementById('exterior-card').getBoundingClientRect();
+  const st = document.getElementById('stage').getBoundingClientRect();
+  return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, cardH: Math.round(c.height), stageH: Math.round(st.height), cardRight: Math.round(c.right) };
+});
+ok('6.2 외관 화면도 390px에서 가로 스크롤 없고 카드가 화면 안', mx.sw <= mx.iw + 1 && mx.cardRight <= mx.iw, JSON.stringify(mx));
+ok('6.2 외관 카드가 장면 높이의 40% 이하(건물이 가려지지 않음)', mx.cardH <= mx.stageH * 0.4, JSON.stringify(mx));
+await p3.screenshot({ path: path.join(OUT, 'stage_exterior_mobile.png') });
+await p3.setViewport({ width: 1280, height: 800 });
 await p3.screenshot({ path: path.join(OUT, 'stage_exterior.png') });
 
 await browser.close();
