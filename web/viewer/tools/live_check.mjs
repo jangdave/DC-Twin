@@ -46,7 +46,7 @@ await page.setViewport({ width: 1440, height: 860 });
 page.on('pageerror', (e) => problems.push(e.message));
 
 // 1) 게이트웨이가 없을 때: 연결 실패가 보여야 한다(FR-62)
-await page.goto(`${base}?live=ws://127.0.0.1:${PORT}/ws`, { waitUntil: 'networkidle0' });
+await page.goto(`${base}?live=ws://127.0.0.1:${PORT}/ws&stage=hall`, { waitUntil: 'networkidle0' });
 await sleep(2500);
 const failText = await page.$eval('#mode-badge', (e) => e.textContent);
 ok('FR-62 게이트웨이 없음 -> 연결 끊김 표시', /끊김/.test(failText), `(${failText})`);
@@ -87,7 +87,7 @@ const stale = await page.evaluate(() => [...window.__viewer.store.latest.values(
 ok('끊기면 값이 오래된 값으로 표시됨', stale > 100, `(${stale}개)`);
 
 // 4) 나쁜 라이브 주소는 거부(FR-63)
-await page.goto(`${base}?live=ws://example.com/ws`, { waitUntil: 'networkidle0' });
+await page.goto(`${base}?live=ws://example.com/ws&stage=hall`, { waitUntil: 'networkidle0' });
 await page.waitForFunction(() => window.__viewer, { timeout: 15000 });
 const rejected = await page.evaluate(() => ({ badge: document.getElementById('mode-badge').textContent, mode: window.__viewer.state.mode }));
 ok('FR-63 원격 ws:// 거부하고 녹화 재생으로 시작', rejected.mode === 'rec' && /거부/.test(rejected.badge), `(${rejected.badge})`);

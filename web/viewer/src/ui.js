@@ -28,7 +28,7 @@ const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 export class UI {
   constructor(store, handlers) {
     this.store = store;
-    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec() }
+    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack() }
     this.metricTab = null;
     this.selected = null;
     this._lastAlarmCount = -1;
@@ -52,6 +52,8 @@ export class UI {
     $('loop-check').addEventListener('change', (e) => this.h.onLoop(e.target.checked));
     $('help-btn').addEventListener('click', () => $('help-dialog').showModal());
     $('live-back').addEventListener('click', () => this.h.onBackToRec());
+    $('enter-btn').addEventListener('click', () => this.h.onEnter());
+    $('back-btn').addEventListener('click', () => this.h.onBack());
   }
 
   fillHelp() {
@@ -89,6 +91,25 @@ export class UI {
 
   setLiveText(t) {
     $('live-text').textContent = t;
+  }
+
+  // 외관과 홀에 따라 보일 조각을 바꾼다
+  setStage(stage) {
+    const ext = stage === 'exterior';
+    $('exterior-card').hidden = !ext;
+    $('stage-tools').hidden = ext;
+    $('back-btn').hidden = ext;
+    $('stage').dataset.stage = stage;
+    $('canvas').setAttribute('aria-label', ext ? '데이터센터 건물 외관. 건물을 누르거나 Enter를 누르면 안으로 들어간다' : '데이터센터 3D 장면. 방향키로 랙을 선택할 수 있다');
+    if (ext) $('enter-btn').focus({ preventScroll: true });
+  }
+
+  renderExterior(s) {
+    const none = '데이터 없음';
+    $('ext-alarms').textContent = s.hasData ? `${s.alarms}건` : none;
+    $('ext-temp').textContent = s.maxTempIn === null ? none : `${fmt(s.maxTempIn, 1)} °C`;
+    $('ext-it').textContent = s.itPower === null ? none : `${fmt(s.itPower, 1)} kW`;
+    $('ext-pue').textContent = s.pue === null ? none : fmt(s.pue, 2);
   }
 
   renderAggregates() {

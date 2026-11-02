@@ -1,4 +1,5 @@
 // 시작과 화면 조립 (docs/18 8.1장). 입력(녹화 또는 라이브)은 같은 저장소를 갱신하고 화면은 저장소만 읽는다.
+import { CommandQueue, FlowState, summarize } from './flow.js';
 import { HallScene, VIEWS } from './scene.js';
 import { LiveClient } from './live.js';
 import { parseRecording, RecordingPlayer } from './recording.js';
@@ -47,7 +48,9 @@ async function main() {
   const params = parseParams(location.search, ids);
   const store = new SensorStore(sensors);
   const sensorInfo = store.byId;
-  const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion });
+  const flow = new FlowState(params.stage ?? 'exterior');
+  const rackKeys = sceneData.racks.map((r) => r.name.toLowerCase());
+  const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage });
 
   const state = {
     mode: 'rec', // rec | live
@@ -58,6 +61,7 @@ async function main() {
     selected: null,
     recCache: new Map(),
     lastSec: -1,
+    stage: flow.stage,
   };
 
   const ui = new UI(store, {
@@ -71,8 +75,43 @@ async function main() {
     onPreset: (p) => scene.setPreset(p),
     onLabels: (b) => scene.setLabels(b),
     onBackToRec: () => startRecording(),
+    onEnter: () => queue.push({ name: 'view.goto', value: 'hall' }),
+    onBack: () => queue.push({ name: 'view.back' }),
   });
   ui.setScenarios(index, state.scenarioId);
+
+  // ---- 화면 단계와 이동 명령 (docs/20) ----
+  function applyStage(instant = false) {
+    scene.setStage(flow.stage, instant);
+    ui.setStage(flow.stage);
+    state.stage = flow.stage;
+    refresh();
+  }
+
+  function execute(c) {
+    switch (c.name) {
+      case 'view.goto':
+        if (flow.goto(c.value)) applyStage();
+        break;
+      case 'view.back':
+        if (flow.back()) applyStage();
+        break;
+      case 'view.select':
+        if (c.value === null) {
+          if (state.selected) selectEquipment(state.selected);
+        } else if (state.selected !== c.value && (rackKeys.includes(c.value) || c.value.startsWith('crac_'))) {
+          selectEquipment(c.value, flow.stage === 'hall');
+        }
+        break;
+      case 'view.layer':
+        setView(c.value === 'power' ? 'power' : 'temp_in');
+        break;
+      case 'sim.scenario':
+        if (state.mode === 'rec' && ids.includes(c.value)) loadScenario(c.value, 0);
+        break;
+    }
+  }
+  const queue = new CommandQueue(execute);
 
   function setView(v) {
     if (!VIEWS[v]) return;
@@ -151,6 +190,7 @@ async function main() {
     ui.renderAggregates();
     ui.renderAlarms(sensorInfo, state.mode);
     ui.renderDetail(state.view);
+    if (flow.stage === 'exterior') ui.renderExterior(summarize(store, rackKeys));
   }
 
   // ---- 장면 조작: 선택, 말풍선, 키보드 ----
@@ -161,6 +201,10 @@ async function main() {
   canvas.addEventListener('pointerup', (e) => {
     if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) return; // 끌기는 선택이 아니다
     const r = rect();
+    if (flow.stage === 'exterior') {
+      if (scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) queue.push({ name: 'view.goto', value: 'hall' });
+      return;
+    }
     const eq = scene.pick((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
     if (eq) selectEquipment(eq);
     else if (state.selected) selectEquipment(state.selected); // 빈 곳: 해제
@@ -168,6 +212,7 @@ async function main() {
   canvas.addEventListener('pointermove', (e) => {
     if (e.buttons) return ui.hideTooltip();
     const r = rect();
+    if (flow.stage === 'exterior') return canvas.classList.toggle('over-building', scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height));
     const eq = scene.pick((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
     scene.hover(eq);
     if (!eq) return ui.hideTooltip();
@@ -196,13 +241,16 @@ async function main() {
     selectEquipment(list[ci].name.toLowerCase(), true);
   }
   canvas.addEventListener('keydown', (e) => {
+    if (flow.stage !== 'hall') return;
     const d = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[e.key];
     if (!d) return;
     e.preventDefault();
     moveSelection(d[0], d[1]);
   });
   window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !e.target.closest?.('dialog')) return void queue.push({ name: 'view.back' });
     if (e.target.closest?.('select, input, textarea, dialog, button')) return;
+    if (e.key === 'Enter' && flow.stage === 'exterior') return void queue.push({ name: 'view.goto', value: 'hall' });
     if (!state.player) return;
     if (e.key === ' ') {
       e.preventDefault();
@@ -256,10 +304,12 @@ async function main() {
   if (params.liveError) {
     badge.textContent = `${badge.textContent} (라이브 주소 거부: ${params.liveError})`;
   }
+  applyStage(true);
+  queue.setReady(); // 장면이 준비되기 전에 들어온 명령은 여기서 실행된다
   requestAnimationFrame(frame);
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
-  window.__viewer = { state, store, scene, selectEquipment, setView, loadScenario };
+  window.__viewer = { state, store, scene, selectEquipment, setView, loadScenario, flow, queue, dispatch: (c) => queue.push(c) };
 }
 
 main();

@@ -34,6 +34,11 @@ describe('주소 매개변수', () => {
     expect(p.liveError).toBeTruthy();
   });
   it('아무것도 없으면 기본값', () => {
-    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null });
+    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null });
+  });
+  it('stage는 exterior와 hall만 받는다', () => {
+    expect(parseParams('?stage=hall', ids).stage).toBe('hall');
+    expect(parseParams('?stage=exterior', ids).stage).toBe('exterior');
+    expect(parseParams('?stage=walk', ids).stage).toBeNull();
   });
 });

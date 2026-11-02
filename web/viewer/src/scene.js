@@ -21,7 +21,7 @@ const CRAC_OK = [0.08, 0.4, 0.55];
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 
 export class HallScene {
-  constructor(canvas, labelLayer, data, store, { reducedMotion = false } = {}) {
+  constructor(canvas, labelLayer, data, store, { reducedMotion = false, stage = 'hall' } = {}) {
     this.store = store;
     this.data = data;
     this.reducedMotion = reducedMotion;
@@ -34,6 +34,7 @@ export class HallScene {
     this.labels = [];
     this.showLabels = false;
     this._anim = null;
+    this.stage = stage;
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -53,12 +54,15 @@ export class HallScene {
     sun.position.set(-6, 14, 8);
     this.scene.add(sun);
 
+    this.hall = new THREE.Group();
+    this.scene.add(this.hall);
     this._buildStatic(data, sx, sy, sz);
     this._buildRacks(data);
     this._buildCracs(data);
     this._buildSelection();
     this._buildLabels(data);
-    this.setPreset('home', true);
+    this._buildExterior(data, sx, sy, sz);
+    this.setStage(stage, true);
   }
 
   // ---- 만들기 ----
@@ -67,18 +71,18 @@ export class HallScene {
     floor.rotation.x = -Math.PI / 2;
     floor.position.copy(this.center);
     floor.position.y = -0.01;
-    this.scene.add(floor);
+    this.hall.add(floor);
     const grid = new THREE.GridHelper(Math.max(sx, sy) * CM, Math.round(Math.max(sx, sy) / 100), 0x2c333f, 0x232933);
     grid.position.copy(this.center);
-    this.scene.add(grid);
+    this.hall.add(grid);
     const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(sx * CM, sz * CM, sy * CM)), new THREE.LineBasicMaterial({ color: 0x3a4352 }));
     outline.position.set(this.center.x, (sz * CM) / 2, this.center.z);
-    this.scene.add(outline);
+    this.hall.add(outline);
 
     const boxMesh = (items, material) => {
       const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, items.length);
       items.forEach((b, i) => mesh.setMatrixAt(i, this._boxMatrix(b)));
-      this.scene.add(mesh);
+      this.hall.add(mesh);
       return mesh;
     };
     boxMesh(data.vents, new THREE.MeshBasicMaterial({ color: 0x1b5fb0 }));
@@ -150,7 +154,7 @@ export class HallScene {
     });
     for (const m of [this.rackBody, this.rackFront, this.rackTop, this.rackHull, this.barTrack, this.bar]) {
       m.frustumCulled = false;
-      this.scene.add(m);
+      this.hall.add(m);
     }
     this.rackHull.renderOrder = 1;
     this._tmp = new THREE.Matrix4();
@@ -170,7 +174,7 @@ export class HallScene {
     });
     for (const m of [this.cracBody, this.cracFront]) {
       m.frustumCulled = false;
-      this.scene.add(m);
+      this.hall.add(m);
     }
   }
 
@@ -178,10 +182,79 @@ export class HallScene {
     this.selBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0x4fd8ff }));
     this.selBox.visible = false;
     this.selBox.renderOrder = 3;
-    this.scene.add(this.selBox);
+    this.hall.add(this.selBox);
     this.hoverBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
     this.hoverBox.visible = false;
-    this.scene.add(this.hoverBox);
+    this.hall.add(this.hoverBox);
+  }
+
+  // 외관: 새 에셋 없이 홀 치수에서 계산한 단순 상자 건물(docs/20 4.2장). 실제 시설 형상이 아니다.
+  _buildExterior(data, sx, sy, sz) {
+    const g = new THREE.Group();
+    const W = (sx + 1000) * CM;
+    const D = (sy + 1000) * CM;
+    const H = sz * CM + 1.6;
+    const c = this.center;
+    const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...extra });
+    const add = (w, h, d, x, y, z, m) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+      mesh.position.set(x, y, z);
+      g.add(mesh);
+      return mesh;
+    };
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(W * 4, D * 4), mat(0x1a2028, { roughness: 1 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(c.x, -0.02, c.z);
+    g.add(ground);
+    this.building = [];
+    this.building.push(add(W, H, D, c.x, H / 2, c.z, mat(0x8a93a1)));
+    this.building.push(add(W + 0.8, 0.5, D + 0.8, c.x, H + 0.25, c.z, mat(0x4a5361)));
+    this.building.push(add(W + 0.02, 1.0, D + 0.02, c.x, H * 0.55, c.z, mat(0x1d3a52, { roughness: 0.3, metalness: 0.4 }))); // 창 띠
+    this.building.push(add(3.2, 3.4, 0.5, c.x, 1.7, c.z + D / 2 + 0.2, mat(0x2f6f9f))); // 출입구
+    for (let i = -1; i <= 1; i++) this.building.push(add(2.4, 1.4, 2.4, c.x + i * (W / 4), H + 1.2, c.z - D / 4, mat(0x5b6675))); // 지붕 설비
+    this.beacon = add(1.0, 1.0, 1.0, c.x, H + 1.5, c.z + D / 4, new THREE.MeshBasicMaterial({ color: 0x19cc4d }));
+    this.building.push(this.beacon);
+    this._extR = Math.max(W, D);
+    this._extH = H;
+    g.visible = false;
+    this.exterior = g;
+    this.scene.add(g);
+  }
+
+  // 건물을 가리키는지(외관 단계에서 클릭과 손모양 표시에 쓴다)
+  pickBuilding(nx, ny) {
+    if (this.stage !== 'exterior') return false;
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(nx * 2 - 1, -(ny * 2 - 1)), this.camera);
+    return ray.intersectObjects(this.building, false).length > 0;
+  }
+
+  _applyLimits(stage) {
+    const ext = stage === 'exterior';
+    this.controls.minDistance = ext ? 10 : 2;
+    this.controls.maxDistance = ext ? this._extR * 3 : 45;
+    this.controls.maxPolarAngle = Math.PI * (ext ? 0.48 : 0.49);
+  }
+
+  // 외관과 홀을 바꾼다. 카메라는 0.8초 동안 옮기고(동작 줄이기면 바로), 이동 중에는 거리 제한을 풀어 둔다.
+  setStage(stage, instant = false) {
+    if (stage !== 'exterior' && stage !== 'hall') return;
+    this.stage = stage;
+    const ext = stage === 'exterior';
+    this.hall.visible = !ext;
+    this.exterior.visible = ext;
+    this.hover(null);
+    for (const l of this.labels) l.el.hidden = ext || !this.showLabels;
+    const moving = !(instant || this.reducedMotion);
+    if (moving) {
+      this.controls.minDistance = 2;
+      this.controls.maxDistance = this._extR * 3;
+    } else {
+      this._applyLimits(stage);
+    }
+    this.setPreset(ext ? 'ext' : 'home', instant, 0.8);
+    if (moving && this._anim) this._anim.onDone = () => this._applyLimits(stage);
+    this._dirty = true;
   }
 
   // 통로 이름: 차가운 통로는 급기구 열의 가운데, 뜨거운 통로는 지붕 패널의 가운데
@@ -219,21 +292,25 @@ export class HallScene {
 
   setLabels(on) {
     this.showLabels = on;
-    for (const l of this.labels) l.el.hidden = !on;
+    for (const l of this.labels) l.el.hidden = !on || this.stage !== 'hall';
   }
 
-  setPreset(name, instant = false) {
+  setPreset(name, instant = false, dur = 0.6) {
     const c = this.center;
     const presets = {
       top: { pos: new THREE.Vector3(c.x, 19, c.z + 0.01), target: c.clone() },
       iso: { pos: new THREE.Vector3(c.x - 9, 10, c.z + 11), target: new THREE.Vector3(c.x, 0.3, c.z) },
     };
+    if (this._extR) {
+      const r = this._extR;
+      presets.ext = { pos: new THREE.Vector3(c.x + r * 1.1, r * 0.62, c.z + r * 1.4), target: new THREE.Vector3(c.x, this._extH / 2, c.z) };
+    }
     presets.home = { pos: new THREE.Vector3(c.x + 8, 10, c.z + 12), target: new THREE.Vector3(c.x, 0.3, c.z) };
     const p = presets[name] ?? presets.home;
-    this._moveCamera(p.pos, p.target, instant);
+    this._moveCamera(p.pos, p.target, instant, dur);
   }
 
-  _moveCamera(pos, target, instant) {
+  _moveCamera(pos, target, instant, dur = 0.6) {
     if (instant || this.reducedMotion) {
       this.camera.position.copy(pos);
       this.controls.target.copy(target);
@@ -241,7 +318,7 @@ export class HallScene {
       this._anim = null;
       return;
     }
-    this._anim = { t: 0, dur: 0.6, fromPos: this.camera.position.clone(), fromTarget: this.controls.target.clone(), pos, target };
+    this._anim = { t: 0, dur, fromPos: this.camera.position.clone(), fromTarget: this.controls.target.clone(), pos, target };
   }
 
   // 장비(rack_01, crac_01 ...)로 카메라를 옮긴다(FR-40)
@@ -288,6 +365,7 @@ export class HallScene {
 
   // 화면 위치(캔버스 안 0~1 좌표)에 있는 장비를 찾는다
   pick(nx, ny) {
+    if (this.stage !== 'hall') return null;
     const ray = new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2(nx * 2 - 1, -(ny * 2 - 1)), this.camera);
     const hits = ray.intersectObjects([this.rackBody, this.rackFront, this.cracBody, this.cracFront], false);
@@ -321,6 +399,7 @@ export class HallScene {
     const view = VIEWS[this.view];
     const c = new THREE.Color();
     let anyCritical = false;
+    let worst = 'normal';
     for (let i = 0; i < this.rackKeys.length; i++) {
       const key = this.rackKeys[i];
       const sample = store.metric(key, view.metric);
@@ -329,6 +408,7 @@ export class HallScene {
       this.rackTop.setColorAt(i, c);
 
       const alarm = store.worstAlarm(key);
+      if (alarm === 'critical' || (alarm === 'warn' && worst === 'normal')) worst = alarm;
       if (alarm === 'normal') {
         this.rackHull.setMatrixAt(i, ZERO);
       } else {
@@ -363,11 +443,13 @@ export class HallScene {
     }
     for (let i = 0; i < this.cracKeys.length; i++) {
       const alarm = store.worstAlarm(this.cracKeys[i]);
+      if (alarm === 'critical' || (alarm === 'warn' && worst === 'normal')) worst = alarm;
       const [r, g, b] = alarm === 'normal' ? CRAC_OK : ALARM_COLOR[alarm];
       this.cracFront.setColorAt(i, c.setRGB(r, g, b));
     }
     for (const m of [this.rackFront, this.rackTop, this.rackHull, this.bar, this.cracFront]) m.instanceColor.needsUpdate = true;
     for (const m of [this.rackHull, this.barTrack, this.bar]) m.instanceMatrix.needsUpdate = true;
+    if (this.beacon) this.beacon.material.color.setRGB(...(worst === 'normal' ? [0.1, 0.8, 0.3] : ALARM_COLOR[worst]));
     this._blink = anyCritical && !this.reducedMotion;
   }
 
@@ -378,7 +460,10 @@ export class HallScene {
       const e = a.t * a.t * (3 - 2 * a.t);
       this.camera.position.lerpVectors(a.fromPos, a.pos, e);
       this.controls.target.lerpVectors(a.fromTarget, a.target, e);
-      if (a.t >= 1) this._anim = null;
+      if (a.t >= 1) {
+        this._anim = null;
+        a.onDone?.();
+      }
     }
     this.controls.update();
     if (this._dirty || this.store.version !== this._lastVersion || this._blink) {
@@ -386,7 +471,7 @@ export class HallScene {
       this._lastVersion = this.store.version;
       this._dirty = false;
     }
-    if (this.showLabels) {
+    if (this.showLabels && this.stage === 'hall') {
       const r = this.renderer.domElement.getBoundingClientRect();
       for (const l of this.labels) {
         const v = l.pos.clone().project(this.camera);

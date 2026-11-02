@@ -39,13 +39,14 @@ await mkdir(OUT, { recursive: true });
 const browser = await puppeteer.launch({ executablePath: exe, headless: true, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const problems = [];
 const shots = [
-  { name: 'normal', q: '?scenario=normal&t=60', select: 'rack_25' },
-  { name: 'fan_fault_early', q: '?scenario=fan_fault&t=20', select: null },
-  { name: 'fan_fault_late', q: '?scenario=fan_fault&t=240', select: 'rack_03' },
-  { name: 'cooling_failure', q: '?scenario=cooling_failure&t=200', select: null },
-  { name: 'power_spike', q: '?scenario=power_spike&t=150', select: null, view: 'power' },
-  { name: 'top_labels', q: '?scenario=fan_fault&t=240', select: 'rack_03', preset: 'top', labels: true },
-  { name: 'iso_critical', q: '?scenario=power_spike&t=150', select: null, preset: 'iso' },
+  { name: 'exterior', q: '?scenario=fan_fault&t=240', select: null },
+  { name: 'normal', q: '?scenario=normal&t=60&stage=hall', select: 'rack_25' },
+  { name: 'fan_fault_early', q: '?scenario=fan_fault&t=20&stage=hall', select: null },
+  { name: 'fan_fault_late', q: '?scenario=fan_fault&t=240&stage=hall', select: 'rack_03' },
+  { name: 'cooling_failure', q: '?scenario=cooling_failure&t=200&stage=hall', select: null },
+  { name: 'power_spike', q: '?scenario=power_spike&t=150&stage=hall', select: null, view: 'power' },
+  { name: 'top_labels', q: '?scenario=fan_fault&t=240&stage=hall', select: 'rack_03', preset: 'top', labels: true },
+  { name: 'iso_critical', q: '?scenario=power_spike&t=150&stage=hall', select: null, preset: 'iso' },
 ];
 for (const s of shots) {
   const page = await browser.newPage();

@@ -11,6 +11,7 @@
 <body>
   <header id="top">
     <h1>DC-Twin 가상 데이터센터</h1>
+    <button id="back-btn" type="button" hidden aria-label="외관 화면으로 돌아가기 (Esc)">← 외관으로</button>
     <span id="mode-badge" class="badge" role="status">불러오는 중</span>
     <label class="field">시나리오
       <select id="scenario-select" aria-label="시나리오"></select>
@@ -41,6 +42,17 @@
           <button type="button" data-preset="home">처음 위치</button>
           <button type="button" id="labels-btn" aria-pressed="false">통로 이름</button>
         </div>
+      </div>
+      <div id="exterior-card" hidden aria-live="polite">
+        <h2>가상 데이터센터</h2>
+        <dl>
+          <dt>알람</dt><dd id="ext-alarms">–</dd>
+          <dt>최고 입구 온도</dt><dd id="ext-temp">–</dd>
+          <dt>IT 전력</dt><dd id="ext-it">–</dd>
+          <dt>PUE</dt><dd id="ext-pue">–</dd>
+        </dl>
+        <p class="muted" id="ext-note">건물을 누르거나 단추를 눌러 안으로 들어가세요.</p>
+        <button id="enter-btn" type="button">홀 들어가기 (Enter)</button>
       </div>
       <div id="webgl-error" hidden>
         <p>이 브라우저에서는 WebGL을 쓸 수 없어 3D 화면을 보여 줄 수 없다.</p>
@@ -99,6 +111,7 @@
       <li><b>랙 앞면의 색</b>은 선택한 값이다. 온도는 18도(파랑)에서 35도(빨강)까지 변한다.</li>
       <li><b>랙 위의 막대</b>는 AI 대리 모델 보정값의 믿을 수 있는 정도다. 막대가 짧을수록 90% 구간이 넓다(불확실하다).</li>
       <li><b>테두리</b>는 알람이다. 노랑은 주의, 빨강(깜박임)은 위험이다.</li>
+      <li><b>외관</b>에서 건물을 누르거나 Enter를 누르면 홀로 들어간다. 홀에서 Esc나 "외관으로" 단추로 돌아온다.</li>
       <li><b>조작</b>: 끌어서 돌리고, 휠로 확대하고, 랙을 누르면 상세를 본다. 스페이스바는 재생과 정지, 좌우 화살표는 5초 이동(Shift는 30초), 캔버스에서 방향키는 랙 이동이다.</li>
     </ul>
     <h3>신뢰 등급</h3>

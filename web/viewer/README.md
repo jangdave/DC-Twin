@@ -13,7 +13,7 @@ npm test               # 자동 시험 (Vitest)
 npm run build          # dist/ 만들기 + 용량 기준 점검
 ```
 
-- 기본은 **녹화 재생**이다(서버 없음). 주소 매개변수: `?scenario=fan_fault&t=60&view=power`
+- 기본은 **녹화 재생**이다(서버 없음). 처음 화면은 건물 외관이고, 건물을 누르거나 Enter를 누르면 홀로 들어간다(Esc로 돌아옴). 주소 매개변수: `?stage=hall&scenario=fan_fault&t=60&view=power`
 - **라이브**: 게이트웨이를 띄우고 `?live=ws://127.0.0.1:8080/ws`로 연다. 이 컴퓨터의 `ws://`와 모든 `wss://`만 받는다.
   ```
   cd ../../gateway
@@ -48,6 +48,7 @@ Edge나 Chrome이 기본 경로에 없으면 `--browser <경로>`로 알려 준�
 |---|---|
 | `src/colors.js` | 온도 색, 등급 색, 막대 길이(Unreal과 같은 규칙) |
 | `src/store.js`, `recording.js`, `live.js`, `messages.js`, `url.js` | 센서 값 저장소, 녹화 재생, 라이브 연결, 메시지 검사, 주소 규칙 |
+| `src/flow.js` | 화면 단계(외관/홀), 화면 이동 명령과 명령 큐, 건물 요약 |
 | `src/scene.js`, `ui.js`, `main.js` | 3D 장면, 화면 조각, 조립 |
 | `tools/` | 자료 변환, 용량 점검, 화면 확인 |
 | `test/` | 자동 시험 |

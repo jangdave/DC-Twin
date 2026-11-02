@@ -40,7 +40,7 @@ const page = await browser.newPage();
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 await page.setViewport({ width: 1440, height: 860 });
-await page.goto(`${base}?scenario=fan_fault&t=100`, { waitUntil: 'networkidle0' });
+await page.goto(`${base}?scenario=fan_fault&t=100&stage=hall`, { waitUntil: 'networkidle0' });
 await page.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 await page.evaluate(() => (window.__viewer.state.player.playing = false));
 await sleep(300);
@@ -136,9 +136,57 @@ for (const [w, h] of [[390, 844], [768, 900]]) {
 // 8) 동작 줄이기(6.3장)
 const p2 = await browser.newPage();
 await p2.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
-await p2.goto(`${base}?scenario=power_spike&t=150`, { waitUntil: 'networkidle0' });
+await p2.goto(`${base}?scenario=power_spike&t=150&stage=hall`, { waitUntil: 'networkidle0' });
 await p2.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 ok('6.3 동작 줄이기 설정이면 장면이 알고 있음', await p2.evaluate(() => window.__viewer.scene.reducedMotion));
+
+// 9) 외관 → 홀 → 외관 (docs/20 FR-80~86)
+const p3 = await browser.newPage();
+await p3.setViewport({ width: 1280, height: 800 });
+await p3.goto(`${base}?scenario=fan_fault&t=240`, { waitUntil: 'networkidle0' });
+await p3.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+const vis = (sel) => p3.$eval(sel, (e) => !e.hidden);
+ok('FR-80 처음은 외관: 요약 카드가 보이고 보기 도구와 뒤로 단추는 숨김', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior' && (await vis('#exterior-card')) && !(await vis('#stage-tools')) && !(await vis('#back-btn')));
+const ext = await p3.evaluate(() => ({ alarms: document.getElementById('ext-alarms').textContent, temp: document.getElementById('ext-temp').textContent }));
+ok('FR-82 외관 요약에 알람 수와 최고 입구 온도', /건$/.test(ext.alarms) && ext.temp.includes('°C'), JSON.stringify(ext));
+await p3.mouse.click(5, 5); // 하늘이나 빈 곳을 눌러도 들어가지 않는다
+await sleep(200);
+ok('빈 곳을 누르면 외관 유지', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior');
+const spot = await p3.evaluate(() => {
+  const r = document.getElementById('canvas').getBoundingClientRect();
+  for (let y = 0.45; y < 0.95; y += 0.05) for (let x = 0.3; x < 0.95; x += 0.05) if (window.__viewer.scene.pickBuilding(x, y)) return { x: r.left + x * r.width, y: r.top + y * r.height };
+  return null;
+});
+ok('건물이 화면 안에서 눌릴 위치에 있다', !!spot);
+await p3.mouse.click(spot.x, spot.y);
+await sleep(1200);
+ok('FR-81 건물을 누르면 홀로 들어감', (await p3.evaluate(() => window.__viewer.state.stage)) === 'hall' && (await vis('#stage-tools')) && (await vis('#back-btn')) && !(await vis('#exterior-card')));
+const kept = await p3.evaluate(() => ({ sc: window.__viewer.state.scenarioId, t: window.__viewer.state.player.time }));
+ok('FR-86 단계가 바뀌어도 시나리오와 재생 위치 유지', kept.sc === 'fan_fault' && kept.t >= 240, JSON.stringify(kept));
+await p3.keyboard.press('Escape');
+await sleep(1200);
+ok('FR-83 Esc로 외관으로 돌아옴', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior' && (await vis('#exterior-card')));
+await p3.evaluate(() => document.getElementById('canvas').focus());
+await p3.keyboard.press('Enter');
+await sleep(1200);
+ok('Enter로 홀 들어가기', (await p3.evaluate(() => window.__viewer.state.stage)) === 'hall');
+await p3.click('#back-btn');
+await sleep(300);
+ok('"외관으로" 단추', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior');
+const rej = await p3.evaluate(() => {
+  const v = window.__viewer;
+  v.dispatch({ name: 'view.goto', value: 'walk' });
+  v.dispatch({ name: 'nope' });
+  v.dispatch({ name: 'view.layer', value: 'power' });
+  v.dispatch({ name: 'view.select', value: 'rack_07' });
+  return { rejected: v.queue.rejected, view: v.state.view, sel: v.state.selected, stage: v.state.stage };
+});
+ok('명령: 모르는 명령은 무시하고 횟수를 세며 올바른 명령은 실행', rej.rejected === 2 && rej.view === 'power' && rej.sel === 'rack_07' && rej.stage === 'exterior', JSON.stringify(rej));
+const p4 = await browser.newPage();
+await p4.goto(`${base}?stage=hall&scenario=cooling_failure&t=200&view=power`, { waitUntil: 'networkidle0' });
+await p4.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+ok('FR-84 주소 매개변수로 홀에서 시작', (await p4.evaluate(() => window.__viewer.state.stage)) === 'hall' && (await p4.$eval('#exterior-card', (e) => e.hidden)));
+await p3.screenshot({ path: path.join(OUT, 'stage_exterior.png') });
 
 await browser.close();
 web.close();
