@@ -107,7 +107,7 @@ uv run --python 3.13 python build_manifest.py ../../usd/scenes/hall01.usda ../..
 | `value` | 숫자 | 측정값 |
 | `unit` | 문자열 | 단위. 매니페스트의 단위와 같아야 한다. |
 | `quality` | 문자열 | `good`(정상), `stale`(오래됨), `bad`(고장 의심) |
-| `lower`, `upper` | 숫자(선택) | 보정 모델(L2)이 붙이는 90% 구간. 랙 입구 온도(`temp_in`)에만 있다. 둘 다 있고 `lower <= upper`일 때만 받는다. |
+| `lower`, `upper` | 숫자(선택) | 보정 모델(L2)이 붙이는 "90% 구간"(실제 포함 비율은 검증에서 약 0.95, 계수를 검증 자료로 정했으므로 낙관적일 수 있다, [E5](../experiments/results/E5_surrogate_residual_model.md) 8장). 랙 입구 온도(`temp_in`)에만 있다. 둘 다 있고 `lower <= upper`일 때만 받는다. 구간은 잡음을 더하기 전 모델 값 기준이다. |
 | `confidence` | 문자열(선택) | 보정 모델의 신뢰 등급: `ok`, `caution`, `low`, `fallback`(학습 범위 밖이라 보정하지 않음). 값의 알람, 품질 판정에는 쓰지 않는다. |
 
 - MQTT 서비스 품질(QoS)은 0, 보존(retain)은 켠다. 새로 접속한 쪽이 마지막 값을 바로 받을 수 있다.
@@ -128,7 +128,8 @@ JSON 텍스트다. `type`으로 종류를 구분한다.
 | `snapshot` | 접속한 직후 한 번 | 모든 센서의 최근 값과 알람 상태 |
 | `sample` | 값이 들어올 때마다 | 센서 ID, 값, 단위, 품질, 시각 |
 | `alarm` | 알람 상태가 바뀔 때 | 센서 ID, 이전 상태, 새 상태, 값, 시각 |
-| `scenario` | 시나리오가 시작·종료될 때 | 시나리오 이름, 시작/종료 |
+| `scenario` | 시나리오가 시작·종료될 때 | 시나리오 이름, 시작/종료. **시작에서 게이트웨이는 상태를 초기화하고 `snapshot`을 다시 보내지 않으므로, 클라이언트는 시작을 받으면 값과 알람을 비운다**(시각이 이전보다 과거로 돌아올 수 있다) |
+| `aggregate` | 집계 값이 계산될 때 | 집계 이름, 값, 단위, 시각(9장) |
 
 알람 상태: `normal`(정상), `warn`(주의), `critical`(위험)
 
@@ -156,7 +157,7 @@ JSON 텍스트다. `type`으로 종류를 구분한다.
 ```
 cd gateway
 npm install
-npm test                                     # Node 내장 시험 38개
+npm test                                     # Node 내장 시험 39개
 node src/index.js --manifest ../sim/out/sensor_manifest.json --replay ../sim/out/recordings/cooling_failure.jsonl --time-scale 10
 ```
 
@@ -257,7 +258,7 @@ uv run --python 3.13 python -m dct_sensors --manifest ../out/sensor_manifest.jso
 | 전체 | 녹화된 `.jsonl`을 재생해 Unreal 쪽 화면을 확인(자동 시험은 Unreal 자동화 테스트) |
 
 ## 8. 보안 (공개 데모 기준)
-- 개발 중에는 로컬(`127.0.0.1`)에서만 연다.
+- 개발 중에는 로컬(`127.0.0.1`)에서만 연다. 웹 보기 화면([18](18_web_viewer_spec.md))의 라이브 모드는 이 컴퓨터의 `ws://`와 모든 `wss://` 주소만 받고, 읽기 전용이다.
 - 외부에 열 때(면접 시연 등)는 [ADR-004](decisions/ADR-004-streaming-hosting.md)의 방식을 따르고, **게이트웨이 WebSocket은 직접 노출하지 않는다.** Pixel Streaming으로 화면만 보낸다.
 - MQTT 브로커는 익명 접속을 허용하지 않고, 외부 접속이 필요하면 계정을 설정한다.
 - 센서 값은 모두 합성 데이터이므로 개인정보나 회사 정보가 들어가지 않는다.

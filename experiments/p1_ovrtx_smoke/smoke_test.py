@@ -1,4 +1,4 @@
-"""Phase 1 스모크 테스트: ovrtx로 로컬 USD를 렌더해 PNG로 저장하고 시간/VRAM을 기록한다.
+"""Phase 1 동작 확인 테스트: ovrtx로 로컬 USD를 렌더해 PNG로 저장하고 시간/VRAM을 기록한다.
 
 사용: uv run python smoke_test.py [--frames N]
 """

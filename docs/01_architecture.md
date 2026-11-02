@@ -20,6 +20,7 @@ Blender로 직접 모델링한 **가상 데이터센터**를 OpenUSD로 정의�
 | [12 Unreal 설계](12_unreal_design.md) | 클라이언트 구성, 화면, 내부 둘러보기, Unreal 고유 기능, 시험 |
 | [13 Omniverse 연구 계획](13_omniverse_research.md) | 확인한 사실, 열 시뮬레이션 설계, 연구 과제 R1~R7 |
 | **[14 핵심 설계](14_sim_to_unreal_core.md)** | **시뮬레이션과 센서 데이터의 Unreal 연동·표현** (이 프로젝트의 핵심) |
+| [18 웹 보기 화면 기능명세](18_web_viewer_spec.md) | Unreal과 별도로 만든 웹(WebGL) 보기 화면의 기능, 데이터, 시험 |
 | [설계 결정 기록](decisions/) | 왜 이렇게 정했는지 |
 
 ## 3. 왜 Omniverse와 Unreal을 나눠 쓰는가
@@ -92,6 +93,7 @@ Blender로 직접 모델링한 **가상 데이터센터**를 OpenUSD로 정의�
 - **주력:** Pixel Streaming(웹). **기준선:** Windows 패키징(exe). **비교 대상:** Omniverse(ovrtx) 뷰어.
 - **UI:** CommonUI 기본에 일부 패널(추이 그래프 등)을 웹으로 만드는 혼합안. 1~2개 패널로 비교 후 확정한다(E4).
 - **호스팅:** GPU 서버가 없으므로 영상과 exe를 상시 산출물로 두고, 라이브 스트리밍은 시연용이다([ADR-004](decisions/ADR-004-streaming-hosting.md)).
+- **웹 보기 화면:** Unreal과 별도로 Three.js 기반 보기 전용 화면(`web/viewer/`)을 정적 배포할 수 있게 만들었다. 같은 게이트웨이 WebSocket이나 녹화 파일을 받아 온도 색과 신뢰 막대를 보인다. Unreal을 대체하지 않는다([ADR-011](decisions/ADR-011-webgl-viewer.md), [기능명세 18](18_web_viewer_spec.md)).
 - **제외:** 모바일 앱, XR.
 
 ## 8. 보여줄 데모 시나리오

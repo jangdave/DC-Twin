@@ -42,6 +42,8 @@
 | ovrtx | Omniverse의 렌더링(화면 그리기) 라이브러리. Python에서 USD를 그릴 수 있다. |
 | Unreal (UE) | 게임 엔진. 운영 화면을 만드는 데 쓴다. |
 | Pixel Streaming | 서버에서 그린 화면을 영상으로 브라우저에 보내는 기능 |
+| 웹 보기 화면 | Unreal과 별도로 브라우저(WebGL)에서 값을 보기만 하는 가벼운 화면. 서버 없이 정적 배포할 수 있다([ADR-011](decisions/ADR-011-webgl-viewer.md)) |
+| 정적 배포 | 서버 프로그램 없이 파일만 올려 두고 브라우저가 내려받아 실행하게 하는 배포 방식(예: GitHub Pages) |
 | MQTT | 센서 값을 주고받는 가벼운 메시지 방식 |
 | 게이트웨이(Gateway) | MQTT 메시지를 Unreal이 받을 수 있는 형태(WebSocket)로 바꿔 주는 중간 프로그램 |
 | WebSocket | 서버와 프로그램이 계속 연결을 유지하며 데이터를 주고받는 방식 |
