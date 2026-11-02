@@ -1,4 +1,5 @@
 // 게이트웨이 WebSocket 라이브 연결 (docs/18 4.4, 5.7장).
+import { applyMessage } from './apply.js';
 import { parseMessage } from './messages.js';
 
 // 재접속 간격(ms): 2초부터 늘려 가며 최대 10초
@@ -98,34 +99,7 @@ export class LiveClient {
     const q = this.queue;
     if (!q.length) return 0;
     this.queue = [];
-    for (const m of q) this._apply(m);
+    for (const m of q) applyMessage(this.store, m);
     return q.length;
-  }
-
-  _apply(m) {
-    const s = this.store;
-    switch (m.kind) {
-      case 'snapshot':
-        s.applySnapshot(m);
-        break;
-      case 'sample':
-        s.setSample(m);
-        break;
-      case 'alarm':
-        s.setAlarm(m.sensorId, m.to);
-        s.alarmLog.push({ ts: m.ts, sensorId: m.sensorId, from: m.from, to: m.to, value: m.value });
-        if (s.alarmLog.length > 200) s.alarmLog.shift();
-        break;
-      case 'aggregate':
-        s.aggregates[m.name] = m.value;
-        s.version++;
-        break;
-      case 'scenario':
-        // 게이트웨이는 새 시나리오 시작에서 상태를 초기화하고 snapshot을 다시 보내지 않는다. 화면도 같이 비운다.
-        if (m.event === 'start') s.clear();
-        s.scenario = m.event === 'end' ? null : m.name;
-        s.version++;
-        break;
-    }
   }
 }

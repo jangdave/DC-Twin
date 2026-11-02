@@ -4,6 +4,10 @@ import { HallScene, VIEWS } from './scene.js';
 import { LiveClient } from './live.js';
 import { parseRecording, RecordingPlayer } from './recording.js';
 import { SensorStore } from './store.js';
+import { SCENARIOS } from './sim/core.js';
+import { SimEngine, layoutFrom } from './sim/engine.js';
+import { SimPanel } from './sim/panel.js';
+import { SimRunner } from './sim/runner.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
 import { parseParams } from './url.js';
 
@@ -53,7 +57,9 @@ async function main() {
   const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage });
 
   const state = {
-    mode: 'rec', // rec | live
+    mode: 'rec', // rec | sim | live
+    sim: null,
+    simScenario: params.scenario ?? 'normal',
     scenarioId: params.scenario ?? 'normal',
     player: null,
     live: null,
@@ -67,7 +73,8 @@ async function main() {
   const ui = new UI(store, {
     onSelect: (eq, focus) => selectEquipment(eq, focus),
     onView: (v) => setView(v),
-    onScenario: (id) => loadScenario(id, 0),
+    onScenario: (id) => (state.mode === 'sim' ? startSim(id) : loadScenario(id, 0)),
+    onMode: (m) => (m === 'sim' ? startSim(state.simScenario) : startRecording()),
     onPlay: () => state.player && ((state.player.playing = !state.player.playing), ui.renderTransport(state.player)),
     onSpeed: (x) => state.player && ((state.player.speed = x), ui.renderTransport(state.player)),
     onSeek: (t) => state.player && (state.player.seek(t), refresh()),
@@ -79,6 +86,46 @@ async function main() {
     onBack: () => queue.push({ name: 'view.back' }),
   });
   ui.setScenarios(index, state.scenarioId);
+
+  // ---- 직접 시뮬레이션(브라우저 간이 모델, docs/21) ----
+  const simRows = [...new Set(sceneData.racks.map((r) => r.row))].sort((a, b) => a - b);
+  const simList = Object.entries(SCENARIOS).map(([id, s]) => ({ id, title: s.title, note: s.description }));
+  const panel = new SimPanel(
+    {
+      onFan: (c, v) => state.sim?.setFan(c, v),
+      onPower: (t, v) => state.sim?.setPowerScale(t, v),
+      onSelectedPower: (r, v) => state.sim?.setPowerScale(r, v),
+      onReset: () => startSim(state.simScenario),
+    },
+    prettyName,
+  );
+  const layout = layoutFrom(sceneData.racks, sensors);
+  panel.build(layout.cracs, simRows);
+
+  function startSim(id = 'normal') {
+    if (!SCENARIOS[id]) id = 'normal';
+    if (state.live) {
+      state.live.stop();
+      state.live = null;
+    }
+    state.mode = 'sim';
+    state.simScenario = id;
+    if (!state.sim) {
+      const engine = new SimEngine({ sensors, ...layout, seed: 7 });
+      state.sim = new SimRunner(engine, store, { onEvent: () => panel.syncFromEngine(engine) });
+    }
+    state.player = state.sim;
+    ui.setMode('sim', '직접 시뮬레이션 (이 브라우저의 간이 모델, 실제 계산이 아님)');
+    ui.setScenarios(simList, id);
+    panel.show(true);
+    panel.setScenario(id);
+    state.sim.start(id);
+    panel.syncFromEngine(state.sim.engine);
+    panel.setSelected(state.selected, state.sim.engine);
+    ui.renderTransport(state.sim);
+    state.lastSec = -1;
+    refresh();
+  }
 
   // ---- 화면 단계와 이동 명령 (docs/20) ----
   function applyStage(instant = false) {
@@ -108,6 +155,7 @@ async function main() {
         break;
       case 'sim.scenario':
         if (state.mode === 'rec' && ids.includes(c.value)) loadScenario(c.value, 0);
+        else if (state.mode === 'sim' && SCENARIOS[c.value]) startSim(c.value);
         break;
     }
   }
@@ -126,6 +174,7 @@ async function main() {
     state.selected = state.selected === eq && !focus ? null : eq;
     scene.select(state.selected);
     ui.setSelected(state.selected);
+    if (state.mode === 'sim') panel.setSelected(state.selected, state.sim.engine);
     ui.renderDetail(state.view);
     if (state.selected && focus) scene.focus(state.selected);
   }
@@ -163,6 +212,7 @@ async function main() {
       state.live = null;
     }
     state.mode = 'rec';
+    panel.show(false);
     store.clear();
     ui.setMode('rec', '녹화 재생 (실시간 아님)');
     await loadScenario(state.scenarioId, params.t);
@@ -170,6 +220,7 @@ async function main() {
 
   function startLive(url) {
     state.player = null;
+    panel.show(false);
     store.clear();
     ui.setMode('connecting', '라이브 연결 중');
     state.live = new LiveClient(url, store, {
@@ -189,6 +240,7 @@ async function main() {
     lastRefresh = { version: store.version, at: performance.now() };
     ui.renderAggregates();
     ui.renderAlarms(sensorInfo, state.mode);
+    if (state.mode === 'sim' && state.sim) panel.renderLog(state.sim.log);
     ui.renderDetail(state.view);
     if (flow.stage === 'exterior') ui.renderExterior(summarize(store, rackKeys));
   }
@@ -274,7 +326,7 @@ async function main() {
   function frame(now) {
     const dt = Math.min((now - last) / 1000, 0.25);
     last = now;
-    if (state.mode === 'rec' && state.player) {
+    if ((state.mode === 'rec' || state.mode === 'sim') && state.player) {
       const before = Math.floor(state.player.time);
       state.player.advance(dt);
       if (Math.floor(state.player.time) !== before || state.lastSec < 0) {
@@ -298,6 +350,8 @@ async function main() {
   if (params.live) {
     state.mode = 'live';
     startLive(params.live);
+  } else if (params.mode === 'sim') {
+    startSim(params.scenario ?? 'normal');
   } else {
     await startRecording();
   }
@@ -309,7 +363,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
-  window.__viewer = { state, store, scene, selectEquipment, setView, loadScenario, flow, queue, dispatch: (c) => queue.push(c) };
+  window.__viewer = { state, store, scene, selectEquipment, setView, loadScenario, startSim, panel, flow, queue, dispatch: (c) => queue.push(c) };
 }
 
 main();

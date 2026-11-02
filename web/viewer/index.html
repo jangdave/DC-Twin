@@ -13,6 +13,10 @@
     <h1>DC-Twin 가상 데이터센터</h1>
     <button id="back-btn" type="button" hidden aria-label="외관 화면으로 돌아가기 (Esc)">← 외관으로</button>
     <span id="mode-badge" class="badge" role="status">불러오는 중</span>
+    <div id="mode-group" role="group" aria-label="보기 방식">
+      <button type="button" data-mode="rec" class="on">녹화 재생</button>
+      <button type="button" data-mode="sim">직접 시뮬레이션</button>
+    </div>
     <label class="field">시나리오
       <select id="scenario-select" aria-label="시나리오"></select>
     </label>
@@ -61,6 +65,23 @@
     </section>
 
     <aside id="side">
+      <section id="sim-panel" hidden aria-label="직접 시뮬레이션 조작">
+        <h2>직접 시뮬레이션</h2>
+        <p id="sim-scenario-desc" class="muted"></p>
+        <p class="muted sim-note">간이 모델(1차 지연 식)을 이 브라우저에서 계산한 값이다. 보정 모델(AI)은 쓰지 않아 신뢰 막대가 나오지 않는다.</p>
+        <h3>CRAC 팬 속도</h3>
+        <div id="sim-fans"></div>
+        <h3>줄별 랙 전력</h3>
+        <div id="sim-rows"></div>
+        <div id="sim-selected" hidden>
+          <h3>선택한 랙만</h3>
+          <label class="sim-row"><span id="sim-selected-name" class="sim-name"></span><input id="sim-selected-power" type="range" min="0" max="300" step="10" value="100" aria-label="선택한 랙 전력 배수" /><output id="sim-selected-val" class="sim-val">100%</output></label>
+        </div>
+        <button id="sim-reset" type="button">시나리오 처음부터 다시</button>
+        <h3>조작 기록</h3>
+        <ol id="sim-log"></ol>
+        <p class="muted" id="sim-log-empty">아직 없다.</p>
+      </section>
       <section id="detail" aria-live="polite" aria-label="선택한 장비">
         <h2>선택한 장비</h2>
         <p class="muted" id="detail-empty">랙이나 냉각 장치(CRAC)를 눌러 보세요.</p>
@@ -88,7 +109,7 @@
         <input id="time-slider" type="range" min="0" max="300" step="0.1" value="0" aria-label="재생 위치" />
       </div>
       <span id="time-text">00:00 / 05:00</span>
-      <label class="check"><input id="loop-check" type="checkbox" checked /> 반복</label>
+      <label class="check" id="loop-label"><input id="loop-check" type="checkbox" checked /> 반복</label>
     </div>
     <div id="live-info" hidden>
       <span id="live-text"></span>
@@ -111,6 +132,7 @@
       <li><b>랙 앞면의 색</b>은 선택한 값이다. 온도는 18도(파랑)에서 35도(빨강)까지 변한다.</li>
       <li><b>랙 위의 막대</b>는 AI 대리 모델 보정값의 믿을 수 있는 정도다. 막대가 짧을수록 90% 구간이 넓다(불확실하다).</li>
       <li><b>테두리</b>는 알람이다. 노랑은 주의, 빨강(깜박임)은 위험이다.</li>
+      <li><b>직접 시뮬레이션</b>은 위의 "직접 시뮬레이션"을 누르면 이 브라우저가 간이 모델로 계산한다. CRAC 팬 속도와 줄별 전력을 슬라이더로 바꿔 보세요. 시나리오는 처음부터 다시 시작할 수 있다.</li>
       <li><b>외관</b>에서 건물을 누르거나 Enter를 누르면 홀로 들어간다. 홀에서 Esc나 "외관으로" 단추로 돌아온다.</li>
       <li><b>조작</b>: 끌어서 돌리고, 휠로 확대하고, 랙을 누르면 상세를 본다. 스페이스바는 재생과 정지, 좌우 화살표는 5초 이동(Shift는 30초), 캔버스에서 방향키는 랙 이동이다.</li>
     </ul>
