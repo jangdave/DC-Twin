@@ -1,0 +1,111 @@
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
+import { describe, expect, it } from 'vitest';
+import { buildScene, buildSensors, convertRecording, SCENARIOS } from '../tools/build_data.mjs';
+import { parseRecording } from '../src/recording.js';
+
+const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '../public/data');
+
+async function jsonl(lines) {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'dct-web-'));
+  const file = path.join(dir, 'x.jsonl');
+  await writeFile(file, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  return file;
+}
+const ts = (s) => new Date(Date.UTC(2026, 9, 15, 9, 0, s)).toISOString();
+const sample = (id, s, v, extra = {}) => ({ type: 'sample', sensorId: id, ts: ts(s), value: v, unit: 'degC', quality: 'good', ...extra });
+
+describe('녹화 변환 (JSONL -> 센서별 배열)', () => {
+  const ids = ['A', 'B'];
+  const base = () => [
+    { type: 'scenario', event: 'start', name: 'x', ts: ts(0) },
+    sample('A', 0, 20.1234, { lower: 19, upper: 21, confidence: 'ok' }),
+    sample('B', 0, 30),
+    { type: 'aggregate', name: 'pue', value: 1.13, ts: ts(0) },
+    sample('A', 1, 21, { lower: 19.5, upper: 22.5, confidence: 'low' }),
+    sample('B', 1, 31),
+    { type: 'alarm', sensorId: 'B', from: 'normal', to: 'warn', value: 31, ts: ts(1) },
+    { type: 'scenario', event: 'event', name: 'x', kind: 'crac_fan', target: 'crac_01', value: 0.15, t: 1, ts: ts(1) },
+  ];
+
+  it('값, 구간, 등급 코드, 알람, 사건, 집계를 옮긴다', async () => {
+    const rec = await convertRecording(await jsonl(base()), 'x', ids);
+    expect(rec.n).toBe(2);
+    expect(rec.values.A).toEqual([20.123, 21]);
+    expect(rec.est.A).toEqual({ lower: [19, 19.5], upper: [21, 22.5], conf: [1, 3] });
+    expect(rec.est.B).toBeUndefined();
+    expect(rec.alarms).toEqual([{ t: 1, sensorId: 'B', from: 'normal', to: 'warn', value: 31 }]);
+    expect(rec.events).toEqual([{ t: 1, kind: 'crac_fan', target: 'crac_01', value: 0.15 }]);
+    expect(rec.aggregates.pue).toEqual([1.13, null]);
+    expect(() => parseRecording({ ...rec, aggregates: { pue: [1.13, 1.13] } }, ids)).not.toThrow();
+  });
+
+  it('1초 간격이 아니면 실패', async () => {
+    const lines = base();
+    lines.push({ ...sample('A', 1, 22), ts: new Date(Date.parse(ts(1)) + 500).toISOString() });
+    await expect(convertRecording(await jsonl(lines), 'x', ids)).rejects.toThrow(/1초 간격/);
+  });
+
+  it('센서 값이 비는 칸이 있으면 실패', async () => {
+    const lines = base().filter((l) => !(l.sensorId === 'B' && l.ts === ts(1) && l.type === 'sample'));
+    await expect(convertRecording(await jsonl(lines), 'x', ids)).rejects.toThrow(/B/);
+  });
+
+  it('모르는 센서는 무시', async () => {
+    const lines = [...base(), sample('ZZZ', 0, 1)];
+    const rec = await convertRecording(await jsonl(lines), 'x', ids);
+    expect(rec.values.ZZZ).toBeUndefined();
+  });
+
+  it('비어 있으면 실패', async () => {
+    await expect(convertRecording(await jsonl([]), 'x', ids)).rejects.toThrow(/비어/);
+  });
+});
+
+describe('장면과 센서 변환', () => {
+  it('장면: 랙 줄 번호와 앞면 방향을 유지한다', () => {
+    const layout = {
+      size_cm: [1, 2, 3],
+      racks: [{ name: 'Rack_11', path: '/DC/Hall01/Row02/Rack_11', min: [0, 0, 0], max: [60, 100, 200], front: [1, 1] }],
+      cracs: [{ name: 'CRAC_01', path: 'p', min: [0, 0, 0], max: [1, 1, 1], front: [0, 1] }],
+      vents: [],
+      panels: [],
+    };
+    const s = buildScene(layout);
+    expect(s.racks[0]).toMatchObject({ name: 'Rack_11', row: 2, front: [1, 1] });
+    expect(s.cracs[0].front).toEqual([0, 1]);
+  });
+  it('센서: 장비 이름을 토픽에서 뽑는다', () => {
+    const [s] = buildSensors({ sensors: [{ sensorId: 'X', topic: 'dct/v1/hall01/rack_01/temp_in', equipmentType: 'rack', metric: 'temp_in', unit: 'degC', range: [10, 45], warn: 27, critical: 32 }] });
+    expect(s).toMatchObject({ equipment: 'rack_01', direction: 'high', warn: 27 });
+  });
+});
+
+describe('저장소에 올라간 정적 자료(public/data)', () => {
+  it('모든 시나리오 녹화가 형식 검사를 통과하고 용량 기준 이내다', async () => {
+    const sensors = JSON.parse(await readFile(path.join(PUBLIC, 'sensors.json'), 'utf8'));
+    const ids = sensors.map((s) => s.sensorId);
+    expect(ids).toHaveLength(204);
+    for (const sc of SCENARIOS) {
+      const text = await readFile(path.join(PUBLIC, 'rec', `${sc.id}.json`), 'utf8');
+      const rec = parseRecording(JSON.parse(text), ids);
+      expect(rec.n).toBe(300);
+      expect(gzipSync(text).length).toBeLessThan(1024 * 1024);
+    }
+  });
+  it('장면: 랙 60기, CRAC 8기, 통풍구 30개', async () => {
+    const scene = JSON.parse(await readFile(path.join(PUBLIC, 'scene.json'), 'utf8'));
+    expect(scene.racks).toHaveLength(60);
+    expect(scene.cracs).toHaveLength(8);
+    expect(scene.vents).toHaveLength(30);
+  });
+  it('팬 이상 녹화의 마지막 시각 등급이 ok 48, low 12다(Unreal 실제 연결 확인과 같다)', async () => {
+    const rec = JSON.parse(await readFile(path.join(PUBLIC, 'rec', 'fan_fault.json'), 'utf8'));
+    const codes = Object.values(rec.est).map((e) => e.conf.at(-1));
+    expect(codes.filter((c) => c === 1)).toHaveLength(48);
+    expect(codes.filter((c) => c === 3)).toHaveLength(12);
+  });
+});

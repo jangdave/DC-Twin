@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws://127.0.0.1:* ws://localhost:* wss:; base-uri 'none'; form-action 'none'" />
+  <title>DC-Twin 웹 보기 화면</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%230e1218%27/%3E%3Crect x=%273%27 y=%273%27 width=%272%27 height=%2710%27 fill=%27%234fd8ff%27/%3E%3Crect x=%277%27 y=%275%27 width=%272%27 height=%278%27 fill=%27%2319cc4d%27/%3E%3Crect x=%2711%27 y=%274%27 width=%272%27 height=%279%27 fill=%27%23ffcc00%27/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <header id="top">
+    <h1>DC-Twin 가상 데이터센터</h1>
+    <span id="mode-badge" class="badge" role="status">불러오는 중</span>
+    <label class="field">시나리오
+      <select id="scenario-select" aria-label="시나리오"></select>
+    </label>
+    <div class="agg" aria-label="집계 값">
+      <span>IT 전력 <b id="agg-it">–</b></span>
+      <span>냉각 전력 <b id="agg-cool">–</b></span>
+      <span>PUE <b id="agg-pue">–</b></span>
+    </div>
+    <button id="help-btn" type="button">도움말</button>
+  </header>
+
+  <main id="main">
+    <section id="stage" aria-label="3D 장면">
+      <canvas id="canvas" tabindex="0" aria-label="데이터센터 3D 장면. 방향키로 랙을 선택할 수 있다"></canvas>
+      <div id="labels"></div>
+      <div id="tooltip" role="tooltip" hidden></div>
+      <div id="stage-tools">
+        <fieldset id="view-group">
+          <legend>보기 값</legend>
+          <label><input type="radio" name="view" value="temp_in" checked /> 입구 온도</label>
+          <label><input type="radio" name="view" value="temp_out" /> 배기 온도</label>
+          <label><input type="radio" name="view" value="power" /> 전력</label>
+        </fieldset>
+        <div id="presets">
+          <button type="button" data-preset="top">위에서</button>
+          <button type="button" data-preset="iso">비스듬히</button>
+          <button type="button" data-preset="home">처음 위치</button>
+          <button type="button" id="labels-btn" aria-pressed="false">통로 이름</button>
+        </div>
+      </div>
+      <div id="webgl-error" hidden>
+        <p>이 브라우저에서는 WebGL을 쓸 수 없어 3D 화면을 보여 줄 수 없다.</p>
+        <p>WebGL 2를 지원하는 최신 Chrome, Edge, Firefox, Safari에서 열어 보세요.</p>
+      </div>
+    </section>
+
+    <aside id="side">
+      <section id="detail" aria-live="polite" aria-label="선택한 장비">
+        <h2>선택한 장비</h2>
+        <p class="muted" id="detail-empty">랙이나 냉각 장치(CRAC)를 눌러 보세요.</p>
+        <div id="detail-body" hidden></div>
+      </section>
+      <section id="alarms" aria-label="알람 목록">
+        <h2>알람 <span id="alarm-count" class="muted"></span></h2>
+        <ol id="alarm-list"></ol>
+        <p class="muted" id="alarm-empty">지금까지 알람이 없다.</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer id="bottom">
+    <div id="transport">
+      <button id="play-btn" type="button" aria-label="재생 또는 일시정지">⏸</button>
+      <div id="speeds" role="group" aria-label="재생 속도">
+        <button type="button" data-speed="1" class="on">1x</button>
+        <button type="button" data-speed="2">2x</button>
+        <button type="button" data-speed="5">5x</button>
+        <button type="button" data-speed="10">10x</button>
+      </div>
+      <div id="timebar">
+        <div id="event-marks"></div>
+        <input id="time-slider" type="range" min="0" max="300" step="0.1" value="0" aria-label="재생 위치" />
+      </div>
+      <span id="time-text">00:00 / 05:00</span>
+      <label class="check"><input id="loop-check" type="checkbox" checked /> 반복</label>
+    </div>
+    <div id="live-info" hidden>
+      <span id="live-text"></span>
+      <button id="live-back" type="button">녹화 재생으로 돌아가기</button>
+    </div>
+    <div id="legend">
+      <span class="legend-title" id="legend-title">입구 온도</span>
+      <span id="legend-min">18</span><span id="legend-ramp" aria-hidden="true"></span><span id="legend-max">35 °C</span>
+      <span class="sep">|</span>
+      <span class="chip c-ok">ok</span><span class="chip c-caution">caution</span><span class="chip c-low">low</span><span class="chip c-fallback">보정 없음</span>
+      <span class="sep">|</span>
+      <span class="chip a-warn">주의 테두리</span><span class="chip a-critical">위험 테두리</span>
+    </div>
+    <p id="disclaimer">시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않는다. 가상 시설이다.</p>
+  </footer>
+
+  <dialog id="help-dialog">
+    <h2>보는 방법</h2>
+    <ul>
+      <li><b>랙 앞면의 색</b>은 선택한 값이다. 온도는 18도(파랑)에서 35도(빨강)까지 변한다.</li>
+      <li><b>랙 위의 막대</b>는 AI 대리 모델 보정값의 믿을 수 있는 정도다. 막대가 짧을수록 90% 구간이 넓다(불확실하다).</li>
+      <li><b>테두리</b>는 알람이다. 노랑은 주의, 빨강(깜박임)은 위험이다.</li>
+      <li><b>조작</b>: 끌어서 돌리고, 휠로 확대하고, 랙을 누르면 상세를 본다. 스페이스바는 재생과 정지, 좌우 화살표는 5초 이동(Shift는 30초), 캔버스에서 방향키는 랙 이동이다.</li>
+    </ul>
+    <h3>신뢰 등급</h3>
+    <ul id="help-conf"></ul>
+    <p class="muted">녹화 재생은 센서 생성기가 미리 만든 값을 돌려 보는 것이라 실시간이 아니다. 로컬 게이트웨이가 있으면 주소 끝에 <code>?live=ws://127.0.0.1:8080/ws</code>를 붙여 실시간으로 볼 수 있다.</p>
+    <form method="dialog"><button>닫기</button></form>
+  </dialog>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

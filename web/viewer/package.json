@@ -1,0 +1,25 @@
+{
+  "name": "dctwin-web-viewer",
+  "version": "0.1.0",
+  "description": "DC-Twin 웹 보기 화면: 녹화 재생과 게이트웨이 라이브를 받아 랙 온도, 알람, 보정 모델의 구간과 신뢰 등급을 보여 주는 읽기 전용 화면",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "data": "node tools/build_data.mjs",
+    "dev": "vite",
+    "build": "vite build && node tools/check_size.mjs",
+    "test": "vitest run",
+    "shot": "node tools/screenshot.mjs"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.16.0",
+    "vite": "^6.0.0",
+    "vitest": "^5.0.5"
+  }
+}

@@ -72,6 +72,8 @@ unreal/DataCenter_DT/Source/DataCenter_DT/
 
 ## 5. 온도를 3D 장비에 색으로 입히기
 
+> **현재 구현과의 차이(2026-11-02):** 아래는 처음 설계다. 실제 구현은 센서마다 동적 재질 인스턴스(`BasicShapeMaterial`)에 `Color`를 직접 넣고, 정규화에는 매니페스트의 `range`가 아니라 고정 18~35도(`ColdValue`, `HotValue`)를 쓰며, 장면 연결은 `UDCTSceneBinder`나 `UDCTHeatTintComponent`가 아니라 오버레이 액터가 맡는다. 구현 기준은 13장이다. 매니페스트의 `range`, `warn`, `critical`은 파싱만 하고 화면에서는 아직 쓰지 않는다([검토 19](19_project_review.md) M13).
+
 **방법:** 서버 앞면 메시(`M_ServerFront` 재질을 쓰는 부분)에 **인스턴스별 값**(Custom Primitive Data)을 넣는다. 재질은 이 값(정규화한 온도, 0~1)을 읽어 색을 정한다.
 
 | 항목 | 설명 |
