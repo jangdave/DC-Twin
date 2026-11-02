@@ -153,6 +153,11 @@ mergePatchPairs ();
     for r_idx, c in enumerate(lay.rack_cold):
         demand[c] += lay.rack_flux[r_idx]
     vent_q = [supply * demand[c] / demand.sum() if demand.sum() > 0 else 0.0 for c in range(n_cold)]
+    # decomposePar가 병렬 계산용 경계값을 유효숫자 7자리(writePrecision)로 다시 쓰므로, 풍량은 소수 4자리로 맞추고
+    # 마지막 급기구가 나머지를 받게 해서 급기 합과 회수 합이 정확히 같게 한다(안 맞으면 첫 반복에서 연속 오류로 멈춘다).
+    if demand.sum() > 0:
+        vent_q = [round(x, 4) for x in vent_q]
+        vent_q[-1] = round(sum(round(float(x), 4) for x in q) - sum(vent_q[:-1]), 4)
     crac_ret = []
     for i, c in enumerate(hall["cracs"]):
         if q[i] <= 0:
@@ -244,9 +249,9 @@ RAS { RASModel kEpsilon; turbulence on; printCoeffs on; }
     for w in walls:
         uvals[w] = "        type noSlip;"
     for c, nm in enumerate(inlets):
-        uvals[nm] = f"        type flowRateInletVelocity;\n        volumetricFlowRate {vent_q[c]:.6g};\n        value uniform (0 0 0);"
+        uvals[nm] = f"        type flowRateInletVelocity;\n        volumetricFlowRate {vent_q[c]:.4f};\n        value uniform (0 0 0);"
     for n, qq in crac_ret:
-        uvals[n] = f"        type flowRateInletVelocity;\n        volumetricFlowRate {-qq:.6g};\n        value uniform (0 0 0);"
+        uvals[n] = f"        type flowRateInletVelocity;\n        volumetricFlowRate {-round(qq, 4):.4f};\n        value uniform (0 0 0);"
     (out / "0.orig/U").write_text(field("volVectorField", "U", "[0 1 -1 0 0 0 0]", "uniform (0 0 0)", uvals), encoding="utf-8")
 
     pv = {n: "        type fixedFluxPressure;\n        value uniform 0;" for n in (*walls, *inlets, *outs)}
