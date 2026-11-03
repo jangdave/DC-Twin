@@ -199,6 +199,33 @@ ok('6.2 외관 화면도 390px에서 가로 스크롤 없고 카드가 화면 �
 ok('6.2 외관 카드가 장면 높이의 40% 이하(건물이 가려지지 않음)', mx.cardH <= mx.stageH * 0.4, JSON.stringify(mx));
 await p3.screenshot({ path: path.join(OUT, 'stage_exterior_mobile.png') });
 await p3.setViewport({ width: 1280, height: 800 });
+await p4.waitForFunction(() => window.__viewer.getModelsState() === 'ready', { timeout: 15000 });
+const mdl = () => p4.evaluate(() => {
+  const sc = window.__viewer.scene;
+  return { models: sc.modelMeshes.every((m) => m.visible), box: sc.rackBody.visible, btn: document.getElementById('model-btn').getAttribute('aria-pressed'), opacity: sc.rackFront.material.opacity, n: sc.modelMeshes.length };
+});
+const m1 = await mdl();
+ok('MODEL 장비 모양이 받아지고 기본으로 켜짐(상자는 숨김, 값 판은 반투명)', m1.models && !m1.box && m1.btn === 'true' && m1.opacity < 1 && m1.n >= 15, JSON.stringify(m1));
+await p4.click('#model-btn');
+const m2 = await mdl();
+ok('MODEL 단추로 단순 상자로 되돌림(값 판은 불투명)', !m2.models && m2.box && m2.btn === 'false' && m2.opacity === 1, JSON.stringify(m2));
+const picked = await p4.evaluate(() => {
+  const sc = window.__viewer.scene;
+  for (let y = 0.3; y < 0.9; y += 0.04) for (let x = 0.2; x < 0.9; x += 0.04) { const e = sc.pick(x, y); if (e) return e; }
+  return null;
+});
+ok('MODEL 상자 모드에서도 선택(레이캐스트)이 됨', !!picked, String(picked));
+await p4.click('#model-btn');
+const picked2 = await p4.evaluate(() => {
+  const sc = window.__viewer.scene;
+  for (let y = 0.3; y < 0.9; y += 0.04) for (let x = 0.2; x < 0.9; x += 0.04) { const e = sc.pick(x, y); if (e) return e; }
+  return null;
+});
+ok('MODEL 장비 모양 모드에서도 숨긴 상자로 선택이 됨', !!picked2, String(picked2));
+const p6 = await browser.newPage();
+await p6.goto(`${base}?stage=hall&models=0`, { waitUntil: 'networkidle0' });
+await p6.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+ok('MODEL models=0이면 받지 않고 상자만 씀', (await p6.evaluate(() => window.__viewer.getModelsState())) === 'off' && (await p6.$eval('#model-btn', (e) => e.hidden)));
 await p3.screenshot({ path: path.join(OUT, 'stage_exterior.png') });
 
 // 10) 직접 시뮬레이션(docs/21): 브라우저가 간이 모델로 계산하고 조작이 반영된다

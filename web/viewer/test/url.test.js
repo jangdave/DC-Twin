@@ -34,7 +34,7 @@ describe('주소 매개변수', () => {
     expect(p.liveError).toBeTruthy();
   });
   it('아무것도 없으면 기본값', () => {
-    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null });
+    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true });
   });
   it('stage는 exterior와 hall만 받는다', () => {
     expect(parseParams('?stage=hall', ids).stage).toBe('hall');
@@ -45,5 +45,9 @@ describe('주소 매개변수', () => {
     expect(parseParams('?mode=sim', ids).mode).toBe('sim');
     expect(parseParams('?mode=rec', ids).mode).toBe('rec');
     expect(parseParams('?mode=x', ids).mode).toBeNull();
+  });
+  it('models=0이면 장비 모양을 끈다', () => {
+    expect(parseParams('?models=0', ids).models).toBe(false);
+    expect(parseParams('?models=1', ids).models).toBe(true);
   });
 });

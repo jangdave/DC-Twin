@@ -56,6 +56,7 @@ for (const s of shots) {
   page.on('requestfailed', (r) => problems.push(`[${s.name}] 요청 실패: ${r.url()}`));
   await page.goto(base + s.q, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => window.__viewer && window.__viewer.state.player, { timeout: 15000 });
+  await page.waitForFunction(() => window.__viewer.getModelsState() !== 'loading', { timeout: 15000 });
   await page.evaluate((s) => {
     const v = window.__viewer;
     v.state.player.playing = false;
