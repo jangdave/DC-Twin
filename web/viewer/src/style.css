@@ -230,6 +230,10 @@ dialog input[type="text"]:focus { border-color: var(--border-dark); }
 #enter-btn { width: 100%; }
 #sky-btn { width: 100%; min-height: 36px; border-radius: var(--radius-large); font-size: var(--text-sm); margin-top: var(--p-1-5); }
 #stage[data-stage="exterior"] canvas.over-building { cursor: pointer; }
+/* 외관 화면의 이미지 효과: 가장자리를 어둡게(비네트)와 해 쪽의 따뜻한 빛 번짐. 카드와 단추는 그 위에 둔다 */
+#stage[data-stage="exterior"]::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: radial-gradient(ellipse at 78% 18%, rgba(255, 236, 190, 0.18), transparent 38%), radial-gradient(ellipse at center, transparent 58%, rgba(5, 27, 60, 0.34) 100%); }
+#stage-tools, #exterior-card, #legend, #mode-badge, #webgl-error { z-index: 2; }
 
 /* 좁은 화면: 외관 카드를 얇은 띠로 줄여 건물을 가리지 않게 한다 */
 @media (max-width: 700px) {
