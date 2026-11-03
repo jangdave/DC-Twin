@@ -68,6 +68,7 @@ class Generator:
         self.alarms = {s.sensor_id: AlarmState(s.warn, s.critical, s.direction, cfg.hysteresis, cfg.consecutive) for s in manifest.sensors}
         self._fired: set[int] = set()
         self.energy_kwh = 0.0
+        self.t_now = 0.0
 
     # ---- 시나리오 이벤트 ----
     def _targets(self, target: str) -> list[str]:
@@ -76,25 +77,39 @@ class Generator:
             return [r for r, (rw, _) in self.m.racks.items() if rw == row]
         return [target]
 
+    def apply_control(self, kind: str, target: str, value: float) -> dict:
+        """제어 하나를 바로 적용하고 이벤트 줄(`scenario` 종류 `event`)을 돌려준다. 시나리오 이벤트와 서버의 직접 조작이 같이 쓴다.
+
+        대상이 없으면 `SystemExit`(시나리오 정의 오류)가 아니라 `ValueError`를 던진다. 서버가 잘못된 조작을 거절할 때 쓴다.
+        """
+        if kind == "crac_fan":
+            if target not in self.fan_ctl:
+                raise ValueError(f"대상 CRAC가 매니페스트에 없다: {target}")
+            self.fan_ctl[target] = value
+        elif kind == "rack_power_scale":
+            targets = self._targets(target)
+            if not targets or any(r not in self.power_scale for r in targets):
+                raise ValueError(f"대상 랙이 매니페스트에 없다: {target}")
+            for r in targets:
+                self.power_scale[r] = value
+        else:
+            raise ValueError(f"알 수 없는 제어 종류: {kind}")
+        if hasattr(self.solver, "controls_changed"):
+            self.solver.controls_changed()
+        return {"type": "scenario", "event": "event", "name": self.sc.name, "kind": kind, "target": target, "value": value, "t": self.t_now}
+
     def _apply_events(self, t: float) -> Iterator[dict]:
+        self.t_now = t
         for i, e in enumerate(self.sc.events):
             if i in self._fired or t < e.t:
                 continue
             self._fired.add(i)
-            if e.kind == "crac_fan":
-                if e.target not in self.fan_ctl:
-                    raise SystemExit(f"시나리오 대상 CRAC가 매니페스트에 없다: {e.target}")
-                self.fan_ctl[e.target] = e.value
-            elif e.kind == "rack_power_scale":
-                for r in self._targets(e.target):
-                    if r not in self.power_scale:
-                        raise SystemExit(f"시나리오 대상 랙이 매니페스트에 없다: {r}")
-                    self.power_scale[r] = e.value
-            else:
-                raise SystemExit(f"알 수 없는 이벤트 종류: {e.kind}")
-            if hasattr(self.solver, "controls_changed"):
-                self.solver.controls_changed()
-            yield {"type": "scenario", "event": "event", "name": self.sc.name, "kind": e.kind, "target": e.target, "value": e.value, "t": e.t}
+            try:
+                ev = self.apply_control(e.kind, e.target, e.value)
+            except ValueError as exc:
+                raise SystemExit(f"시나리오 정의 오류: {exc}") from None
+            ev["t"] = e.t
+            yield ev
 
     def controls(self, t: float) -> Controls:
         cfg = self.cfg

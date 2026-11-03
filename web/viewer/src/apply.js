@@ -22,6 +22,10 @@ export function applyMessage(store, m) {
     case 'scenario':
       // 게이트웨이는 새 시나리오 시작에서 상태를 초기화하고 snapshot을 다시 보내지 않는다. 화면도 같이 비운다.
       if (m.event === 'start') store.clear();
+      if (m.event === 'event' && m.info) {
+        store.events.push({ t: m.t, ...m.info });
+        if (store.events.length > 100) store.events.shift();
+      }
       store.scenario = m.event === 'end' ? null : m.name;
       store.version++;
       break;

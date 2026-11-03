@@ -17,7 +17,7 @@ export function checkLiveUrl(text) {
 // ?scenario=fan_fault&t=60&live=ws://127.0.0.1:8080/ws
 export function parseParams(search, scenarioIds) {
   const p = new URLSearchParams(search);
-  const out = { scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true };
+  const out = { scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null };
   const sc = p.get('scenario');
   if (sc && scenarioIds.includes(sc)) out.scenario = sc;
   const t = Number(p.get('t'));
@@ -26,6 +26,12 @@ export function parseParams(search, scenarioIds) {
   if (live) {
     const r = checkLiveUrl(live);
     if (r.ok) out.live = r.url;
+    else out.liveError = r.reason;
+  }
+  const server = p.get('server');
+  if (server) {
+    const r = checkLiveUrl(server);
+    if (r.ok) out.server = r.url;
     else out.liveError = r.reason;
   }
   const view = p.get('view');

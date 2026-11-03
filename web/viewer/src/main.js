@@ -9,7 +9,7 @@ import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
 import { SimRunner } from './sim/runner.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
-import { parseParams } from './url.js';
+import { checkLiveUrl, parseParams } from './url.js';
 
 const BASE = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
@@ -76,6 +76,7 @@ async function main() {
   const state = {
     mode: 'rec', // rec | sim | live
     sim: null,
+    server: false, // 로컬 계산 서버에 조작을 보내는 라이브
     simScenario: params.scenario ?? 'normal',
     scenarioId: params.scenario ?? 'normal',
     player: null,
@@ -90,8 +91,9 @@ async function main() {
   const ui = new UI(store, {
     onSelect: (eq, focus) => selectEquipment(eq, focus),
     onView: (v) => setView(v),
-    onScenario: (id) => (state.mode === 'sim' ? startSim(id) : loadScenario(id, 0)),
+    onScenario: (id) => (state.server ? serverControl({ kind: 'scenario', name: ((state.simScenario = id), id) }) : state.mode === 'sim' ? startSim(id) : loadScenario(id, 0)),
     onMode: (m) => (m === 'sim' ? startSim(state.simScenario) : startRecording()),
+    onServer: (url) => connectServer(url),
     onPlay: () => state.player && ((state.player.playing = !state.player.playing), ui.renderTransport(state.player)),
     onSpeed: (x) => state.player && ((state.player.speed = x), ui.renderTransport(state.player)),
     onSeek: (t) => state.player && (state.player.seek(t), refresh()),
@@ -110,10 +112,11 @@ async function main() {
   const simList = Object.entries(SCENARIOS).map(([id, s]) => ({ id, title: s.title, note: s.description }));
   const panel = new SimPanel(
     {
-      onFan: (c, v) => state.sim?.setFan(c, v),
-      onPower: (t, v) => state.sim?.setPowerScale(t, v),
-      onSelectedPower: (r, v) => state.sim?.setPowerScale(r, v),
-      onReset: () => startSim(state.simScenario),
+      onFan: (c, v) => (state.server ? serverControl({ kind: 'crac_fan', target: c, value: v }) : state.sim?.setFan(c, v)),
+      onPower: (t, v) => (state.server ? serverControl({ kind: 'rack_power_scale', target: t, value: v }) : state.sim?.setPowerScale(t, v)),
+      onSelectedPower: (r, v) => (state.server ? serverControl({ kind: 'rack_power_scale', target: r, value: v }) : state.sim?.setPowerScale(r, v)),
+      onReset: () => (state.server ? serverControl({ kind: 'scenario', name: state.simScenario }) : startSim(state.simScenario)),
+      onSpeed: (x) => serverControl({ kind: 'speed', value: x }),
     },
     prettyName,
   );
@@ -127,6 +130,8 @@ async function main() {
       state.live = null;
     }
     state.mode = 'sim';
+    state.server = false;
+    panel.setServerMode(false);
     state.simScenario = id;
     if (!state.sim) {
       const engine = new SimEngine({ sensors, ...layout, seed: 7 });
@@ -232,22 +237,78 @@ async function main() {
       state.live = null;
     }
     state.mode = 'rec';
+    state.server = false;
+    panel.setServerMode(false);
     panel.show(false);
     store.clear();
     ui.setMode('rec', '녹화 재생 (실시간 아님)');
     await loadScenario(state.scenarioId, params.t);
   }
 
-  function startLive(url) {
+  // 서버에 조작을 보낸다. 연결이 안 되어 있으면 화면에 알린다.
+  function serverControl(c) {
+    if (!state.live?.send({ type: 'control', ...c })) {
+      badge.textContent = '서버에 연결되어 있지 않아 조작을 보내지 못했다';
+      return false;
+    }
+    return true;
+  }
+
+  // 서버가 알려 준 조작 상태(snapshot의 controls와 그 뒤의 이벤트)로 슬라이더를 맞춘다. 서버가 기준이다.
+  const serverModel = { fan: {}, powerScale: {}, racks: layout.racks };
+  let ctlSeen;
+  let evSeen = 0;
+  function resetServerModel() {
+    const c = store.controls;
+    serverModel.fan = Object.fromEntries(layout.cracs.map((x) => [x, c?.fan?.[x] ?? 1]));
+    serverModel.powerScale = Object.fromEntries(layout.racks.map((r) => [r.name, c?.powerScale?.[r.name] ?? 1]));
+    evSeen = 0;
+  }
+  resetServerModel();
+  function syncServerPanel() {
+    if (store.controls !== ctlSeen || store.events.length < evSeen) {
+      ctlSeen = store.controls;
+      resetServerModel();
+    }
+    for (; evSeen < store.events.length; evSeen++) {
+      const e = store.events[evSeen];
+      if (e.kind === 'crac_fan' && e.target in serverModel.fan) serverModel.fan[e.target] = e.value;
+      else if (e.kind === 'rack_power_scale') {
+        const names = e.target.startsWith('row:') ? layout.racks.filter((r) => r.row === Number(e.target.slice(4))).map((r) => r.name) : [e.target];
+        for (const n of names) if (n in serverModel.powerScale) serverModel.powerScale[n] = e.value;
+      }
+    }
+    panel.syncFromEngine(serverModel);
+    panel.renderLog(store.events);
+    panel.setSelected(state.selected, serverModel);
+  }
+
+  // 화면의 "로컬 서버" 단추와 주소 매개변수 server=가 부른다. 주소가 틀리면 이유 문장을, 맞으면 true를 돌려준다.
+  function connectServer(text) {
+    const r = checkLiveUrl(text);
+    if (!r.ok) return r.reason;
+    state.mode = 'live';
+    startLive(r.url, true);
+    return true;
+  }
+
+  function startLive(url, control = false) {
+    if (state.live) state.live.stop();
     state.player = null;
-    panel.show(false);
+    state.server = control;
+    panel.show(control);
+    panel.setServerMode(control);
     store.clear();
-    ui.setMode('connecting', '라이브 연결 중');
-    ui.setScenarioCard('라이브', '게이트웨이가 보내는 센서 값을 그대로 보여 준다.', [], false);
+    resetServerModel();
+    ui.setMode('connecting', control ? '로컬 서버 연결 중' : '라이브 연결 중');
+    ui.setScenarioCard(control ? '로컬 서버' : '라이브', control ? '이 컴퓨터의 계산 서버가 실제 시간으로 계산한 값을 보여 준다. 시나리오와 조작은 서버로 전달된다.' : '게이트웨이가 보내는 센서 값을 그대로 보여 준다.', [], false);
+    if (control) ui.setScenarios(simList, state.simScenario);
     state.live = new LiveClient(url, store, {
       onState: (s, c) => {
-        const text = { connecting: '라이브 연결 중', open: '라이브 연결됨', closed: `연결 끊김, ${Math.round(c.retryInMs / 1000)}초 뒤 다시 시도`, idle: '라이브 중지' }[s];
+        const label = control ? '로컬 서버' : '라이브';
+        const text = { connecting: `${label} 연결 중`, open: `${label} 연결됨`, closed: `연결 끊김, ${Math.round(c.retryInMs / 1000)}초 뒤 다시 시도`, idle: `${label} 중지` }[s];
         ui.setMode(s === 'open' ? 'open' : s === 'closed' ? 'closed' : 'connecting', text);
+        if (control) ui.setControlMode(true);
         ui.setLiveText(`${url}  ${text}`);
       },
     });
@@ -263,6 +324,7 @@ async function main() {
     ui.renderSummary(summarize(store, rackKeys), store.alarmLog);
     ui.renderAlarms(sensorInfo, state.mode);
     if (state.mode === 'sim' && state.sim) panel.renderLog(state.sim.log);
+    if (state.server) syncServerPanel();
     ui.renderDetail(state.view);
     if (flow.stage === 'exterior') ui.renderExterior(summarize(store, rackKeys));
   }
@@ -359,7 +421,8 @@ async function main() {
     } else if (state.live) {
       if (state.live.flush()) refresh();
       const age = state.live.lastMessageAt ? Math.round((Date.now() - state.live.lastMessageAt) / 1000) : null;
-      if (state.live.state === 'open') ui.setLiveText(`${state.live.url}  마지막 수신 ${age === null ? '–' : `${age}초 전`}, 버린 메시지 ${state.live.dropped}건`);
+      const err = state.live.lastError && Date.now() - state.live.lastError.at < 6000 ? ` / 서버가 거절함: ${state.live.lastError.message}` : '';
+      if (state.live.state === 'open') ui.setLiveText(`${state.live.url}  마지막 수신 ${age === null ? '–' : `${age}초 전`}, 버린 메시지 ${state.live.dropped}건${err}`);
     }
     // 값이 바뀌었는데 아직 반영하지 않았다면(시간 막대 밖의 이동, 라이브 등) 화면 조각을 갱신한다. 라이브는 초당 4번까지만.
     if (store.version !== lastRefresh.version && now - lastRefresh.at > 250) refresh();
@@ -369,7 +432,10 @@ async function main() {
 
   setView(state.view);
   if (params.liveError) console.warn(`라이브 주소를 쓰지 않는다: ${params.liveError}`);
-  if (params.live) {
+  if (params.server) {
+    state.mode = 'live';
+    startLive(params.server, true);
+  } else if (params.live) {
     state.mode = 'live';
     startLive(params.live);
   } else if (params.mode === 'sim') {

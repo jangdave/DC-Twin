@@ -16,6 +16,7 @@
     <div id="mode-group" role="group" aria-label="보기 방식">
       <button type="button" data-mode="rec" class="on">녹화 재생</button>
       <button type="button" data-mode="sim">직접 시뮬레이션</button>
+      <button type="button" data-mode="server">로컬 서버</button>
     </div>
     <label class="field">시나리오
       <select id="scenario-select" aria-label="시나리오"></select>
@@ -79,7 +80,11 @@
       </section>
       <section id="sim-panel" hidden aria-label="직접 시뮬레이션 조작">
         <h2>직접 시뮬레이션</h2>
-        <p class="muted sim-note">간이 모델(1차 지연 식)을 이 브라우저에서 계산한 값이다. 보정 모델(AI)은 쓰지 않아 신뢰 막대가 나오지 않는다.</p>
+        <p class="muted sim-note" id="sim-note">간이 모델(1차 지연 식)을 이 브라우저에서 계산한 값이다. 보정 모델(AI)은 쓰지 않아 신뢰 막대가 나오지 않는다.</p>
+        <div id="sim-speed" hidden role="group" aria-label="서버 속도">
+          <span class="muted">서버 속도</span>
+          <button type="button" data-xspeed="0.5">0.5x</button><button type="button" data-xspeed="1" class="on">1x</button><button type="button" data-xspeed="2">2x</button><button type="button" data-xspeed="5">5x</button><button type="button" data-xspeed="10">10x</button>
+        </div>
         <h3>CRAC 팬 속도</h3>
         <div id="sim-fans"></div>
         <h3>줄별 랙 전력</h3>
@@ -136,6 +141,19 @@
     </div>
     <p id="disclaimer">시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않는다. 가상 시설이다.</p>
   </footer>
+
+  <dialog id="server-dialog">
+    <h2>로컬 계산 서버에 연결</h2>
+    <p>이 컴퓨터에서 계산 서버를 먼저 실행하세요. 서버가 계산한 값이 이 화면에 실시간으로 나오고, 슬라이더 조작이 서버로 전달됩니다.</p>
+    <pre><code>cd sim/sensors
+uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ../out/sensor_manifest.json --solver l0</code></pre>
+    <p class="muted">solver를 l2로 바꾸면 보정 모델(AI)의 90% 구간과 신뢰 막대도 나옵니다(Warp 환경 필요). 이 컴퓨터의 ws://와 wss://만 연결할 수 있습니다.</p>
+    <form id="server-form" method="dialog">
+      <label class="field">주소 <input id="server-url" type="text" value="ws://127.0.0.1:8765/ws" size="30" autocomplete="off" /></label>
+      <p class="muted" id="server-error" hidden></p>
+      <div><button type="button" id="server-connect">연결</button> <button value="cancel">취소</button></div>
+    </form>
+  </dialog>
 
   <dialog id="help-dialog">
     <h2>보는 방법</h2>

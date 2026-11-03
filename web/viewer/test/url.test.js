@@ -34,7 +34,7 @@ describe('주소 매개변수', () => {
     expect(p.liveError).toBeTruthy();
   });
   it('아무것도 없으면 기본값', () => {
-    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true });
+    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null });
   });
   it('stage는 exterior와 hall만 받는다', () => {
     expect(parseParams('?stage=hall', ids).stage).toBe('hall');
@@ -49,5 +49,11 @@ describe('주소 매개변수', () => {
   it('models=0이면 장비 모양을 끈다', () => {
     expect(parseParams('?models=0', ids).models).toBe(false);
     expect(parseParams('?models=1', ids).models).toBe(true);
+  });
+  it('server는 이 컴퓨터의 ws://와 wss://만 받는다', () => {
+    expect(parseParams('?server=ws://127.0.0.1:8765/ws', ids).server).toBe('ws://127.0.0.1:8765/ws');
+    const bad = parseParams('?server=ws://example.com/ws', ids);
+    expect(bad.server).toBeNull();
+    expect(bad.liveError).toContain('127.0.0.1');
   });
 });
