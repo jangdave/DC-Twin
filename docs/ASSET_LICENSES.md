@@ -34,3 +34,7 @@
 
 ## 웹 도심 배경 (2026-11-03)
 - `web/viewer/src/city.js`가 상자 건물, 도로, 가로수, 차량, 창 무늬(캔버스)를 코드로 만든다. 외부 에셋과 외부 이미지는 없다. 가상의 도시이며 실제 지역을 본뜨지 않았다.
+
+## 웹 글꼴과 디자인 토큰 (2026-11-03)
+- `web/viewer/public/fonts/subset/`: Pretendard Variable 동적 부분 집합(92조각). SIL Open Font License 1.1, 저작권 Kil Hyung-jin 등. 원본 https://github.com/orioncactus/pretendard (npm `pretendard@1.3.9`). 라이선스 전문은 `web/viewer/public/fonts/LICENSE-Pretendard.txt`.
+- `web/viewer/src/tokens.css`: Figma "[Platform] DT Design System"의 변수(색, 글자 크기, 모서리, 간격, 그림자) 값. 디자인 시스템 파일의 아이콘, 이미지, 회사 로고와 이름은 가져오지 않았다.
