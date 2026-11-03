@@ -58,6 +58,15 @@ describe('Airflow', () => {
     }
   });
 
+  it('차가운 공기 색은 가까운 랙의 입구 온도를 따라간다', () => {
+    const a = fake();
+    a._refreshColors();
+    const hot = [...a.coldColor[0]];
+    a.store = { metric: (k, m) => ({ value: m === 'temp_in' ? 18 : 35 }) };
+    a._refreshColors();
+    expect(a.coldColor[0][0]).toBeLessThan(hot[0]); // 입구 온도가 낮으면 덜 붉다
+  });
+
   it('랙을 지난 입자는 랙 번호를 기억한다', () => {
     const a = fake();
     for (let i = 0; i < 400; i++) a.step(0.05, i * 0.05);

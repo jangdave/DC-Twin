@@ -1,6 +1,7 @@
 """건물 외관(building_exterior.blend)을 웹 보기용 .glb로 내보낸다 (docs/22).
 
-텍스처는 넣지 않는다(4K 원본 약 230 MB). 재질 이름마다 정한 색, 금속성, 거칠기, 투명도만 쓴다.
+텍스처는 기본색(BaseColor) 한 장만 1K(1024)로 줄여 넣는다(4K 원본 4종은 약 230 MB). 거칠기, 법선, 금속 지도는 버리고
+재질 이름마다 정한 값을 쓴다. 나머지 재질은 정한 색, 금속성, 거칠기, 투명도만 쓴다. 메시는 Draco로 압축한다.
 모델 크기는 cm 숫자 그대로 나가므로 뷰어가 0.01배로 줄여 쓴다.
 
     blender -b blender/building_exterior.blend --python blender/scripts/export_building_glb.py -- --out web/viewer/public/models
@@ -32,6 +33,10 @@ LOOK = {
 FALLBACK = ((0.3, 0.3, 0.3), 0.2, 0.7, 1.0)
 
 
+TEX_SIZE = 1024
+KEEP_BASECOLOR = {"M_Asphalt", "M_BldgConcrete", "M_BldgPanelMetal", "M_BldgRoof"}
+
+
 def flatten_materials() -> list[str]:
     unknown = []
     for m in bpy.data.materials:
@@ -43,7 +48,14 @@ def flatten_materials() -> list[str]:
         if m.name not in LOOK:
             unknown.append(m.name)
         color, metal, rough, alpha = LOOK.get(m.name, FALLBACK)
+        keep = m.name in KEEP_BASECOLOR
         for name in ("Base Color", "Metallic", "Roughness", "Normal", "Emission Color", "Emission Strength", "Alpha"):
+            if keep and name == "Base Color":
+                for link in bsdf.inputs[name].links:
+                    img = link.from_node.image if link.from_node.type == "TEX_IMAGE" else None
+                    if img and max(img.size) > TEX_SIZE:
+                        img.scale(TEX_SIZE, TEX_SIZE)
+                continue
             inp = bsdf.inputs.get(name)
             for link in list(inp.links) if inp else []:
                 m.node_tree.links.remove(link)
@@ -67,7 +79,13 @@ def main() -> None:
     bpy.ops.export_scene.gltf(
         filepath=str(path),
         export_format="GLB",
-        export_image_format="NONE",
+        export_image_format="JPEG",
+        export_jpeg_quality=80,
+        export_draco_mesh_compression_enable=True,
+        export_draco_mesh_compression_level=6,
+        export_draco_position_quantization=14,
+        export_draco_normal_quantization=10,
+        export_draco_texcoord_quantization=12,
         export_materials="EXPORT",
         export_apply=True,
         export_yup=True,

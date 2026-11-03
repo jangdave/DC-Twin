@@ -98,7 +98,8 @@ export function mergeByMaterial(root, scale) {
     if (!o.isMesh) return;
     bake.makeScale(scale, scale, scale).multiply(o.matrixWorld);
     let g = o.geometry.clone().applyMatrix4(bake);
-    for (const a of ['uv', 'uv1', 'uv2', 'color', 'tangent']) g.deleteAttribute(a);
+    const mt = Array.isArray(o.material) ? o.material[0] : o.material;
+    for (const a of mt.map ? ['uv1', 'uv2', 'color', 'tangent'] : ['uv', 'uv1', 'uv2', 'color', 'tangent']) g.deleteAttribute(a); // 기본색 그림이 있는 재질만 uv를 둔다
     g = g.index ? g.toNonIndexed() : g;
     const mat = Array.isArray(o.material) ? o.material[0] : o.material;
     if (!byMat.has(mat)) byMat.set(mat, []);
@@ -110,6 +111,7 @@ export function mergeByMaterial(root, scale) {
     merged.computeBoundingSphere();
     merged.computeBoundingBox();
     const mesh = new THREE.Mesh(merged, mat);
+    if (mat.map) mat.map.anisotropy = 8;
     if (mat.opacity < 1) {
       mat.transparent = true;
       mat.depthWrite = false;
