@@ -174,7 +174,7 @@ async function main() {
       state.sim = new SimRunner(engine, store, { onEvent: () => panel.syncFromEngine(engine) });
     }
     state.player = state.sim;
-    ui.setMode('sim', '직접 시뮬레이션 (이 브라우저의 간이 모델, 실제 계산이 아님)');
+    ui.setMode('sim', '직접 시뮬레이션 · 간이 모델');
     ui.setScenarios(simList, id);
     ui.setScenarioCard(SCENARIOS[id].title, SCENARIOS[id].description, SCENARIOS[id].events, false);
     panel.show(true);
@@ -277,7 +277,7 @@ async function main() {
     panel.setServerMode(false);
     panel.show(false);
     store.clear();
-    ui.setMode('rec', '녹화 재생 (실시간 아님)');
+    ui.setMode('rec', '녹화 재생 · 실시간 아님');
     await loadScenario(state.scenarioId, params.t);
   }
 

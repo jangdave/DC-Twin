@@ -33,7 +33,9 @@ export class UI {
     this.selected = null;
     this._lastAlarmCount = -1;
     this._lastDetailKey = '';
+    this.tab = 'summary';
     this.bind();
+    this.initTabs();
     this.fillHelp();
   }
 
@@ -85,6 +87,41 @@ export class UI {
       else $('server-dialog').close();
     });
     $('server-url').addEventListener('keydown', (e) => e.key === 'Enter' && (e.preventDefault(), $('server-connect').click()));
+  }
+
+  // ---- 오른쪽 패널의 탭: 요약 / 장비 / 조작(시뮬레이션, 서버일 때만) / 알람 ----
+  initTabs() {
+    const tabs = [...document.querySelectorAll('#side-tabs [data-tab]')];
+    for (const t of tabs) {
+      t.addEventListener('click', () => this.showTab(t.dataset.tab));
+      t.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        const open = tabs.filter((x) => !x.hidden);
+        const i = open.indexOf(t) + (e.key === 'ArrowRight' ? 1 : -1);
+        const next = open[(i + open.length) % open.length];
+        next.focus();
+        this.showTab(next.dataset.tab);
+        e.preventDefault();
+      });
+    }
+    // 조작 패널이 나타나면 "조작" 탭을 열고, 사라지면 요약으로 돌아간다
+    new MutationObserver(() => {
+      const shown = !$('sim-panel').hidden;
+      $('tab-control').hidden = !shown;
+      if (shown) this.showTab('control');
+      else if (this.tab === 'control') this.showTab('summary');
+    }).observe($('sim-panel'), { attributes: true, attributeFilter: ['hidden'] });
+    this.showTab('summary');
+  }
+
+  showTab(name) {
+    this.tab = name;
+    for (const t of document.querySelectorAll('#side-tabs [data-tab]')) {
+      const on = t.dataset.tab === name;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      $(`pane-${t.dataset.tab}`).hidden = !on;
+    }
   }
 
   fillHelp() {
@@ -144,6 +181,7 @@ export class UI {
     const ext = stage === 'exterior';
     $('exterior-card').hidden = !ext;
     $('stage-tools').hidden = ext;
+    $('legend').hidden = ext;
     $('back-btn').hidden = ext;
     $('stage').dataset.stage = stage;
     $('canvas').setAttribute('aria-label', ext ? '데이터센터 건물 외관. 건물을 누르거나 Enter를 누르면 안으로 들어간다' : '데이터센터 3D 장면. 방향키로 랙을 선택할 수 있다');
@@ -245,6 +283,8 @@ export class UI {
     list.replaceChildren();
     $('alarm-empty').hidden = log.length > 0;
     $('alarm-count').textContent = log.length ? `(${log.length}건)` : '';
+    $('tab-alarm-count').textContent = String(Math.min(log.length, 99));
+    $('tab-alarm-count').hidden = log.length === 0;
     for (const a of [...log].reverse().slice(0, 60)) {
       const info = sensorInfo.get(a.sensorId);
       if (!info) continue;
@@ -267,6 +307,9 @@ export class UI {
     if (this.selected !== equipment) this.metricTab = null;
     this.selected = equipment;
     this._lastDetailKey = '';
+    // 장비를 고르면 "장비" 탭을 보여 준다(조작 중이면 그대로 둔다). 선택을 풀면 요약으로 돌아간다.
+    if (equipment && (this.tab === 'summary' || this.tab === 'alarms')) this.showTab('detail');
+    else if (!equipment && this.tab === 'detail') this.showTab('summary');
   }
 
   renderDetail(viewKey) {

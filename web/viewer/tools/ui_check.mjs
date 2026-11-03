@@ -94,6 +94,7 @@ await page.click('#play-btn');
 ok('FR-50 재생 버튼으로 일시정지', !(await page.evaluate(() => window.__viewer.state.player.playing)));
 
 // 4) 시간 막대로 이동했을 때 알람 목록(FR-11, 12, 40)
+await page.evaluate(() => document.getElementById('tab-alarms').click());
 await page.evaluate(() => window.__viewer.state.player.seek(200));
 await sleep(200);
 const alarms200 = await page.$$eval('#alarm-list li', (l) => l.length);
@@ -248,6 +249,51 @@ const midInfo = await pm.evaluate(() => {
 });
 ok('Q 자동 시험 브라우저는 보통(도시 블록 48, 차량 60, 그림자)', midInfo.tier === 'mid' && midInfo.blocks === 48 && midInfo.cars && midInfo.shadow, JSON.stringify(midInfo));
 await pm.close();
+// UX 구조: 오른쪽 패널 탭, 범례와 상태 표시의 위치, 상단 높이
+const pu = await browser.newPage();
+await pu.setViewport({ width: 1440, height: 860 });
+await pu.goto(`${base}?scenario=cooling_failure&t=200&stage=hall`, { waitUntil: 'networkidle0' });
+await pu.waitForFunction(() => window.__viewer?.state.player, { timeout: 30000 });
+const ux1 = await pu.evaluate(() => {
+  const sel = (id) => document.getElementById(id);
+  const tabs = [...document.querySelectorAll('#side-tabs [data-tab]')].filter((t) => !t.hidden).map((t) => t.dataset.tab);
+  const active = () => [...document.querySelectorAll('#side-tabs [aria-selected="true"]')].map((t) => t.dataset.tab);
+  const out = { tabs, first: active(), header: sel('top').getBoundingClientRect().height, legendInStage: sel('stage').contains(sel('legend')), badgeInStage: sel('stage').contains(sel('mode-badge')), scenarioInSummary: sel('pane-summary').contains(sel('scenario-select')) };
+  out.paneCount = document.querySelectorAll('.pane:not([hidden])').length;
+  return out;
+});
+ok('UX 탭은 요약, 장비, 알람(조작은 숨김)이고 처음에는 요약만 열림', JSON.stringify(ux1.tabs) === '["summary","detail","alarms"]' && JSON.stringify(ux1.first) === '["summary"]' && ux1.paneCount === 1, JSON.stringify(ux1));
+ok('UX 상단은 한 줄(64px 이하), 범례와 상태 표시는 3D 화면 안, 시나리오 선택은 요약 탭 안', ux1.header <= 64 && ux1.legendInStage && ux1.badgeInStage && ux1.scenarioInSummary, JSON.stringify(ux1));
+const badgeN = await pu.$eval('#tab-alarm-count', (e) => ({ hidden: e.hidden, n: e.textContent }));
+ok('UX 알람 탭에 알람 개수 표시', !badgeN.hidden && Number(badgeN.n) >= 1, JSON.stringify(badgeN));
+await pu.evaluate(() => window.__viewer.selectEquipment('rack_21', false));
+await sleep(300);
+ok('UX 장비를 고르면 "장비" 탭이 열리고 고른 것을 풀면 요약으로 돌아감', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'detail');
+await pu.evaluate(() => window.__viewer.selectEquipment(null, false));
+await sleep(200);
+ok('UX 선택을 풀면 요약으로 돌아감', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'summary');
+await pu.focus('#tab-summary');
+await pu.keyboard.press('ArrowRight');
+ok('UX 탭은 좌우 화살표로 옮겨 감', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'detail');
+await pu.evaluate(() => document.querySelector('#mode-group [data-mode="sim"]').click());
+await sleep(400);
+const ux2 = await pu.evaluate(() => ({ control: !document.getElementById('tab-control').hidden, active: document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab }));
+ok('UX 직접 시뮬레이션이면 "조작" 탭이 나타나 열림', ux2.control && ux2.active === 'control', JSON.stringify(ux2));
+await pu.evaluate(() => window.__viewer.selectEquipment('rack_21', false));
+await sleep(300);
+ok('UX 조작 중에 장비를 골라도 조작 탭에 머무름', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'control');
+await pu.evaluate(() => document.querySelector('#mode-group [data-mode="rec"]').click());
+await sleep(400);
+const ux3 = await pu.evaluate(() => ({ control: document.getElementById('tab-control').hidden, active: document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab }));
+ok('UX 녹화로 돌아가면 조작 탭이 사라지고 요약으로 감', ux3.control && ux3.active !== 'control', JSON.stringify(ux3));
+await pu.close();
+const pmo = await browser.newPage();
+await pmo.setViewport({ width: 390, height: 800, deviceScaleFactor: 2 });
+await pmo.goto(`${base}?stage=hall`, { waitUntil: 'networkidle0' });
+await pmo.waitForFunction(() => window.__viewer?.state.player, { timeout: 30000 });
+const mo = await pmo.evaluate(() => ({ header: document.getElementById('top').getBoundingClientRect().height, sw: document.documentElement.scrollWidth, iw: innerWidth, tabs: document.getElementById('side-tabs').getBoundingClientRect().width, modeScroll: getComputedStyle(document.getElementById('mode-group')).overflowX }));
+ok('UX 좁은 화면(390px): 상단 150px 이하, 가로 스크롤 없음', mo.header <= 150 && mo.sw <= mo.iw, JSON.stringify(mo));
+await pmo.close();
 // 건물 모델과 공기 흐름
 const p7 = await browser.newPage();
 await p7.goto(`${base}?scenario=cooling_failure&t=30&stage=exterior`, { waitUntil: 'networkidle0' });
@@ -319,6 +365,7 @@ ok('SIM CRAC_02를 끄면 가장 높은 입구 온도가 3도 이상 오름', af
 await sleep(700); // 화면 조각은 0.25초 간격으로 갱신된다
 ok('SIM 알람이 생기고 조작 기록에 남음', after.alarms > 0 && (await p5.$$eval('#sim-log li', (l) => l.length)) >= 1);
 await sleep(600);
+await p5.evaluate(() => document.getElementById('tab-alarms').click());
 ok('SIM 알람 목록이 화면에 나옴', (await p5.$$eval('#alarm-list li', (l) => l.length)) > 0);
 await p5.evaluate(() => window.__viewer.selectEquipment('rack_05', true));
 await sleep(200);
