@@ -31,3 +31,6 @@
 - `web/viewer/public/models/building.glb`: `blender/building_exterior.blend`(직접 모델링)에서 `blender/scripts/export_building_glb.py`로 내보낸 건물과 옥외 설비. 콘크리트, 외벽 패널, 지붕, 아스팔트의 기본색 그림을 1K로 줄여 넣었다. 원본은 `blender/textures/building/`이고, 출처는 직접 절차적으로 만든 것(`blender/scripts/make_building_textures.py`)과 ambientCG CC0 자료(`blender/textures/cc0_sources.json`)이다. Draco 압축 해제기(`public/draco/`)는 three.js 예제의 파일이며 MIT 라이선스다.
 - 하늘, 구름, 먼 언덕, 풀밭은 `web/viewer/src/env.js`가 코드로 만든다. 외부 이미지를 쓰지 않는다.
 - `web/viewer/public/data/flow.bin`, `flow.json`: 우리 솔버(`experiments/omniverse_probe/hall60_sim.py`)가 홀 장면에서 계산해 `export_web_flow.py`로 내보낸 속도장. 외부 데이터 없음.
+
+## 웹 도심 배경 (2026-11-03)
+- `web/viewer/src/city.js`가 상자 건물, 도로, 가로수, 차량, 창 무늬(캔버스)를 코드로 만든다. 외부 에셋과 외부 이미지는 없다. 가상의 도시이며 실제 지역을 본뜨지 않았다.

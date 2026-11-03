@@ -70,16 +70,16 @@ export function makeSky() {
 }
 
 // 먼 언덕: 링 모양 땅을 잡음으로 올려 지평선에 윤곽을 만든다. 풀밭 색과 안개에 섞인다.
-export function makeHills(color) {
-  const geo = new THREE.RingGeometry(260, 700, 96, 8);
+export function makeHills(color, inner = 260, outer = 700, amp = 14) {
+  const geo = new THREE.RingGeometry(inner, outer, 96, 8);
   geo.rotateX(-Math.PI / 2);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i);
     const r = Math.hypot(x, z);
     const a = Math.atan2(z, x);
-    const t = (r - 260) / 440;
-    const h = (Math.sin(a * 3.0) * 0.5 + Math.sin(a * 7.0 + 1.3) * 0.3 + Math.sin(a * 13.0 + 0.4) * 0.2 + 1.0) * 14 * Math.sin(Math.min(t * 1.6, 1) * Math.PI * 0.5);
+    const t = (r - inner) / (outer - inner);
+    const h = (Math.sin(a * 3.0) * 0.5 + Math.sin(a * 7.0 + 1.3) * 0.3 + Math.sin(a * 13.0 + 0.4) * 0.2 + 1.0) * amp * Math.sin(Math.min(t * 1.6, 1) * Math.PI * 0.5);
     p.setY(i, h);
   }
   geo.computeVertexNormals();

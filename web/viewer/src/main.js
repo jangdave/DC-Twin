@@ -1,5 +1,6 @@
 // 시작과 화면 조립 (docs/18 8.1장). 입력(녹화 또는 라이브)은 같은 저장소를 갱신하고 화면은 저장소만 읽는다.
 import { CommandQueue, FlowState, summarize } from './flow.js';
+import { detectQuality, browserEnv, lowerTier, SETTINGS } from './quality.js';
 import { HallScene, VIEWS } from './scene.js';
 import { LiveClient } from './live.js';
 import { parseRecording, RecordingPlayer } from './recording.js';
@@ -54,7 +55,10 @@ async function main() {
   const sensorInfo = store.byId;
   const flow = new FlowState(params.stage ?? 'exterior');
   const rackKeys = sceneData.racks.map((r) => r.name.toLowerCase());
-  const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage });
+  const tier = detectQuality(params.q, browserEnv());
+  const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage, tier });
+  const qsel = document.getElementById('quality-sel');
+  if (qsel) qsel.value = params.q ?? 'auto';
 
   scene.setSky(params.sky);
   if (params.sky === 'dusk') {
@@ -72,20 +76,32 @@ async function main() {
     .catch((e) => console.warn('공기 흐름을 받지 못해 생략한다:', e.message));
 
   // 장비 모양(glb)은 화면이 뜬 뒤에 받는다. 실패하면 단순 상자로 계속 쓴다.
-  scene.useModels = params.models;
-  let modelsState = params.models ? 'loading' : 'off';
-  if (params.models) {
-    scene
+  // 낮은 화질(모바일, 저사양)에서는 랙 60기 모델(삼각형 약 27만 개)을 자동으로 받지 않고, 단추를 누르면 받는다.
+  const autoModels = params.models && SETTINGS[tier].hallModels;
+  scene.useModels = autoModels;
+  let modelsState = autoModels ? 'loading' : 'off';
+  let modelsPromise = null;
+  const modelBtn = document.getElementById('model-btn');
+  const ensureModels = () => {
+    modelsPromise ??= scene
       .loadModels(BASE)
       .then(() => {
         modelsState = 'ready';
-        document.getElementById('model-btn').hidden = false;
-        document.getElementById('model-btn').setAttribute('aria-pressed', 'true');
+        modelBtn.hidden = false;
       })
       .catch((e) => {
         modelsState = 'failed';
+        modelsPromise = null;
         console.warn('장비 모양을 받지 못해 상자로 보여 준다:', e.message);
       });
+    return modelsPromise;
+  };
+  if (autoModels) {
+    ensureModels().then(() => modelBtn.setAttribute('aria-pressed', 'true'));
+  } else if (params.models) {
+    modelBtn.hidden = false; // 낮은 화질: 눌러서 받는다
+    modelBtn.setAttribute('aria-pressed', 'false');
+    modelsState = 'deferred';
   }
 
   const state = {
@@ -115,7 +131,10 @@ async function main() {
     onLoop: (b) => state.player && (state.player.loop = b),
     onPreset: (p) => scene.setPreset(p),
     onLabels: (b) => scene.setLabels(b),
-    onModels: (b) => scene.setModels(b),
+    onModels: async (b) => {
+      if (b && !scene.modelsReady) await ensureModels();
+      scene.setModels(b);
+    },
     onFlow: (b) => scene.setAirflow(b),
     onSky: (n) => scene.setSky(n),
     onBackToRec: () => startRecording(),
@@ -423,8 +442,31 @@ async function main() {
   new ResizeObserver(resize).observe(stage);
   resize();
 
+  // 프레임이 낮으면(처음 몇 초 평균 22 미만) 화질을 한 단계 낮춘다. 주소에 q가 있거나 자동 시험 브라우저면 하지 않는다.
+  const guard = { on: !params.q && !navigator.webdriver, frames: 0, t0: 0, tier };
+  function perfGuard(now) {
+    if (!guard.on) return;
+    if (!guard.t0) guard.t0 = now + 2500; // 처음 2.5초는 모델을 받느라 느리니 건너뛴다
+    if (now < guard.t0) return;
+    guard.frames++;
+    if (now - guard.t0 < 3000) return;
+    const fps = (guard.frames * 1000) / (now - guard.t0);
+    const lower = lowerTier(guard.tier);
+    guard.frames = 0;
+    guard.t0 = now + 1500;
+    if (fps < 22 && lower) {
+      guard.tier = lower;
+      scene.applyQuality(lower);
+      if (qsel) qsel.title = `프레임이 낮아 화질을 ${lower}로 낮췄다`;
+      console.info(`프레임 ${fps.toFixed(0)}fps: 화질을 ${lower}로 낮춤`);
+    } else {
+      guard.on = false; // 충분하면 끝
+    }
+  }
+
   let last = performance.now();
   function frame(now) {
+    perfGuard(now);
     const dt = Math.min((now - last) / 1000, 0.25);
     last = now;
     if ((state.mode === 'rec' || state.mode === 'sim') && state.player) {

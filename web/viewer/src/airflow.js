@@ -40,6 +40,7 @@ export class Airflow {
     this.cracKeys = cracKeys;
     this.rng = rng;
     this.count = count;
+    this.active = count; // 계산하고 그리는 입자 수. 화질을 낮추면 줄어든다
     this.nField = flow.meta.fields.length;
     this.fan = new Array(this.nField - 1).fill(1);
     this.u = new Float32Array(this.nx * this.ny * this.nz * 3);
@@ -186,7 +187,7 @@ export class Airflow {
       this._lastColorAt = now;
     }
     const u = [0, 0, 0];
-    for (let p = 0; p < this.count; p++) {
+    for (let p = 0; p < this.active; p++) {
       const o = p * 3;
       this.age[p] += dt;
       const sp = this.sample(this.pos[o], this.pos[o + 1], this.pos[o + 2], u);
@@ -212,7 +213,7 @@ export class Airflow {
   _write() {
     const position = this.geo.attributes.position.array;
     const color = this.geo.attributes.color.array;
-    for (let p = 0; p < this.count; p++) {
+    for (let p = 0; p < this.active; p++) {
       const o = p * 3;
       const q = p * 6;
       // 장면(x, y, z) -> three(x, z, -y). 머리는 지금 위치, 꼬리는 속도 반대쪽
@@ -246,6 +247,11 @@ export class Airflow {
     }
     this.geo.attributes.position.needsUpdate = true;
     this.geo.attributes.color.needsUpdate = true;
+  }
+
+  setActive(n) {
+    this.active = Math.min(this.count, n);
+    this.geo.setDrawRange(0, this.active * 2);
   }
 
   dispose() {
