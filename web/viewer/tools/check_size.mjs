@@ -26,8 +26,9 @@ const sizes = new Map();
 for (const f of files) sizes.set(path.relative(DIST, f).replace(/\\/g, '/'), gzipSync(await readFile(f)).length);
 
 // 첫 로딩: 화면 코드(assets/*, index.html), 장면, 센서 목록, 시나리오 목록, 처음에 보이는 시나리오(normal)
+const onDemand = (k) => k.startsWith('fonts/subset/'); // 글자 범위별 조각: 화면에 나온 글자의 조각만 받으므로 합계에서 뺀다(조각 하나는 200 KB 이하)
 const later = (k) => k.startsWith('models/') || k === 'data/flow.bin'; // 화면이 뜬 뒤에 받는 파일
-const all = [...sizes].filter(([k]) => !k.startsWith('data/rec/') || k === 'data/rec/normal.json');
+const all = [...sizes].filter(([k]) => (!k.startsWith('data/rec/') || k === 'data/rec/normal.json') && !onDemand(k));
 const first = all.filter(([k]) => !later(k));
 const allTotal = all.reduce((a, [, v]) => a + v, 0);
 const firstTotal = first.reduce((a, [, v]) => a + v, 0);
@@ -44,6 +45,10 @@ if (firstTotal > FIRST_LOAD_LIMIT) {
   bad = true;
 }
 for (const [k, v] of sizes) {
+  if (onDemand(k) && v > 200 * 1024) {
+    console.error(`${k}: 글꼴 조각이 200 KB를 넘었다 (${kb(v)})`);
+    bad = true;
+  }
   if (k.startsWith('data/rec/') && v > SCENARIO_LIMIT) {
     console.error(`${k}: 시나리오 파일이 한도(${kb(SCENARIO_LIMIT)})를 넘었다 (${kb(v)})`);
     bad = true;

@@ -379,8 +379,8 @@ export function drawChart(canvas, hist, info) {
   g.clearRect(0, 0, w, h);
   const pts = hist.filter((p) => Number.isFinite(p.value));
   if (pts.length < 2) {
-    g.fillStyle = '#9aa5b4';
-    g.font = '12px system-ui';
+    g.fillStyle = '#6d7882';
+    g.font = '12px "Pretendard Variable", system-ui';
     g.fillText('추이를 모으는 중', 10, h / 2);
     return;
   }
@@ -409,9 +409,9 @@ export function drawChart(canvas, hist, info) {
   const B = 16;
   const x = (i) => L + (i / Math.max(hist.length - 1, 1)) * (w - L - R);
   const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (h - T - B);
-  g.strokeStyle = '#2a3340';
-  g.fillStyle = '#9aa5b4';
-  g.font = '10px system-ui';
+  g.strokeStyle = '#ced5db';
+  g.fillStyle = '#6d7882';
+  g.font = '10px "Pretendard Variable", system-ui';
   g.lineWidth = 1;
   for (const v of [lo + pad, (lo + hi) / 2, hi - pad]) {
     g.beginPath();
@@ -423,7 +423,7 @@ export function drawChart(canvas, hist, info) {
   // 90% 구간 띠
   const band = hist.map((p, i) => [i, p.lower, p.upper]).filter((b) => Number.isFinite(b[1]) && Number.isFinite(b[2]));
   if (band.length > 1) {
-    g.fillStyle = 'rgba(79, 216, 255, 0.18)';
+    g.fillStyle = 'rgba(37, 110, 244, 0.16)';
     g.beginPath();
     band.forEach(([i, l]) => g.lineTo(x(i), y(l)));
     [...band].reverse().forEach(([i, , u]) => g.lineTo(x(i), y(u)));
@@ -432,7 +432,7 @@ export function drawChart(canvas, hist, info) {
   }
   // 알람 기준선
   g.setLineDash([4, 3]);
-  for (const [t, c] of [[info.warn, '#ffcc00'], [info.critical, '#ff2619']]) {
+  for (const [t, c] of [[info.warn, '#d7ab00'], [info.critical, '#d84b4b']]) {
     if (Number.isFinite(t) && t > lo && t < hi) {
       g.strokeStyle = c;
       g.beginPath();
@@ -443,7 +443,7 @@ export function drawChart(canvas, hist, info) {
   }
   g.setLineDash([]);
   // 값 선
-  g.strokeStyle = '#e6eaf0';
+  g.strokeStyle = '#0d47a1';
   g.lineWidth = 1.6;
   g.beginPath();
   let started = false;
@@ -457,7 +457,7 @@ export function drawChart(canvas, hist, info) {
     started = true;
   });
   g.stroke();
-  g.fillStyle = '#9aa5b4';
+  g.fillStyle = '#6d7882';
   g.fillText('2분 전', L, h - 3);
   g.fillText('지금', w - R - 22, h - 3);
 }

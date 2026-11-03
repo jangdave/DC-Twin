@@ -168,7 +168,7 @@ uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ../out
       <li><b>조작</b>: 끌어서 돌리고, 휠로 확대하고, 랙을 누르면 상세를 본다. 스페이스바는 재생과 정지, 좌우 화살표는 5초 이동(Shift는 30초), 캔버스에서 방향키는 랙 이동이다.</li>
     </ul>
     <h3>화질</h3>
-    <p><label>화질 <select id="quality-sel"><option value="auto">자동</option><option value="low">낮음(모바일, 저사양)</option><option value="mid">보통</option><option value="high">높음</option></select></label> <span class="muted">바꾸면 화면을 다시 불러온다. 자동은 기기를 보고 고르고, 프레임이 낮으면 한 단계 낮춘다.</span></p>
+    <p><label>선택 <select id="quality-sel"><option value="auto">자동</option><option value="low">낮음(모바일, 저사양)</option><option value="mid">보통</option><option value="high">높음</option></select></label> <span class="muted">바꾸면 화면을 다시 불러온다. 자동은 기기를 보고 고르고, 프레임이 낮으면 한 단계 낮춘다.</span></p>
     <h3>신뢰 등급</h3>
     <ul id="help-conf"></ul>
     <p class="muted">녹화 재생은 센서 생성기가 미리 만든 값을 돌려 보는 것이라 실시간이 아니다. 로컬 게이트웨이가 있으면 주소 끝에 <code>?live=ws://127.0.0.1:8080/ws</code>를 붙여 실시간으로 볼 수 있다.</p>

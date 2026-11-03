@@ -1,0 +1,70 @@
+/* 디자인 시스템 토큰 ([Platform] DT Design System, Figma Variables에서 가져온 값). docs/24 참고.
+   색과 글꼴 크기, 모서리, 간격, 그림자는 여기서만 정하고 style.css는 이 변수를 쓴다.
+   3D 화면의 온도 색(colors.js)은 Unreal과 같은 곡선이라 이 토큰을 쓰지 않는다. */
+
+:root {
+  /* 글꼴 (font/family/basic) */
+  --font-basic: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --text-xxs: 10px; --leading-xxs: 12px;
+  --text-xs: 12px; --leading-xs: 16px;
+  --text-sm: 14px; --leading-sm: 20px;
+  --text-base: 16px; --leading-base: 24px;
+  --text-lg: 18px; --leading-lg: 28px;
+  --text-xl: 20px;
+  --weight-normal: 400; --weight-medium: 500; --weight-semibold: 600; --weight-bold: 700;
+
+  /* 색: main_deepblue (brand) */
+  --brand-100: #020d1f; --brand-90: #051b3c; --brand-80: #082c61; --brand-70: #0d47a1; --brand-60: #2162c3;
+  --brand-50: #3c79d7; --brand-40: #6096e6; --brand-30: #90b6ed; --brand-20: #ccdcf5; --brand-10: #e9f2ff; --brand-5: #fafcff;
+
+  /* 색: gray scale (brand-gray) */
+  --gray-0: #ffffff; --gray-5: #f2f3f5; --gray-10: #ebedf0; --gray-20: #ced5db; --gray-30: #aeb9c2; --gray-40: #8a949e;
+  --gray-50: #6d7882; --gray-60: #58616a; --gray-70: #464c53; --gray-80: #33363d; --gray-90: #1e2124; --gray-95: #131416;
+
+  /* 색: status (strong / subtle) */
+  --danger: #ff6161; --danger-subtle: #ffd7d5;
+  --analyzing: #ee75e2; --analyzing-subtle: #ffe5fc;
+  --warning: #ff9030; --warning-subtle: #ffefde;
+  --caution: #d7ab00; --caution-subtle: #ffeea9;
+  --normal: #1c9e34; --normal-subtle: #ddffd3;
+  --scheduled: #256ef4; --scheduled-subtle: #d8e5fd;
+  --disabled: #6d7882; --disabled-subtle: #ebedf0;
+  --blocked: #33363d; --blocked-subtle: #ced5db;
+  --emergency: #d84b4b; --emergency-subtle: #fad2d2;
+
+  /* 글자 색 (color/text/*) */
+  --text-primary: var(--gray-95);
+  --text-secondary: var(--gray-70);
+  --text-tertiary: var(--gray-50);
+  --text-disabled: var(--gray-20);
+  --text-placeholder: var(--gray-30);
+  --text-inverse: #ffffff;
+  --text-brand: var(--brand-70);
+  --text-action: #256ef4;
+  --text-error: var(--emergency);
+  --text-success: var(--normal);
+
+  /* 면과 선 */
+  --surface-page: rgba(255, 255, 255, 0.8);
+  --surface-container: var(--gray-5);
+  --surface-disabled: var(--gray-5);
+  --border-subtle: var(--gray-30);
+  --border-gray: var(--gray-40);
+  --border-dark: var(--gray-60);
+  --border-disabled: var(--gray-20);
+  --fill-primary: var(--brand-70);
+  --fill-primary-hover: var(--brand-60);
+  --fill-primary-pressed: var(--brand-50);
+
+  /* 모서리와 간격, 그림자 */
+  --radius-sm: 4px; --radius-medium: 6px; --radius-large: 8px; --radius-max: 100px;
+  --p-1: 4px; --p-1-5: 6px; --p-2: 8px; --p-2-5: 10px; --p-3: 12px; --p-4: 16px;
+  --shadow-md: 0 4px 6px -1px rgba(5, 27, 60, 0.2);
+  --shadow-sm: 0 1px 3px rgba(5, 27, 60, 0.16);
+
+  /* 접근성용 태그 글자 색: 디자인 시스템의 status 색을 연한 배경 위 12px 글자에 쓰면 명암비가 4.5:1에 못 미쳐 어둡게 한 값 */
+  --tag-normal-text: #11701f;
+  --tag-caution-text: #755b00;
+  --tag-danger-text: #a82e2e;
+  --tag-scheduled-text: #1646b0;
+}
