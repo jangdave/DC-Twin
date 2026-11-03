@@ -19,6 +19,16 @@ export const VIEWS = {
 
 const CM = 0.01;
 
+// 재질별 하늘 반사 세기. 유리와 금속만 반사하고 바닥, 콘크리트, 지붕, 잔디는 반사하지 않는다.
+// (거친 바닥이 반사를 받으면 낮은 각도에서 하늘색이 섞여 보는 각도에 따라 바닥 색이 달라 보인다.)
+export function envIntensityFor(name = '') {
+  if (/Glass/i.test(name)) return 0.8;
+  if (/PanelMetal/i.test(name)) return 0.5;
+  if (/Fan/i.test(name)) return 0.35;
+  if (/Mullion|Louver|OutdoorEquip/i.test(name)) return 0.25;
+  return 0;
+}
+
 // 부드러운 원형 빛 번짐 그림(표시등용)
 function glowTexture() {
   const c = document.createElement('canvas');
@@ -375,19 +385,34 @@ export class HallScene {
   }
 
   // 하늘에서 반사 지도를 만들어 유리와 금속에 비춘다(외관 단계에서만). 낮은 화질에서는 만들지 않는다.
+  // 반사 지도는 장면 전체(scene.environment)에 걸지 않고, 유리와 금속 재질에만 직접 지정한다.
+  // 장면 전체에 걸면 거친 바닥(아스팔트, 인도, 도로)에도 하늘 빛이 들어가 보는 각도에 따라 바닥 색이 달라진다.
   _updateReflection() {
+    this.scene.environment = null;
     if (!this.q.reflection) {
-      this.scene.environment = null;
+      this._envRT?.dispose();
+      this._envRT = null;
+      this._applyEnvMaps();
       return;
     }
     this._pmrem ??= new THREE.PMREMGenerator(this.renderer);
     const mini = new THREE.Scene();
     mini.add(new THREE.Mesh(this.sky.geometry, this.sky.material));
-    this._envRT?.dispose();
+    const old = this._envRT;
     this._envRT = this._pmrem.fromScene(mini, 0, 0.1, 2500);
-    this.scene.environmentIntensity = 0.7;
-    this._envOn = true;
-    if (this.stage === 'exterior') this.scene.environment = this._envRT.texture;
+    this._applyEnvMaps();
+    old?.dispose();
+  }
+
+  // 반사할 재질(유리, 금속) 목록에 지도를 걸거나 뺀다. 목록: 건물 모델과 도시의 {mat, k(세기)}
+  _applyEnvMaps() {
+    const tex = this._envRT?.texture ?? null;
+    for (const { mat, k } of [...(this._reflective ?? []), ...(this.city?.reflective ?? [])]) {
+      mat.envMap = tex;
+      mat.envMapIntensity = k;
+      mat.needsUpdate = true;
+    }
+    this._dirty = true;
   }
 
   // 화질을 한 단계 낮춘다(프레임이 낮을 때). 도시 규모(건물 수)는 그대로 두고 나머지를 줄인다.
@@ -407,7 +432,7 @@ export class HallScene {
     this.renderer.shadowMap.needsUpdate = true;
     this.city?.setCounts(q.cars, q.trees);
     this.airflow?.setActive(q.particles);
-    if (!q.reflection) this.scene.environment = null;
+    if (!q.reflection) this._updateReflection();
     this._dirty = true;
   }
 
@@ -450,6 +475,8 @@ export class HallScene {
     for (const m of meshes) {
       // 바닥과 같은 높이에 겹친 면(주차선, 횡단보도)은 앞으로, 아스팔트는 뒤로 밀어 깜빡임을 막는다
       const n = m.material.name || '';
+      const k = envIntensityFor(n);
+      if (k > 0) (this._reflective ??= []).push({ mat: m.material, k });
       if (/Paint|Crosswalk/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
       else if (/Asphalt/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
     }
@@ -460,6 +487,7 @@ export class HallScene {
     const c = this.center;
     const model = new THREE.Group();
     for (const m of meshes) model.add(m);
+    this._applyEnvMaps();
     model.position.set(c.x - mid.x, 0, c.z - mid.z); // 건물 가운데를 홀 가운데에 맞춘다
     this.exterior.add(model);
     for (const b of this.building) b.visible = false; // 상자는 숨기고 클릭 판정에만 쓴다
@@ -508,7 +536,6 @@ export class HallScene {
     this.exterior.visible = ext;
     this.scene.background = ext ? null : new THREE.Color(0x0e1218);
     this.scene.fog = ext ? new THREE.FogExp2(this.fogColor, 0.0014) : null;
-    this.scene.environment = ext && this.q.reflection && this._envRT ? this._envRT.texture : null;
     this.hover(null);
     for (const l of this.labels) l.el.hidden = ext || !this.showLabels;
     const moving = !(instant || this.reducedMotion);

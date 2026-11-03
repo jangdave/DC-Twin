@@ -294,6 +294,21 @@ await pmo.waitForFunction(() => window.__viewer?.state.player, { timeout: 30000 
 const mo = await pmo.evaluate(() => ({ header: document.getElementById('top').getBoundingClientRect().height, sw: document.documentElement.scrollWidth, iw: innerWidth, tabs: document.getElementById('side-tabs').getBoundingClientRect().width, modeScroll: getComputedStyle(document.getElementById('mode-group')).overflowX }));
 ok('UX 좁은 화면(390px): 상단 150px 이하, 가로 스크롤 없음', mo.header <= 150 && mo.sw <= mo.iw, JSON.stringify(mo));
 await pmo.close();
+// 하늘 반사: 장면 전체에는 걸지 않고 유리와 금속 재질에만 건다(바닥 색이 보는 각도에 따라 변하지 않게)
+const prf = await browser.newPage();
+await prf.goto(`${base}?stage=exterior&q=high`, { waitUntil: 'networkidle0' });
+await prf.waitForFunction(() => window.__viewer?.scene?.exteriorModel, { timeout: 30000 }).catch(() => {});
+const rf = await prf.evaluate(() => {
+  const s = window.__viewer.scene;
+  const glassFacades = s.city.reflective.every((r) => !!r.mat.envMap && r.k > 0);
+  const modelGlass = (s._reflective ?? []).length > 0 && s._reflective.every((r) => !!r.mat.envMap);
+  let groundHasEnv = false;
+  s.city.group.traverse((o) => { if (o.material && !s.city.reflective.some((r) => r.mat === o.material) && o.material.envMap) groundHasEnv = true; });
+  s.exteriorModel.traverse((o) => { if (o.material && !(s._reflective ?? []).some((r) => r.mat === o.material) && o.material.envMap) groundHasEnv = true; });
+  return { sceneEnv: s.scene.environment === null, glassFacades, modelGlass, groundHasEnv };
+});
+ok('REFLECT 높음: 장면 전체 반사는 없고 유리와 금속에만 반사 지도가 걸림, 바닥과 콘크리트에는 없음', rf.sceneEnv && rf.glassFacades && rf.modelGlass && !rf.groundHasEnv, JSON.stringify(rf));
+await prf.close();
 // 건물 모델과 공기 흐름
 const p7 = await browser.newPage();
 await p7.goto(`${base}?scenario=cooling_failure&t=30&stage=exterior`, { waitUntil: 'networkidle0' });
