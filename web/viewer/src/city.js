@@ -1,32 +1,112 @@
-// 데이터센터 주변 도심 (docs/23). 외부 에셋 없이 상자 건물, 도로, 가로수, 차량을 코드로 만든다. 가상의 도시이며 실제 지역이 아니다.
+// 데이터센터 주변 도심 (docs/23, docs/26). 외부 에셋 없이 건물, 공원, 주차장, 도로, 횡단보도, 가로등, 가로수, 차량을 코드로 만든다.
+// 가상의 도시이며 실제 지역이 아니다.
 //   planCity: 배치만 계산(순수 함수, 시험 가능). buildCity: three.js 객체를 만든다.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { FACADE_TILE, ROOF_UV, facadeTextures, grassTexture, lotTexture, mulberry32, roadTexture, sidewalkTexture, skylineTexture } from './citytex.js';
 
 export const CITY = {
   pitchX: 210, // 블록 중심 간격(m). 가운데 블록에 데이터센터 부지(약 130 x 105 m)가 들어간다
   pitchZ: 185,
   road: 20, // 도로 폭
-  setback: 4,
+};
+export const FACADES = Object.keys(FACADE_TILE);
+
+const pick = (rng, table) => {
+  let r = rng() * table.reduce((a, [, w]) => a + w, 0);
+  for (const [v, w] of table) if ((r -= w) <= 0) return v;
+  return table[table.length - 1][0];
 };
 
-export function mulberry32(a) {
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+// 블록(또는 그 일부)을 2~6개 필지로 나눈다. 긴 쪽을 38~62% 지점에서 자른다.
+function splitParcels(rng, x0, z0, w, d, depth = 0) {
+  const small = w < 52 || d < 52;
+  if (small || w * d < 2600 || depth >= 3 || (depth >= 1 && rng() < 0.28)) return [{ x: x0, z: z0, w, d }];
+  const t = 0.38 + rng() * 0.24;
+  if (w >= d) {
+    const w1 = w * t;
+    return [...splitParcels(rng, x0 - w / 2 + w1 / 2, z0, w1, d, depth + 1), ...splitParcels(rng, x0 + w / 2 - (w - w1) / 2, z0, w - w1, d, depth + 1)];
+  }
+  const d1 = d * t;
+  return [...splitParcels(rng, x0, z0 - d / 2 + d1 / 2, w, d1, depth + 1), ...splitParcels(rng, x0, z0 + d / 2 - (d - d1) / 2, w, d - d1, depth + 1)];
 }
 
-// 블록마다 2x2 필지로 나누고 필지마다 건물 높이를 정한다. 가운데 블록(0,0)은 비운다.
+const KINDS = {
+  1: [['box', 0.42], ['podium', 0.2], ['stepped', 0.2], ['lshape', 0.18]],
+  2: [['box', 0.2], ['podium', 0.28], ['stepped', 0.2], ['lshape', 0.14], ['tower', 0.18]],
+  3: [['box', 0.1], ['podium', 0.24], ['stepped', 0.18], ['lshape', 0.1], ['tower', 0.38]],
+};
+const HEIGHT = {
+  1: { box: [9, 24], podium: [16, 30], stepped: [18, 32], lshape: [12, 24], tower: [30, 40] },
+  2: { box: [20, 40], podium: [30, 68], stepped: [30, 60], lshape: [22, 46], tower: [55, 90] },
+  3: { box: [24, 50], podium: [45, 110], stepped: [40, 90], lshape: [30, 60], tower: [80, 170] },
+};
+const FACADE_BY_KIND = {
+  tower: [['glass', 0.55], ['ribbon', 0.3], ['metal', 0.15]],
+  podium: [['glass', 0.35], ['ribbon', 0.35], ['metal', 0.15], ['concrete', 0.15]],
+  stepped: [['concrete', 0.3], ['ribbon', 0.25], ['glass', 0.25], ['metal', 0.2]],
+  box: [['concrete', 0.35], ['brick', 0.3], ['ribbon', 0.2], ['metal', 0.15]],
+  lshape: [['brick', 0.3], ['concrete', 0.3], ['ribbon', 0.2], ['glass', 0.2]],
+};
+
+// 필지 안의 건물 한 동을 상자 여러 개(parts)로 만든다. 모두 필지 안에 있고 서로 겹치지 않거나 위로 쌓인다.
+function makeBuilding(rng, p, ring) {
+  const kind = pick(rng, KINDS[Math.min(ring, 3)]);
+  const [lo, hi] = HEIGHT[Math.min(ring, 3)][kind];
+  let H = lo + rng() * (hi - lo);
+  if (kind === 'tower' && ring === 3 && rng() < 0.1) H = 175 + rng() * 40; // 랜드마크
+  const { x: cx, z: cz, w: fw, d: fd } = p;
+  const parts = [];
+  if (kind === 'box') {
+    parts.push({ x: cx, z: cz, w: fw, d: fd, y0: 0, h: H });
+  } else if (kind === 'podium') {
+    const bh = Math.min(7 + rng() * 7, H * 0.5);
+    parts.push({ x: cx, z: cz, w: fw, d: fd, y0: 0, h: bh });
+    const tw = fw * (0.5 + rng() * 0.25), td = fd * (0.5 + rng() * 0.25);
+    parts.push({ x: cx + ((fw - tw) / 2) * (rng() * 1.6 - 0.8), z: cz + ((fd - td) / 2) * (rng() * 1.6 - 0.8), w: tw, d: td, y0: bh, h: H - bh });
+  } else if (kind === 'stepped') {
+    const scales = [1, 0.76, 0.54];
+    const shares = [0.45, 0.3, 0.25];
+    let y = 0;
+    scales.forEach((s, i) => {
+      const w = fw * s, d = fd * s;
+      const h = H * shares[i];
+      parts.push({ x: cx + ((fw - w) / 2) * (rng() * 0.6 - 0.3), z: cz + ((fd - d) / 2) * (rng() * 0.6 - 0.3), w, d, y0: y, h });
+      y += h;
+    });
+  } else if (kind === 'lshape') {
+    const sgn = rng() < 0.5 ? -1 : 1;
+    parts.push({ x: cx, z: cz - fd / 4, w: fw, d: fd / 2, y0: 0, h: H });
+    parts.push({ x: cx + (sgn * fw) / 4, z: cz + fd / 4, w: fw / 2, d: fd / 2, y0: 0, h: H * (0.55 + rng() * 0.35) });
+  } else {
+    const tw = fw * (0.45 + rng() * 0.2), td = fd * (0.45 + rng() * 0.2);
+    let y = 0;
+    if (rng() < 0.3) {
+      parts.push({ x: cx, z: cz, w: fw, d: fd, y0: 0, h: 6 });
+      y = 6;
+    }
+    parts.push({ x: cx, z: cz, w: tw, d: td, y0: y, h: H - y });
+    parts.push({ x: cx, z: cz, w: tw * 0.7, d: td * 0.7, y0: H, h: 3 + rng() * 5 }); // 꼭대기 설비층
+  }
+  // 옥상 설비: 가장 높은 상자 위에 작은 상자 몇 개와 높은 건물의 안테나
+  const top = parts.reduce((a, q) => (q.y0 + q.h > a.y0 + a.h ? q : a), parts[0]);
+  const roof = [];
+  const n = top.w > 9 && top.d > 9 ? 1 + Math.floor(rng() * 3) : 0;
+  for (let i = 0; i < n; i++) {
+    const w = 2 + rng() * 4, d = 2 + rng() * 4, h = 1.5 + rng() * 2;
+    roof.push({ x: top.x + (top.w / 2 - w / 2 - 1) * (rng() * 2 - 1), z: top.z + (top.d / 2 - d / 2 - 1) * (rng() * 2 - 1), w, d, y0: top.y0 + top.h, h });
+  }
+  const topY = Math.max(...parts.map((q) => q.y0 + q.h));
+  if (topY > 90 && rng() < 0.5) roof.push({ x: top.x, z: top.z, w: 0.7, d: 0.7, y0: top.y0 + top.h, h: 10 + rng() * 8 });
+  return { kind, facade: pick(rng, FACADE_BY_KIND[kind]), h: topY, parts, roof };
+}
+
+// 블록마다 필지로 나누고 공원, 주차장, 건물을 놓는다. 가운데 블록(0,0)은 비운다.
 export function planCity({ cx, cz, rings, seed = 11 }) {
   const rng = mulberry32(seed);
   const bw = CITY.pitchX - CITY.road;
   const bd = CITY.pitchZ - CITY.road;
-  const blocks = [];
-  const buildings = [];
+  const blocks = [], buildings = [], parks = [], lots = [], trees = [];
   for (let i = -rings; i <= rings; i++) {
     for (let j = -rings; j <= rings; j++) {
       if (i === 0 && j === 0) continue;
@@ -34,21 +114,23 @@ export function planCity({ cx, cz, rings, seed = 11 }) {
       const bx = cx + i * CITY.pitchX;
       const bz = cz + j * CITY.pitchZ;
       blocks.push({ i, j, ring, x: bx, z: bz, w: bw, d: bd });
-      const sx = 0.35 + rng() * 0.3; // 필지를 나누는 위치
-      const sz = 0.35 + rng() * 0.3;
-      const xs = [bw * sx, bw * (1 - sx)];
-      const zs = [bd * sz, bd * (1 - sz)];
-      for (let a = 0; a < 2; a++) {
-        for (let b = 0; b < 2; b++) {
-          if (rng() < 0.12) continue; // 빈 터
-          const w = xs[a] - CITY.setback * 2;
-          const d = zs[b] - CITY.setback * 2;
-          const px = bx - bw / 2 + (a === 0 ? xs[0] / 2 : xs[0] + xs[1] / 2);
-          const pz = bz - bd / 2 + (b === 0 ? zs[0] / 2 : zs[0] + zs[1] / 2);
-          const lo = [0, 10, 26, 45][Math.min(ring, 3)]; // 가까운 블록은 낮게(데이터센터가 가려지지 않게)
-          const hi = [0, 26, 62, 150][Math.min(ring, 3)];
-          buildings.push({ x: px, z: pz, w, d, h: lo + rng() * (hi - lo), tint: rng(), ring, uvSeed: rng() });
+      for (const parcel of splitParcels(rng, bx, bz, bw, bd)) {
+        const r = rng();
+        if (r < 0.07) {
+          parks.push({ ...parcel, ring });
+          const count = Math.floor((parcel.w * parcel.d) / 120);
+          for (let k = 0; k < count; k++) trees.push([parcel.x + (rng() - 0.5) * (parcel.w - 6), parcel.z + (rng() - 0.5) * (parcel.d - 6)]);
+          continue;
         }
+        if (r < 0.12) {
+          lots.push({ ...parcel, ring });
+          continue;
+        }
+        const setback = 2 + rng() * 4;
+        const fp = { x: parcel.x, z: parcel.z, w: parcel.w - setback * 2, d: parcel.d - setback * 2 };
+        if (fp.w < 14 || fp.d < 14) continue;
+        const b = makeBuilding(rng, fp, ring);
+        buildings.push({ ...b, x: fp.x, z: fp.z, w: fp.w, d: fp.d, tint: rng(), uvSeed: rng(), ring });
       }
     }
   }
@@ -58,115 +140,93 @@ export function planCity({ cx, cz, rings, seed = 11 }) {
   const lenZ = (2 * rings + 2) * CITY.pitchZ;
   for (let j = -rings - 1; j <= rings; j++) roads.push({ dir: 'x', x: cx, z: cz + (j + 0.5) * CITY.pitchZ, len: lenX });
   for (let i = -rings - 1; i <= rings; i++) roads.push({ dir: 'z', x: cx + (i + 0.5) * CITY.pitchX, z: cz, len: lenZ });
-  // 가로수 자리: 블록 가장자리(인도 위)를 따라 16 m 간격
-  const trees = [];
+  // 가로수: 블록 가장자리(인도 위)를 따라 16 m 간격
   for (const b of blocks) {
     const m = 3;
-    for (let t = -b.w / 2 + 8; t < b.w / 2; t += 16) {
-      trees.push([b.x + t, b.z - b.d / 2 + m], [b.x + t, b.z + b.d / 2 - m]);
-    }
-    for (let t = -b.d / 2 + 8; t < b.d / 2; t += 16) {
-      trees.push([b.x - b.w / 2 + m, b.z + t], [b.x + b.w / 2 - m, b.z + t]);
+    for (let t = -b.w / 2 + 8; t < b.w / 2; t += 16) trees.push([b.x + t, b.z - b.d / 2 + m], [b.x + t, b.z + b.d / 2 - m]);
+    for (let t = -b.d / 2 + 8; t < b.d / 2; t += 16) trees.push([b.x - b.w / 2 + m, b.z + t], [b.x + b.w / 2 - m, b.z + t]);
+  }
+  // 가로등: 도로 양쪽 인도 가장자리, 38 m 간격
+  const lamps = [];
+  for (const r of roads) {
+    const off = CITY.road / 2 + 1.4;
+    for (let t = -r.len / 2 + 19; t < r.len / 2; t += 38) {
+      if (r.dir === 'x') lamps.push([r.x + t, r.z - off], [r.x + t + 19, r.z + off]);
+      else lamps.push([r.x - off, r.z + t], [r.x + off, r.z + t + 19]);
     }
   }
-  return { blocks, buildings, roads, trees };
-}
-
-// ---- 그림(캔버스) ----
-function windowTextures() {
-  const S = 128; // 4 x 4 창
-  const mk = () => {
-    const c = document.createElement('canvas');
-    c.width = c.height = S;
-    return c;
-  };
-  const wall = mk(), glow = mk();
-  const a = wall.getContext('2d'), g = glow.getContext('2d');
-  a.fillStyle = '#8c9199';
-  a.fillRect(0, 0, S, S);
-  g.fillStyle = '#000';
-  g.fillRect(0, 0, S, S);
-  const rng = mulberry32(5);
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      const x = c * 32 + 4, y = r * 32 + 6;
-      const lit = rng() < 0.38;
-      a.fillStyle = lit ? '#cdb98a' : '#27384a';
-      a.fillRect(x, y, 24, 20);
-      if (lit) {
-        g.fillStyle = '#ffd08a';
-        g.fillRect(x, y, 24, 20);
+  // 횡단보도: 교차로 네 방향, 도로 폭을 가로지르는 줄무늬
+  const crosswalks = [];
+  const xRoads = roads.filter((r) => r.dir === 'x');
+  const zRoads = roads.filter((r) => r.dir === 'z');
+  for (const rx of xRoads) {
+    for (const rz of zRoads) {
+      const ix = rz.x, iz = rx.z;
+      const off = CITY.road / 2 + 1.6;
+      for (let k = -6; k <= 6; k++) {
+        const s = k * 1.35;
+        crosswalks.push({ x: ix - off, z: iz + s, w: 3.2, d: 0.7 }, { x: ix + off, z: iz + s, w: 3.2, d: 0.7 });
+        crosswalks.push({ x: ix + s, z: iz - off, w: 0.7, d: 3.2 }, { x: ix + s, z: iz + off, w: 0.7, d: 3.2 });
       }
     }
   }
-  const tw = new THREE.CanvasTexture(wall), te = new THREE.CanvasTexture(glow);
-  for (const t of [tw, te]) {
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.anisotropy = 4;
-  }
-  tw.colorSpace = THREE.SRGBColorSpace;
-  te.colorSpace = THREE.SRGBColorSpace;
-  return { wall: tw, glow: te };
+  return { blocks, buildings, parks, lots, roads, trees, lamps, crosswalks };
 }
 
-function roadTexture() {
-  const c = document.createElement('canvas');
-  c.width = 64;
-  c.height = 128;
-  const x = c.getContext('2d');
-  x.fillStyle = '#3b3d41';
-  x.fillRect(0, 0, 64, 128);
-  const rng = mulberry32(9);
-  for (let i = 0; i < 700; i++) {
-    const v = 50 + Math.floor(rng() * 30);
-    x.fillStyle = `rgb(${v},${v},${v + 3})`;
-    x.fillRect(rng() * 64, rng() * 128, 1.5, 1.5);
-  }
-  x.fillStyle = '#d9c25a'; // 가운데 노란 점선
-  x.fillRect(30, 8, 4, 48);
-  x.fillStyle = '#c9ccd0'; // 양쪽 가장자리 선
-  x.fillRect(3, 0, 2, 128);
-  x.fillRect(59, 0, 2, 128);
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = 4;
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-// 상자 한 동: 창 무늬가 건물 크기에 맞게 반복되도록 uv를 키우고 색을 입힌다.
-function buildingGeometry(b) {
-  const g = new THREE.BoxGeometry(b.w, b.h, b.d);
-  g.translate(b.x, 0.25 + b.h / 2, b.z);
+// ---- 형상 ----
+// 상자 한 개: 창 무늬가 크기에 맞게 반복되도록 uv를 키우고, 지붕은 흰 점을 가리켜 색으로만 칠한다.
+function boxGeometry(q, b) {
+  const g = new THREE.BoxGeometry(q.w, q.h, q.d);
+  g.translate(q.x, 0.25 + q.y0 + q.h / 2, q.z);
+  const { tw, th, cols } = FACADE_TILE[b.facade];
   const uv = g.attributes.uv;
-  const FW = 12.8, FH = 14.4; // 그림 한 장이 덮는 가로, 세로(m)
-  const ou = Math.floor(b.uvSeed * 4) / 4, ov = Math.floor((b.uvSeed * 16) % 4) / 4;
-  const faces = [
-    [b.d / FW, b.h / FH], [b.d / FW, b.h / FH], // +x, -x
-    null, null, // +y(지붕), -y
-    [b.w / FW, b.h / FH], [b.w / FW, b.h / FH], // +z, -z
-  ];
+  const pos = g.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  const ou = Math.floor(b.uvSeed * 4) / 4;
+  const ov = Math.floor((b.uvSeed * 16) % 4) / 4;
+  const sides = [q.d / tw, q.d / tw, 0, 0, q.w / tw, q.w / tw];
+  const t = 0.62 + 0.36 * b.tint;
+  const warm = b.tint > 0.55 ? [1.0, 0.96, 0.9] : [0.92, 0.96, 1.0];
   for (let f = 0; f < 6; f++) {
     for (let k = 0; k < 4; k++) {
       const n = f * 4 + k;
-      if (!faces[f]) {
-        uv.setXY(n, 0.02, 0.02); // 창 없는 쪽(지붕): 벽색 한 점
+      if (f === 2 || f === 3) {
+        uv.setXY(n, ROOF_UV, ROOF_UV); // 지붕과 바닥: 흰 점
+        const roof = f === 2 ? 0.52 : 0.3;
+        col[n * 3] = col[n * 3 + 1] = col[n * 3 + 2] = roof;
       } else {
-        const [su, sv] = faces[f];
-        uv.setXY(n, Math.round(uv.getX(n) * su * 4) / 4 + ou, uv.getY(n) * sv + ov);
+        uv.setXY(n, Math.round(uv.getX(n) * sides[f] * cols) / cols + ou, (uv.getY(n) * q.h) / th + ov);
+        const ratio = (pos.getY(n) - 0.25 - q.y0) / q.h; // 0 바닥, 1 위
+        const ao = q.y0 === 0 ? 0.68 + 0.32 * Math.min(ratio * (q.h / 12) + 0.15, 1) : 1; // 바닥 가까이 어둡게
+        col[n * 3] = t * warm[0] * ao;
+        col[n * 3 + 1] = t * warm[1] * ao;
+        col[n * 3 + 2] = t * warm[2] * ao;
       }
     }
   }
-  const col = new Float32Array(g.attributes.position.count * 3);
-  const t = 0.42 + 0.36 * b.tint;
-  const warm = b.tint > 0.6 ? [1.0, 0.96, 0.9] : [0.92, 0.96, 1.0];
-  for (let n = 0; n < g.attributes.position.count; n++) {
-    col[n * 3] = t * warm[0];
-    col[n * 3 + 1] = t * warm[1];
-    col[n * 3 + 2] = t * warm[2];
-  }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   return g;
+}
+
+function roofBoxGeometry(r, tint) {
+  const g = new THREE.BoxGeometry(r.w, r.h, r.d);
+  g.translate(r.x, 0.25 + r.y0 + r.h / 2, r.z);
+  g.deleteAttribute('uv');
+  const c = new Float32Array(g.attributes.position.count * 3).fill(0.42 + 0.2 * tint);
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g;
+}
+
+function flatRects(rects, y, tile) {
+  const geos = rects.map((r) => {
+    const g = new THREE.PlaneGeometry(r.w, r.d);
+    g.rotateX(-Math.PI / 2);
+    const uv = g.attributes.uv;
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, (uv.getX(k) * r.w) / tile, (uv.getY(k) * r.d) / tile);
+    g.translate(r.x, y, r.z);
+    return g;
+  });
+  return mergeGeometries(geos, false);
 }
 
 export function buildCity({ cx, cz, quality, seed = 11 }) {
@@ -174,25 +234,49 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   const group = new THREE.Group();
   const disposables = [];
   const track = (o) => (disposables.push(o), o);
+  const mesh = (geo, mat, receive = false) => {
+    const m = new THREE.Mesh(track(geo), track(mat));
+    m.receiveShadow = receive;
+    group.add(m);
+    return m;
+  };
 
-  // 건물(한 번에 그림)
-  const tex = windowTextures();
-  track(tex.wall);
-  track(tex.glow);
-  const bMat = track(new THREE.MeshStandardMaterial({ map: tex.wall, emissiveMap: tex.glow, emissive: new THREE.Color(0xffffff), emissiveIntensity: 0.05, vertexColors: true, roughness: 0.65, metalness: 0.15 }));
-  const bGeo = track(mergeGeometries(plan.buildings.map(buildingGeometry), false));
-  const buildings = new THREE.Mesh(bGeo, bMat);
-  group.add(buildings);
+  // 건물: 외벽 5종 x 재질 하나씩, 한 종류당 한 덩어리
+  const tex = facadeTextures();
+  const mats = {};
+  const byFacade = Object.fromEntries(FACADES.map((f) => [f, []]));
+  for (const f of FACADES) {
+    track(tex[f].map);
+    track(tex[f].glow);
+    mats[f] = new THREE.MeshStandardMaterial({
+      map: tex[f].map, emissiveMap: tex[f].glow, emissive: new THREE.Color(0xffffff), emissiveIntensity: 0.05, vertexColors: true,
+      roughness: f === 'glass' ? 0.28 : 0.7, metalness: f === 'glass' || f === 'metal' ? 0.35 : 0.1,
+    });
+  }
+  const roofGeos = [];
+  for (const b of plan.buildings) {
+    for (const q of b.parts) byFacade[b.facade].push(boxGeometry(q, b));
+    for (const r of b.roof) roofGeos.push(roofBoxGeometry(r, b.tint));
+  }
+  for (const f of FACADES) if (byFacade[f].length) mesh(mergeGeometries(byFacade[f], false), mats[f]);
+  if (roofGeos.length) mesh(mergeGeometries(roofGeos, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
+  const emissiveMats = Object.values(mats);
 
-  // 인도 판(블록마다) 합치기
-  const slabs = plan.blocks.map((b) => new THREE.BoxGeometry(b.w, 0.25, b.d).translate(b.x, 0.125, b.z));
-  const slabGeo = track(mergeGeometries(slabs, false));
-  const slabMat = track(new THREE.MeshStandardMaterial({ color: 0x8a8c8e, roughness: 0.95 }));
-  group.add(new THREE.Mesh(slabGeo, slabMat));
+  // 인도 판(블록마다), 공원(잔디), 주차장
+  const sw = track(sidewalkTexture());
+  const slabs = plan.blocks.map((b) => {
+    const g = new THREE.BoxGeometry(b.w, 0.25, b.d);
+    const uv = g.attributes.uv;
+    for (let k = 8; k < 12; k++) uv.setXY(k, (uv.getX(k) * b.w) / 8, (uv.getY(k) * b.d) / 8); // 윗면만 8 m 마다 반복
+    g.translate(b.x, 0.125, b.z);
+    return g;
+  });
+  mesh(mergeGeometries(slabs, false), new THREE.MeshStandardMaterial({ map: sw, roughness: 0.95 }), true);
+  if (plan.parks.length) mesh(flatRects(plan.parks, 0.27, 6), new THREE.MeshStandardMaterial({ map: track(grassTexture()), roughness: 1 }), true);
+  if (plan.lots.length) mesh(flatRects(plan.lots, 0.27, 16), new THREE.MeshStandardMaterial({ map: track(lotTexture()), roughness: 0.95 }), true);
 
-  // 도로
+  // 도로와 횡단보도
   const rt = track(roadTexture());
-  const roadMat = track(new THREE.MeshStandardMaterial({ map: rt, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
   const strips = plan.roads.map((r, n) => {
     const g = new THREE.PlaneGeometry(CITY.road, r.len);
     g.rotateX(-Math.PI / 2);
@@ -202,48 +286,76 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     g.translate(r.x, 0.02 + (r.dir === 'x' ? 0.01 : 0) + n * 0.0005, r.z);
     return g;
   });
-  group.add(new THREE.Mesh(track(mergeGeometries(strips, false)), roadMat));
+  mesh(mergeGeometries(strips, false), new THREE.MeshStandardMaterial({ map: rt, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  const zebra = plan.crosswalks.map((r) => {
+    const g = new THREE.PlaneGeometry(r.w, r.d);
+    g.rotateX(-Math.PI / 2);
+    g.translate(r.x, 0.06, r.z);
+    return g;
+  });
+  mesh(mergeGeometries(zebra, false), new THREE.MeshStandardMaterial({ color: 0xdfe1e3, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
 
-  // 가로수(인스턴스)
+  // 가로수와 가로등(인스턴스)
+  const rng = mulberry32(seed + 3);
   const nTree = Math.min(quality.trees, plan.trees.length);
   let trees = null;
   if (nTree > 0) {
-    const rng = mulberry32(seed + 3);
-    const pick = plan.trees.slice().sort(() => rng() - 0.5).slice(0, nTree);
+    const chosen = plan.trees.slice().sort(() => rng() - 0.5).slice(0, nTree);
     const trunkG = track(new THREE.CylinderGeometry(0.22, 0.3, 3, 6).translate(0, 1.5, 0));
     const crownG = track(new THREE.IcosahedronGeometry(2.3, 0).translate(0, 4.6, 0));
-    const trunkM = track(new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 1 }));
-    const crownM = track(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }));
-    const trunk = new THREE.InstancedMesh(trunkG, trunkM, nTree);
-    const crown = new THREE.InstancedMesh(crownG, crownM, nTree);
-    const m4 = new THREE.Matrix4(), col = new THREE.Color();
-    pick.forEach(([x, z], k) => {
-      const s = 0.8 + rng() * 0.6;
-      m4.compose(new THREE.Vector3(x, 0.25, z), new THREE.Quaternion(), new THREE.Vector3(s, s, s));
-      trunk.setMatrixAt(k, m4);
-      crown.setMatrixAt(k, m4);
-      crown.setColorAt(k, col.setHSL(0.27 + rng() * 0.05, 0.45, 0.2 + rng() * 0.1));
+    const trunk = new THREE.InstancedMesh(trunkG, track(new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 1 })), nTree);
+    const crown = new THREE.InstancedMesh(crownG, track(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 })), nTree);
+    const tm = new THREE.Matrix4(), c = new THREE.Color();
+    chosen.forEach(([x, z], k) => {
+      const s = 0.75 + rng() * 0.7;
+      tm.compose(new THREE.Vector3(x, 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng() * 6), new THREE.Vector3(s, s * (0.9 + rng() * 0.4), s));
+      trunk.setMatrixAt(k, tm);
+      crown.setMatrixAt(k, tm);
+      crown.setColorAt(k, c.setHSL(0.22 + rng() * 0.1, 0.4 + rng() * 0.2, 0.17 + rng() * 0.12));
     });
     trees = new THREE.Group();
     trees.add(trunk, crown);
     group.add(trees);
   }
+  let lampHeads = null;
+  let lampPoles = null;
+  const nLamp = Math.min(Math.floor(quality.trees * 0.6), plan.lamps.length);
+  if (nLamp > 0) {
+    const chosen = plan.lamps.slice().sort(() => rng() - 0.5).slice(0, nLamp);
+    const poleG = track(new THREE.CylinderGeometry(0.1, 0.14, 8.5, 6).translate(0, 4.25, 0));
+    const headG = track(new THREE.BoxGeometry(1.8, 0.25, 0.55).translate(0, 8.55, 0));
+    lampPoles = new THREE.InstancedMesh(poleG, track(new THREE.MeshStandardMaterial({ color: 0x3a3f45, roughness: 0.6, metalness: 0.5 })), nLamp);
+    lampHeads = new THREE.InstancedMesh(headG, track(new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: new THREE.Color(0xffe2a8), emissiveIntensity: 0 })), nLamp);
+    const lm = new THREE.Matrix4();
+    chosen.forEach(([x, z], k) => {
+      lm.makeTranslation(x, 0.25, z);
+      lampPoles.setMatrixAt(k, lm);
+      lampHeads.setMatrixAt(k, lm);
+    });
+    group.add(lampPoles, lampHeads);
+  }
+
+  // 먼 도시 윤곽(원통 안쪽에 두른 그림). 안개에 묻혀 멀리 보인다.
+  const sk = track(skylineTexture());
+  const skyline = new THREE.Mesh(track(new THREE.CylinderGeometry(1250, 1250, 256, 64, 1, true)), track(new THREE.MeshBasicMaterial({ map: sk, transparent: true, alphaTest: 0.5, side: THREE.BackSide, depthWrite: false })));
+  skyline.scale.x = -1;
+  skyline.position.set(cx, 108, cz);
+  skyline.renderOrder = -0.5;
+  group.add(skyline);
 
   // 차량(인스턴스, 도로를 따라 움직임)
   let cars = null;
   const nCar = quality.cars;
   const carState = [];
   if (nCar > 0) {
-    const rng = mulberry32(seed + 7);
+    const r2 = mulberry32(seed + 7);
     const carG = track(new THREE.BoxGeometry(4.2, 1.4, 1.9).translate(0, 0.9, 0));
-    const carM = track(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.5 }));
-    cars = new THREE.InstancedMesh(carG, carM, nCar);
+    cars = new THREE.InstancedMesh(carG, track(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.5 })), nCar);
     const col = new THREE.Color();
     for (let k = 0; k < nCar; k++) {
-      const road = plan.roads[Math.floor(rng() * plan.roads.length)];
-      const dirSign = rng() < 0.5 ? 1 : -1; // 차선: 진행 방향의 오른쪽
-      carState.push({ road, sign: dirSign, t: rng() * road.len, speed: 7 + rng() * 7, lane: 4.2 });
-      cars.setColorAt(k, col.setHSL(rng(), 0.1 + rng() * 0.5, 0.25 + rng() * 0.4));
+      const road = plan.roads[Math.floor(r2() * plan.roads.length)];
+      carState.push({ road, sign: r2() < 0.5 ? 1 : -1, t: r2() * road.len, speed: 7 + r2() * 7, lane: 4.2 });
+      cars.setColorAt(k, col.setHSL(r2(), 0.1 + r2() * 0.5, 0.25 + r2() * 0.4));
     }
     cars.frustumCulled = false;
     group.add(cars);
@@ -273,9 +385,12 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   return {
     group,
     plan,
-    // 낮이면 창이 어둡고 저녁이면 불이 켜진다
+    // 낮이면 창이 어둡고 저녁이면 창과 가로등에 불이 켜지며, 먼 윤곽은 어두워진다
     setSky(name) {
-      bMat.emissiveIntensity = name === 'dusk' ? 1.5 : 0.05;
+      const dusk = name === 'dusk';
+      for (const m of emissiveMats) m.emissiveIntensity = dusk ? 1.5 : 0.05;
+      if (lampHeads) lampHeads.material.emissiveIntensity = dusk ? 2.5 : 0;
+      skyline.material.color.setScalar(dusk ? 0.45 : 1);
     },
     update(dt) {
       updateCars(Math.min(dt, 0.1));
@@ -284,10 +399,10 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     setCounts(nCars, nTrees) {
       if (cars) cars.count = Math.min(cars.count, nCars);
       if (trees) for (const m of trees.children) m.count = Math.min(m.count, nTrees);
+      if (lampHeads) lampHeads.count = lampPoles.count = Math.min(lampHeads.count, Math.floor(nTrees * 0.6));
     },
     dispose() {
       for (const d of disposables) d.dispose();
-      for (const o of [trees, cars]) o?.traverse?.((x) => x.dispose?.());
     },
   };
 }
