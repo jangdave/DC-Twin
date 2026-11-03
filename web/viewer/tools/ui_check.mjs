@@ -294,20 +294,28 @@ await pmo.waitForFunction(() => window.__viewer?.state.player, { timeout: 30000 
 const mo = await pmo.evaluate(() => ({ header: document.getElementById('top').getBoundingClientRect().height, sw: document.documentElement.scrollWidth, iw: innerWidth, tabs: document.getElementById('side-tabs').getBoundingClientRect().width, modeScroll: getComputedStyle(document.getElementById('mode-group')).overflowX }));
 ok('UX 좁은 화면(390px): 상단 150px 이하, 가로 스크롤 없음', mo.header <= 150 && mo.sw <= mo.iw, JSON.stringify(mo));
 await pmo.close();
-// 하늘 반사: 장면 전체에는 걸지 않고 유리와 금속 재질에만 건다(바닥 색이 보는 각도에 따라 변하지 않게)
+// 하늘 반사: 장면 전체에는 걸지 않고 유리와 금속 재질에만 건다. 나머지(바닥, 도로, 콘크리트, 벽돌, 지붕, 식재)는 반사하지 않는 재질(Lambert)이라 보는 각도에 따라 색이 변하지 않는다.
 const prf = await browser.newPage();
 await prf.goto(`${base}?stage=exterior&q=high`, { waitUntil: 'networkidle0' });
 await prf.waitForFunction(() => window.__viewer?.scene?.exteriorModel, { timeout: 30000 }).catch(() => {});
 const rf = await prf.evaluate(() => {
   const s = window.__viewer.scene;
-  const glassFacades = s.city.reflective.every((r) => !!r.mat.envMap && r.k > 0);
-  const modelGlass = (s._reflective ?? []).length > 0 && s._reflective.every((r) => !!r.mat.envMap);
-  let groundHasEnv = false;
-  s.city.group.traverse((o) => { if (o.material && !s.city.reflective.some((r) => r.mat === o.material) && o.material.envMap) groundHasEnv = true; });
-  s.exteriorModel.traverse((o) => { if (o.material && !(s._reflective ?? []).some((r) => r.mat === o.material) && o.material.envMap) groundHasEnv = true; });
-  return { sceneEnv: s.scene.environment === null, glassFacades, modelGlass, groundHasEnv };
+  const refl = [...s.city.reflective, ...(s._reflective ?? [])].map((r) => r.mat);
+  const bad = [];
+  const seen = new Set();
+  for (const root of [s.city.group, s.exteriorModel]) {
+    root.traverse((o) => {
+      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of ms) {
+        if (seen.has(m) || refl.includes(m)) continue;
+        seen.add(m);
+        if (m.isMeshStandardMaterial || m.isMeshPhysicalMaterial) bad.push(m.name || m.type);
+      }
+    });
+  }
+  return { sceneEnv: s.scene.environment === null, reflective: refl.length, allWithEnv: refl.every((m) => !!m.envMap), badStandard: bad, ground: s.ground.material.type };
 });
-ok('REFLECT 높음: 장면 전체 반사는 없고 유리와 금속에만 반사 지도가 걸림, 바닥과 콘크리트에는 없음', rf.sceneEnv && rf.glassFacades && rf.modelGlass && !rf.groundHasEnv, JSON.stringify(rf));
+ok('REFLECT 높음: 장면 전체 반사 없음, 유리와 금속에만 반사 지도, 나머지는 Lambert(표준 재질이 남아 있지 않음)', rf.sceneEnv && rf.reflective > 4 && rf.allWithEnv && rf.badStandard.length === 0 && rf.ground === 'MeshLambertMaterial', JSON.stringify(rf));
 await prf.close();
 // 건물 모델과 공기 흐름
 const p7 = await browser.newPage();

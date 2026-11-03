@@ -306,10 +306,13 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   for (const f of FACADES) {
     track(tex[f].map);
     track(tex[f].glow);
-    mats[f] = new THREE.MeshStandardMaterial({
-      map: tex[f].map, emissiveMap: tex[f].glow, emissive: new THREE.Color(0xffffff), emissiveIntensity: 0.05, vertexColors: true,
-      roughness: f === 'glass' ? 0.28 : 0.7, metalness: f === 'glass' || f === 'metal' ? 0.35 : 0.1,
-    });
+    const base = { map: tex[f].map, emissiveMap: tex[f].glow, emissive: new THREE.Color(0xffffff), emissiveIntensity: 0.05, vertexColors: true };
+    const glassy = baseFacade(f) === 'glass';
+    const metal = baseFacade(f) === 'metal';
+    // 유리는 반사가 강한 짙은 유리, 금속은 반사가 중간. 콘크리트, 벽돌, 띠창은 반사하지 않는 면(보는 각도에 따라 색이 변하지 않음)
+    mats[f] = glassy ? new THREE.MeshStandardMaterial({ ...base, roughness: 0.08, metalness: 0.45 })
+      : metal ? new THREE.MeshStandardMaterial({ ...base, roughness: 0.4, metalness: 0.5 })
+      : new THREE.MeshLambertMaterial(base);
   }
   const roofGeos = [];
   for (const b of plan.buildings) {
@@ -317,7 +320,7 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     for (const r of b.roof) roofGeos.push(roofBoxGeometry(r, b.tint));
   }
   for (const f of FACADES) if (byFacade[f].length) mesh(mergeGeometries(byFacade[f], false), mats[f]);
-  if (roofGeos.length) mesh(mergeGeometries(roofGeos, false), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
+  if (roofGeos.length) mesh(mergeGeometries(roofGeos, false), new THREE.MeshLambertMaterial({ vertexColors: true }));
   const emissiveMats = Object.values(mats);
 
   // 인도 판(블록마다), 공원(잔디), 주차장
@@ -329,11 +332,11 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     g.translate(b.x, 0.125, b.z);
     return g;
   });
-  mesh(mergeGeometries(slabs, false), new THREE.MeshStandardMaterial({ map: sw, roughness: 0.95 }), true);
-  mesh(flatRects(plan.apron.lawns, 0.06, 6), new THREE.MeshStandardMaterial({ map: track(grassTexture()), roughness: 1 }), true);
-  mesh(flatRects([plan.apron.drive], 0.07, 16), new THREE.MeshStandardMaterial({ color: 0x3b3d41, roughness: 0.92 }), true);
-  if (plan.parks.length) mesh(flatRects(plan.parks, 0.33, 6), new THREE.MeshStandardMaterial({ map: track(grassTexture()), roughness: 1 }), true);
-  if (plan.lots.length) mesh(flatRects(plan.lots, 0.33, 16), new THREE.MeshStandardMaterial({ map: track(lotTexture()), roughness: 0.95 }), true);
+  mesh(mergeGeometries(slabs, false), new THREE.MeshLambertMaterial({ map: sw }), true);
+  mesh(flatRects(plan.apron.lawns, 0.06, 6), new THREE.MeshLambertMaterial({ map: track(grassTexture()) }), true);
+  mesh(flatRects([plan.apron.drive], 0.07, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }), true);
+  if (plan.parks.length) mesh(flatRects(plan.parks, 0.33, 6), new THREE.MeshLambertMaterial({ map: track(grassTexture()) }), true);
+  if (plan.lots.length) mesh(flatRects(plan.lots, 0.33, 16), new THREE.MeshLambertMaterial({ map: track(lotTexture()) }), true);
 
   // 도로와 횡단보도
   const rt = track(roadTexture());
@@ -346,15 +349,15 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     g.translate(r.x, 0.05, r.z); // 모든 도로 조각은 같은 높이이고 서로 겹치지 않는다
     return g;
   });
-  mesh(mergeGeometries(strips, false), new THREE.MeshStandardMaterial({ map: rt, roughness: 0.92 }));
-  mesh(flatRects(plan.intersections.map((i) => ({ x: i.x, z: i.z, w: CITY.road, d: CITY.road })), 0.05, 16), new THREE.MeshStandardMaterial({ color: 0x3b3d41, roughness: 0.92 }));
+  mesh(mergeGeometries(strips, false), new THREE.MeshLambertMaterial({ map: rt }));
+  mesh(flatRects(plan.intersections.map((i) => ({ x: i.x, z: i.z, w: CITY.road, d: CITY.road })), 0.05, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }));
   const zebra = plan.crosswalks.map((r) => {
     const g = new THREE.PlaneGeometry(r.w, r.d);
     g.rotateX(-Math.PI / 2);
     g.translate(r.x, 0.11, r.z);
     return g;
   });
-  mesh(mergeGeometries(zebra, false), new THREE.MeshStandardMaterial({ color: 0xdfe1e3, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  mesh(mergeGeometries(zebra, false), new THREE.MeshLambertMaterial({ color: 0xdfe1e3, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
 
   // 가로수와 가로등(인스턴스)
   const rng = mulberry32(seed + 3);
@@ -364,8 +367,8 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     const chosen = plan.trees.slice().sort(() => rng() - 0.5).slice(0, nTree);
     const trunkG = track(new THREE.CylinderGeometry(0.22, 0.3, 3, 6).translate(0, 1.5, 0));
     const crownG = track(new THREE.IcosahedronGeometry(2.3, 0).translate(0, 4.6, 0));
-    const trunk = new THREE.InstancedMesh(trunkG, track(new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 1 })), nTree);
-    const crown = new THREE.InstancedMesh(crownG, track(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 })), nTree);
+    const trunk = new THREE.InstancedMesh(trunkG, track(new THREE.MeshLambertMaterial({ color: 0x4a3524 })), nTree);
+    const crown = new THREE.InstancedMesh(crownG, track(new THREE.MeshLambertMaterial({ color: 0xffffff })), nTree);
     const tm = new THREE.Matrix4(), c = new THREE.Color();
     chosen.forEach(([x, z], k) => {
       const s = 0.75 + rng() * 0.7;
@@ -385,8 +388,8 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     const chosen = plan.lamps.slice().sort(() => rng() - 0.5).slice(0, nLamp);
     const poleG = track(new THREE.CylinderGeometry(0.1, 0.14, 8.5, 6).translate(0, 4.25, 0));
     const headG = track(new THREE.BoxGeometry(1.8, 0.25, 0.55).translate(0, 8.55, 0));
-    lampPoles = new THREE.InstancedMesh(poleG, track(new THREE.MeshStandardMaterial({ color: 0x3a3f45, roughness: 0.6, metalness: 0.5 })), nLamp);
-    lampHeads = new THREE.InstancedMesh(headG, track(new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: new THREE.Color(0xffe2a8), emissiveIntensity: 0 })), nLamp);
+    lampPoles = new THREE.InstancedMesh(poleG, track(new THREE.MeshLambertMaterial({ color: 0x3a3f45 })), nLamp);
+    lampHeads = new THREE.InstancedMesh(headG, track(new THREE.MeshLambertMaterial({ color: 0xdddddd, emissive: new THREE.Color(0xffe2a8), emissiveIntensity: 0 })), nLamp);
     const lm = new THREE.Matrix4();
     chosen.forEach(([x, z], k) => {
       lm.makeTranslation(x, 0.25, z);
@@ -411,7 +414,7 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   if (nCar > 0) {
     const r2 = mulberry32(seed + 7);
     const carG = track(new THREE.BoxGeometry(4.2, 1.4, 1.9).translate(0, 0.9, 0));
-    cars = new THREE.InstancedMesh(carG, track(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.5 })), nCar);
+    cars = new THREE.InstancedMesh(carG, track(new THREE.MeshLambertMaterial({ color: 0xffffff })), nCar);
     const col = new THREE.Color();
     for (let k = 0; k < nCar; k++) {
       const road = plan.roads[Math.floor(r2() * plan.roads.length)];
@@ -444,7 +447,7 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   updateCars(0);
 
   // 하늘 반사는 유리 외벽과 금속 외벽에만 준다. 바닥, 도로, 콘크리트, 벽돌은 반사하지 않아 보는 각도에 따라 색이 변하지 않는다.
-  const ENV = { glass: 0.8, glass2: 0.8, metal: 0.5, metal2: 0.5 };
+  const ENV = { glass: 1.6, glass2: 1.6, metal: 0.5, metal2: 0.5 };
   const reflective = FACADES.filter((f) => ENV[f]).map((f) => ({ mat: mats[f], k: ENV[f] })); // scene.js가 반사 지도를 걸어 준다
 
   return {
