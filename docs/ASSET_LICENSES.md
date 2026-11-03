@@ -26,3 +26,8 @@
 | 랙, CRAC 상세 3D 모델과 홀 내부 형상 (`blender/scripts/make_rack_detailed.py`, `make_crac_detailed.py`, `scripts/usd_tools/hall_interior.py`) | **직접 제작.** 가상 장비이며 실제 제품의 형상, 로고, 상표, 라벨 문구를 따라 하지 않았다. 레퍼런스는 공통 특징만 참고했다([16](16_interior_references.md)). | 이 저장소의 라이선스를 따른다 (직접 제작) | 홀 내부 화면 |
 | 건물 외관 3D 모델 (`blender/building_exterior.blend`, `usd/assets/building.usda`) | **직접 제작.** `blender/scripts/make_building_exterior.py`가 Blender로 형상을 만든다. 가상 시설이며 실제 시설의 형상, 도면, 로고, 상표를 따라 하지 않았다. 레퍼런스는 공통 특징만 참고했다([15](15_exterior_references.md)). | 이 저장소의 라이선스를 따른다 (직접 제작) | 외관 화면 |
 | 웹 보기 화면용 장비 모양 `web/viewer/public/models/{rack,crac}.glb` | **직접 제작.** `blender/rack.blend`, `crac.blend`를 `blender/scripts/export_glb.py`로 내보냈다. 텍스처를 넣지 않았고 재질 색은 스크립트에 직접 적은 값이다(외부 이미지 없음) | 이 저장소의 라이선스를 따른다 (직접 제작) | 웹 보기 화면 |
+
+## 웹 외관 환경 (2026-11-03)
+- `web/viewer/public/models/building.glb`: `blender/building_exterior.blend`(직접 모델링)에서 `blender/scripts/export_building_glb.py`로 내보낸 건물과 옥외 설비. 텍스처는 넣지 않고 재질별로 정한 색만 쓴다. 외부 에셋 없음.
+- 하늘, 구름, 먼 언덕, 풀밭은 `web/viewer/src/env.js`가 코드로 만든다. 외부 이미지를 쓰지 않는다.
+- `web/viewer/public/data/flow.bin`, `flow.json`: 우리 솔버(`experiments/omniverse_probe/hall60_sim.py`)가 홀 장면에서 계산해 `export_web_flow.py`로 내보낸 속도장. 외부 데이터 없음.

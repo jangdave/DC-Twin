@@ -36,7 +36,7 @@ jobs:
       - run: npm ci
       - name: 단위 시험
         run: npm test
-      - name: 빌드와 용량 점검(첫 로딩 gzip 1.5 MB 이하)
+      - name: 빌드와 용량 점검(첫 로딩 gzip 1.5 MB 이하, 모델 포함 3 MB 이하)
         run: npm run build
       - name: 의존성 취약점 점검(높음 이상)
         run: npm audit --audit-level=high

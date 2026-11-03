@@ -1,0 +1,113 @@
+{
+ "version": 1,
+ "note": "시각화 목적. 질량 보존 퍼텐셜 흐름(점성, 난류, 부력 없음). 실제 CFD 결과가 아니다.",
+ "shape": [
+  55,
+  68,
+  20
+ ],
+ "cell_m": 0.2,
+ "vmax_ms": 4.0,
+ "layout": "field,x,y,z,component int8 (scene axes, z up)",
+ "fields": [
+  {
+   "name": "all",
+   "max_ms": 5.21,
+   "supply_m3s": 57.6,
+   "leak_m3s": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "off01",
+   "max_ms": 5.21,
+   "supply_m3s": 57.6,
+   "leak_m3s": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "off02",
+   "max_ms": 5.89,
+   "supply_m3s": 48.0,
+   "leak_m3s": [
+    0.0,
+    9.6,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "off03",
+   "max_ms": 5.89,
+   "supply_m3s": 48.0,
+   "leak_m3s": [
+    0.0,
+    0.0,
+    9.6,
+    0.0
+   ]
+  },
+  {
+   "name": "off04",
+   "max_ms": 5.21,
+   "supply_m3s": 57.6,
+   "leak_m3s": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "off05",
+   "max_ms": 5.21,
+   "supply_m3s": 57.6,
+   "leak_m3s": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "off06",
+   "max_ms": 5.89,
+   "supply_m3s": 48.0,
+   "leak_m3s": [
+    0.0,
+    9.6,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "off07",
+   "max_ms": 5.89,
+   "supply_m3s": 48.0,
+   "leak_m3s": [
+    0.0,
+    0.0,
+    9.6,
+    0.0
+   ]
+  },
+  {
+   "name": "off08",
+   "max_ms": 5.21,
+   "supply_m3s": 57.6,
+   "leak_m3s": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  }
+ ]
+}

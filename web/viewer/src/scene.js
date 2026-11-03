@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
+import { Airflow, loadFlow } from './airflow.js';
 import { ALARM_COLOR, barFraction, confidenceColor, sampleColor } from './colors.js';
 
 // 보는 값. 범위는 화면 색 곡선 기준이다(입구 온도는 Unreal과 같은 18~35도).
@@ -40,9 +42,12 @@ export class HallScene {
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0e1218);
-    this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+    this.camera = new THREE.PerspectiveCamera(45, 1, 0.2, 2500);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = !reducedMotion;
     this.controls.maxPolarAngle = Math.PI * 0.49;
@@ -51,10 +56,12 @@ export class HallScene {
 
     const [sx, sy, sz] = data.size;
     this.center = toThree(sx / 2, sy / 2, 0);
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1.4));
+    this.hallLights = new THREE.Group(); // 홀 조명. 외관 단계에서는 끈다
+    this.hallLights.add(new THREE.AmbientLight(0xffffff, 1.4));
     const sun = new THREE.DirectionalLight(0xffffff, 1.6);
     sun.position.set(-6, 14, 8);
-    this.scene.add(sun);
+    this.hallLights.add(sun);
+    this.scene.add(this.hallLights);
 
     this.hall = new THREE.Group();
     this.scene.add(this.hall);
@@ -180,6 +187,34 @@ export class HallScene {
     }
   }
 
+  // ---- 공기 흐름 입자(docs/22) ----
+  async loadAirflow(baseUrl) {
+    const flow = await loadFlow(baseUrl);
+    this.airflow = new Airflow(flow, this.data, this.store, this.rackKeys, this.cracKeys);
+    this.airflow.points.visible = this.showAirflow ?? true;
+    this.hall.add(this.airflow.points);
+    return this.airflow.count;
+  }
+
+  setAirflow(on) {
+    this.showAirflow = on;
+    if (this.airflow) this.airflow.points.visible = on;
+    this._dirty = true;
+  }
+
+  _stepAirflow(dtSec, timeSec) {
+    const a = this.airflow;
+    if (!a || !a.points.visible || this.stage !== 'hall') return;
+    if (this.store.version !== this._flowVersion) {
+      this._flowVersion = this.store.version;
+      a.setFans(this.cracKeys.map((k) => {
+        const v = this.store.metric(k, 'fan_speed')?.value;
+        return v == null ? 1 : v / 100;
+      }));
+    }
+    a.step(dtSec, timeSec);
+  }
+
   // ---- 장비 모양(glb) ----
   // 모델(cm 단위, 정면 +Z, 바닥 중앙이 원점)을 재질별로 합쳐 인스턴스로 그린다. 값 색 판(rackFront 등)은 반투명으로 겹친다.
   async loadModels(baseUrl) {
@@ -267,10 +302,32 @@ export class HallScene {
       g.add(mesh);
       return mesh;
     };
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(W * 4, D * 4), mat(0x1a2028, { roughness: 1 }));
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(300, 64), mat(0x39502c, { roughness: 1 }));
     ground.rotation.x = -Math.PI / 2;
-    ground.position.set(c.x, -0.02, c.z);
+    ground.position.set(c.x, -0.35, c.z);
+    ground.receiveShadow = true;
     g.add(ground);
+    this.ground = ground;
+    this.sky = makeSky();
+    this.sky.position.copy(c);
+    g.add(this.sky);
+    this.hills = makeHills(0x39502c);
+    this.hills.position.set(c.x, -0.3, c.z);
+    g.add(this.hills);
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    g.add(this.hemi);
+    this.sunExt = new THREE.DirectionalLight(0xffffff, 2);
+    this.sunExt.castShadow = true;
+    this.sunExt.shadow.mapSize.set(4096, 4096);
+    const sc = this.sunExt.shadow.camera;
+    Object.assign(sc, { left: -110, right: 110, top: 110, bottom: -110, near: 10, far: 500 });
+    this.sunExt.shadow.bias = -0.0004;
+    this.sunExt.shadow.normalBias = 0.3;
+    this.sunTarget = new THREE.Object3D();
+    this.sunTarget.position.copy(c);
+    g.add(this.sunTarget);
+    this.sunExt.target = this.sunTarget;
+    g.add(this.sunExt);
     this.building = [];
     this.building.push(add(W, H, D, c.x, H / 2, c.z, mat(0x8a93a1)));
     this.building.push(add(W + 0.8, 0.5, D + 0.8, c.x, H + 0.25, c.z, mat(0x4a5361)));
@@ -284,6 +341,61 @@ export class HallScene {
     g.visible = false;
     this.exterior = g;
     this.scene.add(g);
+    this.setSky(this.skyName ?? 'day');
+  }
+
+  // 하늘 시간대(day, dusk): 하늘 색, 해 방향과 빛, 안개, 풀 색을 한꺼번에 바꾼다.
+  setSky(name) {
+    const p = SKY_PRESETS[name] ?? SKY_PRESETS.day;
+    this.skyName = SKY_PRESETS[name] ? name : 'day';
+    const dir = sunVector(p.elev, p.azim);
+    const u = this.sky.material.uniforms;
+    u.zenith.value.set(p.zenith);
+    u.horizon.value.set(p.horizon);
+    u.sunColor.value.set(p.sun);
+    u.sunDir.value.copy(dir);
+    this.sunExt.color.set(p.sun);
+    this.sunExt.intensity = p.sunI;
+    this.sunExt.position.copy(this.center).addScaledVector(dir, 250);
+    this.hemi.color.set(p.hemiSky);
+    this.hemi.groundColor.set(p.hemiGround);
+    this.hemi.intensity = p.hemiI;
+    this.ground.material.color.set(p.grass);
+    this.hills.material.color.set(p.grass).multiplyScalar(0.8);
+    this.fogColor = new THREE.Color(p.fog);
+    if (this.stage === 'exterior') this.scene.fog = new THREE.FogExp2(this.fogColor, 0.0016);
+    this._dirty = true;
+  }
+
+  // 건물 모델(glb)을 받아 단순 상자 건물을 바꾼다. 실패하면 상자로 계속 쓴다.
+  async loadExteriorModel(baseUrl) {
+    const gltf = await new GLTFLoader().loadAsync(`${baseUrl}models/building.glb`);
+    const meshes = mergeByMaterial(gltf.scene, CM);
+    const box = new THREE.Box3();
+    for (const m of meshes) box.union(m.geometry.boundingBox);
+    const size = box.getSize(new THREE.Vector3());
+    const mid = box.getCenter(new THREE.Vector3());
+    const c = this.center;
+    const model = new THREE.Group();
+    for (const m of meshes) model.add(m);
+    model.position.set(c.x - mid.x, 0, c.z - mid.z); // 건물 가운데를 홀 가운데에 맞춘다
+    this.exterior.add(model);
+    for (const b of this.building) b.visible = false; // 상자는 숨기고 클릭 판정에만 쓴다
+    const proxy = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial({ visible: false }));
+    proxy.position.set(c.x, size.y / 2, c.z);
+    this.exterior.add(proxy);
+    this.building = [proxy];
+    this.beacon.visible = true;
+    this.beacon.position.set(c.x, size.y + 2, c.z);
+    this.exteriorModel = model;
+    this._extR = Math.max(size.x, size.z) * 0.9;
+    this._extH = size.y;
+    if (this.stage === 'exterior') {
+      this._applyLimits('exterior');
+      this.setPreset('ext', true);
+    }
+    this._dirty = true;
+    return meshes.length;
   }
 
   // 건물을 가리키는지(외관 단계에서 클릭과 손모양 표시에 쓴다)
@@ -307,7 +419,10 @@ export class HallScene {
     this.stage = stage;
     const ext = stage === 'exterior';
     this.hall.visible = !ext;
+    this.hallLights.visible = !ext;
     this.exterior.visible = ext;
+    this.scene.background = ext ? null : new THREE.Color(0x0e1218);
+    this.scene.fog = ext ? new THREE.FogExp2(this.fogColor, 0.0016) : null;
     this.hover(null);
     for (const l of this.labels) l.el.hidden = ext || !this.showLabels;
     const moving = !(instant || this.reducedMotion);
@@ -368,7 +483,7 @@ export class HallScene {
     };
     if (this._extR) {
       const r = this._extR;
-      presets.ext = { pos: new THREE.Vector3(c.x + r * 1.1, r * 0.62, c.z + r * 1.4), target: new THREE.Vector3(c.x, this._extH / 2, c.z) };
+      presets.ext = { pos: new THREE.Vector3(c.x + r * 1.0, r * 0.3, c.z + r * 1.3), target: new THREE.Vector3(c.x, this._extH / 2, c.z) };
     }
     presets.home = { pos: new THREE.Vector3(c.x + 8, 10, c.z + 12), target: new THREE.Vector3(c.x, 0.3, c.z) };
     const p = presets[name] ?? presets.home;
@@ -531,6 +646,7 @@ export class HallScene {
       }
     }
     this.controls.update();
+    this._stepAirflow(dtSec, timeSec);
     if (this._dirty || this.store.version !== this._lastVersion || this._blink) {
       this._paint(timeSec);
       this._lastVersion = this.store.version;

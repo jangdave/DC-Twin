@@ -226,6 +226,30 @@ const p6 = await browser.newPage();
 await p6.goto(`${base}?stage=hall&models=0`, { waitUntil: 'networkidle0' });
 await p6.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 ok('MODEL models=0이면 받지 않고 상자만 씀', (await p6.evaluate(() => window.__viewer.getModelsState())) === 'off' && (await p6.$eval('#model-btn', (e) => e.hidden)));
+// 건물 모델과 공기 흐름
+const p7 = await browser.newPage();
+await p7.goto(`${base}?scenario=cooling_failure&t=30&stage=exterior`, { waitUntil: 'networkidle0' });
+await p7.waitForFunction(() => window.__viewer?.scene?.exteriorModel, { timeout: 30000 }).catch(() => {});
+const extInfo = await p7.evaluate(() => {
+  const s = window.__viewer.scene;
+  return { model: !!s.exteriorModel, sky: s.sky.visible, fog: !!s.scene.fog, box: s.building.length, hallLights: s.hallLights.visible };
+});
+ok('EXT 건물 모델과 하늘이 보이고 홀 조명은 꺼짐', extInfo.model && extInfo.sky && extInfo.fog && !extInfo.hallLights, JSON.stringify(extInfo));
+await p7.evaluate(() => window.__viewer.dispatch?.({ name: 'view.goto', args: ['hall'] }));
+await p7.evaluate(() => document.getElementById('enter-btn')?.click());
+await p7.waitForFunction(() => window.__viewer.scene.stage === 'hall' && window.__viewer.scene.airflow, { timeout: 20000 }).catch(() => {});
+const f1 = await p7.evaluate(() => {
+  const s = window.__viewer.scene;
+  return { has: !!s.airflow, btn: !document.getElementById('flow-btn').hidden, vis: s.airflow?.points.visible, fog: s.scene.fog, lights: s.hallLights.visible };
+});
+ok('FLOW 홀에서 공기 흐름 입자가 보이고 단추가 있음, 안개는 꺼짐', f1.has && f1.btn && f1.vis && !f1.fog && f1.lights, JSON.stringify(f1));
+await p7.evaluate(() => document.getElementById('flow-btn').click());
+ok('FLOW 단추로 끔', (await p7.evaluate(() => window.__viewer.scene.airflow.points.visible)) === false);
+await p7.evaluate(() => document.getElementById('flow-btn').click());
+await p7.evaluate(() => window.__viewer.state.player.seek(200)); // 60초에 CRAC_02 정지
+await sleep(1200);
+const fan = await p7.evaluate(() => window.__viewer.scene.airflow.fan.map((v) => +v.toFixed(2)));
+ok('FLOW CRAC_02가 멈추면 속도장에 반영됨(팬 비율 0)', fan[1] < 0.05 && fan[0] > 0.9, JSON.stringify(fan));
 const card = await p4.evaluate(() => ({ title: document.getElementById('sc-title').textContent, desc: document.getElementById('sc-desc').textContent.length, max: document.getElementById('sc-max').textContent, ev: [...document.querySelectorAll('#sc-events li')].map((l) => l.textContent) }));
 ok('CARD 시나리오 설명과 가장 높은 입구 온도, 일어나는 일이 보임', card.title.length > 1 && card.desc > 5 && /Rack_\d+ [\d.]+ °C/.test(card.max) && card.ev.length >= 1 && card.ev[0].includes('CRAC_02'), JSON.stringify(card));
 await p4.evaluate(() => document.querySelector('#sc-events li').click());
