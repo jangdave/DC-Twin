@@ -34,7 +34,7 @@ describe('주소 매개변수', () => {
     expect(p.liveError).toBeTruthy();
   });
   it('아무것도 없으면 기본값', () => {
-    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null, sky: 'day' });
+    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null, sky: 'day', q: null });
   });
   it('stage는 exterior와 hall만 받는다', () => {
     expect(parseParams('?stage=hall', ids).stage).toBe('hall');
@@ -46,6 +46,11 @@ describe('주소 매개변수', () => {
     expect(parseParams('?mode=rec', ids).mode).toBe('rec');
     expect(parseParams('?mode=x', ids).mode).toBeNull();
   });
+  it('q=low|mid|high만 받는다', () => {
+    expect(parseParams('?q=low', ids).q).toBe('low');
+    expect(parseParams('?q=ultra', ids).q).toBeNull();
+  });
+
   it('sky=dusk이면 저녁 하늘', () => {
     expect(parseParams('?sky=dusk', ids).sky).toBe('dusk');
     expect(parseParams('?sky=x', ids).sky).toBe('day');

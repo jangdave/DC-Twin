@@ -6,6 +6,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
 import { Airflow, loadFlow } from './airflow.js';
+import { buildCity } from './city.js';
+import { SETTINGS } from './quality.js';
 import { ALARM_COLOR, barFraction, confidenceColor, sampleColor } from './colors.js';
 
 // 보는 값. 범위는 화면 색 곡선 기준이다(입구 온도는 Unreal과 같은 18~35도).
@@ -26,7 +28,9 @@ const CRAC_OK = [0.08, 0.4, 0.55];
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 
 export class HallScene {
-  constructor(canvas, labelLayer, data, store, { reducedMotion = false, stage = 'hall' } = {}) {
+  constructor(canvas, labelLayer, data, store, { reducedMotion = false, stage = 'hall', tier = 'high' } = {}) {
+    this.tier = tier;
+    this.q = { ...SETTINGS[tier] };
     this.store = store;
     this.data = data;
     this.reducedMotion = reducedMotion;
@@ -42,9 +46,11 @@ export class HallScene {
     this.stage = stage;
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.q.pixelRatio));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = false; // 해와 건물이 움직이지 않으니 그림자 지도는 필요할 때만 다시 그린다
+    this.renderer.shadowMap.needsUpdate = true;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0e1218);
@@ -191,7 +197,7 @@ export class HallScene {
   // ---- 공기 흐름 입자(docs/22) ----
   async loadAirflow(baseUrl) {
     const flow = await loadFlow(baseUrl);
-    this.airflow = new Airflow(flow, this.data, this.store, this.rackKeys, this.cracKeys);
+    this.airflow = new Airflow(flow, this.data, this.store, this.rackKeys, this.cracKeys, { count: this.q.particles });
     this.airflow.points.visible = this.showAirflow ?? true;
     this.hall.add(this.airflow.points);
     return this.airflow.count;
@@ -303,7 +309,7 @@ export class HallScene {
       g.add(mesh);
       return mesh;
     };
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(300, 64), mat(0x39502c, { roughness: 1 }));
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(1800, 64), mat(0x39502c, { roughness: 1 }));
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(c.x, -0.35, c.z);
     ground.receiveShadow = true;
@@ -312,14 +318,14 @@ export class HallScene {
     this.sky = makeSky();
     this.sky.position.copy(c);
     g.add(this.sky);
-    this.hills = makeHills(0x39502c);
+    this.hills = makeHills(0x39502c, 1100, 2000, 60);
     this.hills.position.set(c.x, -0.3, c.z);
     g.add(this.hills);
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
     g.add(this.hemi);
     this.sunExt = new THREE.DirectionalLight(0xffffff, 2);
-    this.sunExt.castShadow = true;
-    this.sunExt.shadow.mapSize.set(4096, 4096);
+    this.sunExt.castShadow = this.q.shadow > 0;
+    this.sunExt.shadow.mapSize.set(this.q.shadow || 1, this.q.shadow || 1);
     const sc = this.sunExt.shadow.camera;
     Object.assign(sc, { left: -110, right: 110, top: 110, bottom: -110, near: 10, far: 500 });
     this.sunExt.shadow.bias = -0.0004;
@@ -342,7 +348,48 @@ export class HallScene {
     g.visible = false;
     this.exterior = g;
     this.scene.add(g);
+    // 도심: 가운데 블록(데이터센터)을 빼고 주변에 도로, 건물, 가로수, 차량
+    this.city = buildCity({ cx: c.x, cz: c.z, quality: this.q });
+    g.add(this.city.group);
+    this.ground.material.color.set(0x6a6c6f); // 도로 사이 빈 바닥은 포장 색
     this.setSky(this.skyName ?? 'day');
+  }
+
+  // 하늘에서 반사 지도를 만들어 유리와 금속에 비춘다(외관 단계에서만). 낮은 화질에서는 만들지 않는다.
+  _updateReflection() {
+    if (!this.q.reflection) {
+      this.scene.environment = null;
+      return;
+    }
+    this._pmrem ??= new THREE.PMREMGenerator(this.renderer);
+    const mini = new THREE.Scene();
+    mini.add(new THREE.Mesh(this.sky.geometry, this.sky.material));
+    this._envRT?.dispose();
+    this._envRT = this._pmrem.fromScene(mini, 0, 0.1, 2500);
+    this.scene.environmentIntensity = 0.7;
+    this._envOn = true;
+    if (this.stage === 'exterior') this.scene.environment = this._envRT.texture;
+  }
+
+  // 화질을 한 단계 낮춘다(프레임이 낮을 때). 도시 규모(건물 수)는 그대로 두고 나머지를 줄인다.
+  applyQuality(tier) {
+    const q = SETTINGS[tier];
+    if (!q) return;
+    this.tier = tier;
+    this.q = { ...this.q, ...q, cityRings: this.q.cityRings };
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatio));
+    this.renderer.setSize(this.renderer.domElement.clientWidth, this.renderer.domElement.clientHeight, false);
+    this.sunExt.castShadow = q.shadow > 0;
+    if (q.shadow > 0) {
+      this.sunExt.shadow.map?.dispose();
+      this.sunExt.shadow.map = null;
+      this.sunExt.shadow.mapSize.set(q.shadow, q.shadow);
+    }
+    this.renderer.shadowMap.needsUpdate = true;
+    this.city?.setCounts(q.cars, q.trees);
+    this.airflow?.setActive(q.particles);
+    if (!q.reflection) this.scene.environment = null;
+    this._dirty = true;
   }
 
   // 하늘 시간대(day, dusk): 하늘 색, 해 방향과 빛, 안개, 풀 색을 한꺼번에 바꾼다.
@@ -361,10 +408,12 @@ export class HallScene {
     this.hemi.color.set(p.hemiSky);
     this.hemi.groundColor.set(p.hemiGround);
     this.hemi.intensity = p.hemiI;
-    this.ground.material.color.set(p.grass);
     this.hills.material.color.set(p.grass).multiplyScalar(0.8);
+    this.city?.setSky(this.skyName);
+    this._updateReflection();
     this.fogColor = new THREE.Color(p.fog);
-    if (this.stage === 'exterior') this.scene.fog = new THREE.FogExp2(this.fogColor, 0.0016);
+    this.renderer.shadowMap.needsUpdate = true;
+    if (this.stage === 'exterior') this.scene.fog = new THREE.FogExp2(this.fogColor, 0.0014);
     this._dirty = true;
   }
 
@@ -396,6 +445,7 @@ export class HallScene {
     this.beacon.visible = true;
     this.beacon.position.set(c.x, size.y + 2, c.z);
     this.exteriorModel = model;
+    this.renderer.shadowMap.needsUpdate = true;
     this._extR = Math.max(size.x, size.z) * 0.9;
     this._extH = size.y;
     if (this.stage === 'exterior') {
@@ -417,7 +467,7 @@ export class HallScene {
   _applyLimits(stage) {
     const ext = stage === 'exterior';
     this.controls.minDistance = ext ? 10 : 2;
-    this.controls.maxDistance = ext ? this._extR * 3 : 45;
+    this.controls.maxDistance = ext ? this._extR * 4.5 : 45;
     this.controls.maxPolarAngle = Math.PI * (ext ? 0.48 : 0.49);
   }
 
@@ -426,17 +476,19 @@ export class HallScene {
     if (stage !== 'exterior' && stage !== 'hall') return;
     this.stage = stage;
     const ext = stage === 'exterior';
+    this.renderer.shadowMap.needsUpdate = true;
     this.hall.visible = !ext;
     this.hallLights.visible = !ext;
     this.exterior.visible = ext;
     this.scene.background = ext ? null : new THREE.Color(0x0e1218);
-    this.scene.fog = ext ? new THREE.FogExp2(this.fogColor, 0.0016) : null;
+    this.scene.fog = ext ? new THREE.FogExp2(this.fogColor, 0.0014) : null;
+    this.scene.environment = ext && this.q.reflection && this._envRT ? this._envRT.texture : null;
     this.hover(null);
     for (const l of this.labels) l.el.hidden = ext || !this.showLabels;
     const moving = !(instant || this.reducedMotion);
     if (moving) {
       this.controls.minDistance = 2;
-      this.controls.maxDistance = this._extR * 3;
+      this.controls.maxDistance = this._extR * 4.5;
     } else {
       this._applyLimits(stage);
     }
@@ -491,7 +543,7 @@ export class HallScene {
     };
     if (this._extR) {
       const r = this._extR;
-      presets.ext = { pos: new THREE.Vector3(c.x + r * 1.0, r * 0.3, c.z + r * 1.3), target: new THREE.Vector3(c.x, this._extH / 2, c.z) };
+      presets.ext = { pos: new THREE.Vector3(c.x + r * 1.25, r * 0.72, c.z + r * 1.6), target: new THREE.Vector3(c.x, this._extH / 2, c.z) };
     }
     presets.home = { pos: new THREE.Vector3(c.x + 8, 10, c.z + 12), target: new THREE.Vector3(c.x, 0.3, c.z) };
     const p = presets[name] ?? presets.home;
@@ -655,6 +707,10 @@ export class HallScene {
     }
     this.controls.update();
     this._stepAirflow(dtSec, timeSec);
+    if (this.stage === 'exterior') {
+      this.city?.update(this.reducedMotion ? 0 : dtSec);
+      this.sky.material.uniforms.time.value = timeSec;
+    }
     if (this._dirty || this.store.version !== this._lastVersion || this._blink) {
       this._paint(timeSec);
       this._lastVersion = this.store.version;

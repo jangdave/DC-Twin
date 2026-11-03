@@ -102,7 +102,7 @@ await sleep(200);
 const alarms10 = await page.$$eval('#alarm-list li', (l) => l.length);
 ok('FR-12 알람 목록이 재생 시각에 따라 달라짐', alarms200 === 2 && alarms10 === 0, `(200초 ${alarms200}건, 10초 ${alarms10}건)`);
 await page.evaluate(() => window.__viewer.state.player.seek(200));
-await sleep(200);
+await page.waitForSelector('#alarm-list li', { timeout: 5000 });
 await page.click('#alarm-list li');
 await sleep(900);
 ok('FR-40 알람 항목을 누르면 장비 선택', (await page.evaluate(() => window.__viewer.state.selected)) === 'crac_01');
@@ -226,6 +226,28 @@ const p6 = await browser.newPage();
 await p6.goto(`${base}?stage=hall&models=0`, { waitUntil: 'networkidle0' });
 await p6.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 ok('MODEL models=0이면 받지 않고 상자만 씀', (await p6.evaluate(() => window.__viewer.getModelsState())) === 'off' && (await p6.$eval('#model-btn', (e) => e.hidden)));
+// 화질 단계: 낮음은 랙 모델을 자동으로 받지 않고 단추로 받는다. 차량 없음, 입자 적음
+const pq = await browser.newPage();
+await pq.goto(`${base}?stage=hall&q=low`, { waitUntil: 'networkidle0' });
+await pq.waitForFunction(() => window.__viewer?.scene?.airflow, { timeout: 30000 }).catch(() => {});
+const lowInfo = await pq.evaluate(() => {
+  const v = window.__viewer;
+  return { tier: v.scene.tier, models: v.getModelsState(), btnHidden: document.getElementById('model-btn').hidden, pressed: document.getElementById('model-btn').getAttribute('aria-pressed'), particles: v.scene.airflow.active, shadow: v.scene.sunExt.castShadow, sel: document.getElementById('quality-sel').value };
+});
+ok('Q 낮음: 랙 모델은 자동으로 받지 않고 단추만 보임, 입자 2500, 그림자 없음', lowInfo.tier === 'low' && lowInfo.models === 'deferred' && !lowInfo.btnHidden && lowInfo.pressed === 'false' && lowInfo.particles === 2500 && !lowInfo.shadow && lowInfo.sel === 'low', JSON.stringify(lowInfo));
+await pq.evaluate(() => document.getElementById('model-btn').click());
+await pq.waitForFunction(() => window.__viewer.scene.modelsReady, { timeout: 30000 }).catch(() => {});
+ok('Q 낮음: 단추를 누르면 랙 모델을 받아 보여 줌', await pq.evaluate(() => window.__viewer.scene.modelsReady && window.__viewer.scene.modelMeshes.every((m) => m.visible)));
+await pq.close();
+const pm = await browser.newPage();
+await pm.goto(`${base}?stage=exterior`, { waitUntil: 'networkidle0' });
+await pm.waitForFunction(() => window.__viewer?.scene?.exteriorModel, { timeout: 30000 }).catch(() => {});
+const midInfo = await pm.evaluate(() => {
+  const s = window.__viewer.scene;
+  return { tier: s.tier, blocks: s.city.plan.blocks.length, cars: s.city.group.children.some((c) => c.isInstancedMesh && c.count === 60), shadow: s.sunExt.castShadow };
+});
+ok('Q 자동 시험 브라우저는 보통(도시 블록 48, 차량 60, 그림자)', midInfo.tier === 'mid' && midInfo.blocks === 48 && midInfo.cars && midInfo.shadow, JSON.stringify(midInfo));
+await pm.close();
 // 건물 모델과 공기 흐름
 const p7 = await browser.newPage();
 await p7.goto(`${base}?scenario=cooling_failure&t=30&stage=exterior`, { waitUntil: 'networkidle0' });

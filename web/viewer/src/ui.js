@@ -62,6 +62,12 @@ export class UI {
       e.currentTarget.textContent = dusk ? '낮으로 보기' : '저녁으로 보기';
       this.h.onSky(dusk ? 'dusk' : 'day');
     });
+    $('quality-sel').addEventListener('change', (e) => {
+      const u = new URL(location.href);
+      if (e.target.value === 'auto') u.searchParams.delete('q');
+      else u.searchParams.set('q', e.target.value);
+      location.href = u.toString();
+    });
     $('play-btn').addEventListener('click', () => this.h.onPlay());
     document.querySelectorAll('#speeds [data-speed]').forEach((b) => b.addEventListener('click', () => this.h.onSpeed(Number(b.dataset.speed))));
     $('time-slider').addEventListener('input', (e) => this.h.onSeek(Number(e.target.value)));
