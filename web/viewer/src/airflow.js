@@ -48,6 +48,7 @@ export class Airflow {
     data.racks.forEach((r, i) => this._mark(r, i));
     this.rackColor = rackKeys.map(() => [1, 0.5, 0.15]);
     this.coldColor = rackKeys.map(() => COLD); // 가까운 랙의 입구 온도 색(차가운 공기)
+    this._mix = [0, 0, 0];
     this.nearRack = this._nearestRacks(data.racks);
     this._lastColorAt = -1;
 
@@ -72,22 +73,31 @@ export class Airflow {
     this._write();
   }
 
-  // 위에서 본 칸마다 가장 가까운 랙(중심 거리). 차가운 공기를 그 랙의 입구 온도 색으로 칠할 때 쓴다.
+  // 위에서 본 칸마다 가까운 랙 K대와 가중치(거리 역수 제곱). 차가운 공기를 그 랙들의 입구 온도 색 평균으로 칠할 때 쓴다.
   _nearestRacks(racks) {
-    const out = new Int16Array(this.nx * this.ny);
+    const K = 4;
+    this.K = K;
+    const idx = new Int16Array(this.nx * this.ny * K);
+    const wgt = new Float32Array(this.nx * this.ny * K);
     const cx = racks.map((r) => ((r.min[0] + r.max[0]) / 2) * CM);
     const cy = racks.map((r) => ((r.min[1] + r.max[1]) / 2) * CM);
+    const d = new Float64Array(cx.length);
     for (let i = 0; i < this.nx; i++)
       for (let j = 0; j < this.ny; j++) {
         const x = (i + 0.5) * this.cell, y = (j + 0.5) * this.cell;
-        let best = 0, bd = Infinity;
-        for (let r = 0; r < cx.length; r++) {
-          const d = (cx[r] - x) ** 2 + (cy[r] - y) ** 2;
-          if (d < bd) { bd = d; best = r; }
-        }
-        out[i * this.ny + j] = best;
+        for (let r = 0; r < cx.length; r++) d[r] = (cx[r] - x) ** 2 + (cy[r] - y) ** 2;
+        const order = [...d.keys()].sort((a, b) => d[a] - d[b]).slice(0, K);
+        let sum = 0;
+        order.forEach((r, n) => {
+          const w = 1 / (d[r] + 0.25);
+          idx[(i * this.ny + j) * K + n] = r;
+          wgt[(i * this.ny + j) * K + n] = w;
+          sum += w;
+        });
+        for (let n = 0; n < K; n++) wgt[(i * this.ny + j) * K + n] /= sum;
       }
-    return out;
+    this.nearW = wgt;
+    return idx;
   }
 
   _mark(box, id) {
@@ -217,7 +227,16 @@ export class Airflow {
       else {
         const gi = Math.min(this.nx - 1, Math.max(0, Math.floor(this.pos[o] / this.cell)));
         const gj = Math.min(this.ny - 1, Math.max(0, Math.floor(this.pos[o + 1] / this.cell)));
-        c = this.coldColor[this.nearRack[gi * this.ny + gj]];
+        const b = (gi * this.ny + gj) * this.K;
+        c = this._mix;
+        c[0] = c[1] = c[2] = 0;
+        for (let n = 0; n < this.K; n++) {
+          const k = this.coldColor[this.nearRack[b + n]];
+          const w = this.nearW[b + n];
+          c[0] += w * k[0];
+          c[1] += w * k[1];
+          c[2] += w * k[2];
+        }
       }
       const fade = Math.min(1, this.age[p] / 0.6, (this.life[p] - this.age[p]) / 1.5);
       color[q] = c[0] * fade;

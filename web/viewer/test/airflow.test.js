@@ -67,6 +67,15 @@ describe('Airflow', () => {
     expect(a.coldColor[0][0]).toBeLessThan(hot[0]); // 입구 온도가 낮으면 덜 붉다
   });
 
+  it('가까운 랙 가중치는 칸마다 합이 1이다', () => {
+    const a = fake();
+    for (let c = 0; c < a.nx * a.ny; c++) {
+      let sum = 0;
+      for (let n = 0; n < a.K; n++) sum += a.nearW[c * a.K + n];
+      expect(sum).toBeCloseTo(1, 5);
+    }
+  });
+
   it('랙을 지난 입자는 랙 번호를 기억한다', () => {
     const a = fake();
     for (let i = 0; i < 400; i++) a.step(0.05, i * 0.05);
