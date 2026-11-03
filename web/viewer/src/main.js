@@ -56,6 +56,23 @@ async function main() {
   const rackKeys = sceneData.racks.map((r) => r.name.toLowerCase());
   const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage });
 
+  // 장비 모양(glb)은 화면이 뜬 뒤에 받는다. 실패하면 단순 상자로 계속 쓴다.
+  scene.useModels = params.models;
+  let modelsState = params.models ? 'loading' : 'off';
+  if (params.models) {
+    scene
+      .loadModels(BASE)
+      .then(() => {
+        modelsState = 'ready';
+        document.getElementById('model-btn').hidden = false;
+        document.getElementById('model-btn').setAttribute('aria-pressed', 'true');
+      })
+      .catch((e) => {
+        modelsState = 'failed';
+        console.warn('장비 모양을 받지 못해 상자로 보여 준다:', e.message);
+      });
+  }
+
   const state = {
     mode: 'rec', // rec | sim | live
     sim: null,
@@ -81,6 +98,7 @@ async function main() {
     onLoop: (b) => state.player && (state.player.loop = b),
     onPreset: (p) => scene.setPreset(p),
     onLabels: (b) => scene.setLabels(b),
+    onModels: (b) => scene.setModels(b),
     onBackToRec: () => startRecording(),
     onEnter: () => queue.push({ name: 'view.goto', value: 'hall' }),
     onBack: () => queue.push({ name: 'view.back' }),
@@ -363,7 +381,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
-  window.__viewer = { state, store, scene, selectEquipment, setView, loadScenario, startSim, panel, flow, queue, dispatch: (c) => queue.push(c) };
+  window.__viewer = { getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, panel, flow, queue, dispatch: (c) => queue.push(c) };
 }
 
 main();

@@ -1,6 +1,8 @@
 // Three.js 장면 (docs/18 5.1, 5.3장). 랙은 InstancedMesh 묶음으로 그리고 값은 인스턴스 색으로 칠한다.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ALARM_COLOR, barFraction, confidenceColor, sampleColor } from './colors.js';
 
 // 보는 값. 범위는 화면 색 곡선 기준이다(입구 온도는 Unreal과 같은 18~35도).
@@ -176,6 +178,69 @@ export class HallScene {
       m.frustumCulled = false;
       this.hall.add(m);
     }
+  }
+
+  // ---- 장비 모양(glb) ----
+  // 모델(cm 단위, 정면 +Z, 바닥 중앙이 원점)을 재질별로 합쳐 인스턴스로 그린다. 값 색 판(rackFront 등)은 반투명으로 겹친다.
+  async loadModels(baseUrl) {
+    const loader = new GLTFLoader();
+    const [rack, crac] = await Promise.all([loader.loadAsync(`${baseUrl}models/rack.glb`), loader.loadAsync(`${baseUrl}models/crac.glb`)]);
+    this.modelMeshes = [...this._instanceModel(rack.scene, this.data.racks), ...this._instanceModel(crac.scene, this.data.cracs)];
+    for (const m of this.modelMeshes) this.hall.add(m);
+    this.modelsReady = true;
+    this.setModels(this.useModels ?? true);
+    return this.modelMeshes.length;
+  }
+
+  _instanceModel(root, boxes) {
+    root.updateMatrixWorld(true);
+    const byMaterial = new Map();
+    const bake = new THREE.Matrix4();
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      bake.makeScale(CM, CM, CM).multiply(o.matrixWorld); // cm -> m
+      let g = o.geometry.clone().applyMatrix4(bake);
+      for (const a of ['uv', 'uv1', 'uv2', 'color', 'tangent']) g.deleteAttribute(a);
+      g = g.index ? g.toNonIndexed() : g;
+      const mat = Array.isArray(o.material) ? o.material[0] : o.material;
+      if (!byMaterial.has(mat)) byMaterial.set(mat, []);
+      byMaterial.get(mat).push(g);
+    });
+    const meshes = [];
+    const m4 = new THREE.Matrix4();
+    for (const [mat, geos] of byMaterial) {
+      const merged = mergeGeometries(geos, false);
+      merged.computeBoundingSphere();
+      const im = new THREE.InstancedMesh(merged, mat, boxes.length);
+      boxes.forEach((b, i) => {
+        const [axis, sign] = b.front;
+        const fx = axis === 0 ? sign : 0;
+        const fy = axis === 1 ? sign : 0;
+        const yaw = Math.atan2(fx, -fy); // 모델 정면(+Z)을 상자의 앞면 방향으로 돌린다
+        const c = toThree((b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, b.min[2]);
+        m4.compose(c, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw), new THREE.Vector3(1, 1, 1));
+        im.setMatrixAt(i, m4);
+      });
+      im.frustumCulled = false;
+      meshes.push(im);
+    }
+    return meshes;
+  }
+
+  // 장비 모양(true)과 단순 상자(false)를 바꾼다. 모델이 아직 없으면 상자로 둔다.
+  setModels(on) {
+    this.useModels = on;
+    const show = on && this.modelsReady;
+    for (const m of this.modelMeshes ?? []) m.visible = show;
+    this.rackBody.visible = !show; // 숨겨도 선택(레이캐스트)에는 계속 쓴다
+    this.cracBody.visible = !show;
+    for (const mesh of [this.rackFront, this.rackTop, this.cracFront]) {
+      mesh.material.transparent = show;
+      mesh.material.opacity = show ? 0.5 : 1;
+      mesh.material.depthWrite = !show;
+      mesh.material.needsUpdate = true;
+    }
+    this._dirty = true;
   }
 
   _buildSelection() {

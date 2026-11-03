@@ -28,7 +28,7 @@ const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 export class UI {
   constructor(store, handlers) {
     this.store = store;
-    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m) }
+    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on) }
     this.metricTab = null;
     this.selected = null;
     this._lastAlarmCount = -1;
@@ -45,6 +45,11 @@ export class UI {
       const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
       e.currentTarget.setAttribute('aria-pressed', String(on));
       this.h.onLabels(on);
+    });
+    $('model-btn').addEventListener('click', (e) => {
+      const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+      e.currentTarget.setAttribute('aria-pressed', String(on));
+      this.h.onModels(on);
     });
     $('play-btn').addEventListener('click', () => this.h.onPlay());
     document.querySelectorAll('#speeds [data-speed]').forEach((b) => b.addEventListener('click', () => this.h.onSpeed(Number(b.dataset.speed))));
