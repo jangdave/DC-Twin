@@ -201,6 +201,52 @@ await p3.screenshot({ path: path.join(OUT, 'stage_exterior_mobile.png') });
 await p3.setViewport({ width: 1280, height: 800 });
 await p3.screenshot({ path: path.join(OUT, 'stage_exterior.png') });
 
+// 10) 직접 시뮬레이션(docs/21): 브라우저가 간이 모델로 계산하고 조작이 반영된다
+const p5 = await browser.newPage();
+await p5.setViewport({ width: 1280, height: 800 });
+await p5.goto(`${base}?stage=hall&mode=sim&scenario=normal`, { waitUntil: 'networkidle0' });
+await p5.waitForFunction(() => window.__viewer?.state.sim, { timeout: 15000 });
+const vis5 = (sel) => p5.$eval(sel, (e) => !e.hidden);
+ok('SIM 직접 시뮬레이션으로 시작: 패널이 보이고 시간 막대와 반복은 숨김', (await vis5('#sim-panel')) && !(await vis5('#timebar')) && !(await vis5('#loop-label')) && (await p5.$eval('#mode-badge', (e) => e.textContent)).includes('직접 시뮬레이션'));
+ok('SIM CRAC 슬라이더 8개, 줄 슬라이더 6개', (await p5.$$eval('#sim-fans input', (l) => l.length)) === 8 && (await p5.$$eval('#sim-rows input', (l) => l.length)) === 6);
+ok('SIM 첫 값이 바로 보임(센서 204개, 입구 온도 18~20도)', await p5.evaluate(() => {
+  const v = window.__viewer;
+  const t = v.store.metric('rack_01', 'temp_in');
+  return v.store.latest.size === 204 && t && t.value > 17.5 && t.value < 20.5 && !t.confidence;
+}));
+await sleep(2600);
+ok('SIM 실제 시간에 맞춰 진행(2초 이상)', (await p5.evaluate(() => window.__viewer.state.sim.time)) >= 2);
+await p5.evaluate(() => {
+  const input = document.querySelector('#sim-fans input[aria-label="CRAC_02 팬 속도"]');
+  input.value = '0';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+});
+const before = await p5.evaluate(() => Math.max(...[...Array(60).keys()].map((i) => window.__viewer.store.metric(`rack_${String(i + 1).padStart(2, '0')}`, 'temp_in').value)));
+const after = await p5.evaluate(() => {
+  const v = window.__viewer;
+  v.state.sim.speed = 10;
+  for (let i = 0; i < 40; i++) v.state.sim.advance(1);
+  return { max: Math.max(...[...Array(60).keys()].map((i) => v.store.metric(`rack_${String(i + 1).padStart(2, '0')}`, 'temp_in').value)), alarms: v.store.alarmLog.length, fan: v.state.sim.engine.fan.crac_02 };
+});
+ok('SIM CRAC_02를 끄면 가장 높은 입구 온도가 3도 이상 오름', after.fan === 0 && after.max > before + 3, JSON.stringify({ before, ...after }));
+ok('SIM 알람이 생기고 조작 기록에 남음', after.alarms > 0 && (await p5.$$eval('#sim-log li', (l) => l.length)) >= 1);
+await sleep(600);
+ok('SIM 알람 목록이 화면에 나옴', (await p5.$$eval('#alarm-list li', (l) => l.length)) > 0);
+await p5.evaluate(() => window.__viewer.selectEquipment('rack_05', true));
+await sleep(200);
+ok('SIM 랙을 선택하면 "선택한 랙만" 슬라이더가 나타남', await vis5('#sim-selected'));
+await p5.select('#scenario-select', 'power_spike');
+await sleep(500);
+const reset = await p5.evaluate(() => ({ fan: window.__viewer.state.sim.engine.fan.crac_02, t: window.__viewer.state.sim.time, sc: window.__viewer.state.simScenario, slider: document.querySelector('#sim-fans input[aria-label="CRAC_02 팬 속도"]').value }));
+ok('SIM 시나리오를 바꾸면 처음부터 다시 시작하고 슬라이더도 되돌아옴', reset.fan === 1 && reset.t < 20 && reset.sc === 'power_spike' && reset.slider === '100', JSON.stringify(reset));
+await p5.click('#mode-group [data-mode="rec"]');
+await sleep(800);
+ok('SIM 녹화 재생으로 돌아오면 패널이 숨고 시간 막대가 다시 보임', !(await vis5('#sim-panel')) && (await vis5('#timebar')) && (await p5.$eval('#mode-badge', (e) => e.textContent)).includes('녹화'));
+await p5.click('#mode-group [data-mode="sim"]');
+await sleep(500);
+ok('SIM 다시 직접 시뮬레이션으로 전환', (await vis5('#sim-panel')) && (await p5.evaluate(() => window.__viewer.state.mode)) === 'sim');
+await p5.screenshot({ path: path.join(OUT, 'sim_mode.png') });
+
 await browser.close();
 web.close();
 const bad = [...new Set(errors)];

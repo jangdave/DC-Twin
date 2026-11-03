@@ -28,7 +28,7 @@ const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 export class UI {
   constructor(store, handlers) {
     this.store = store;
-    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack() }
+    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m) }
     this.metricTab = null;
     this.selected = null;
     this._lastAlarmCount = -1;
@@ -54,6 +54,7 @@ export class UI {
     $('live-back').addEventListener('click', () => this.h.onBackToRec());
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
     $('back-btn').addEventListener('click', () => this.h.onBack());
+    document.querySelectorAll('#mode-group [data-mode]').forEach((b) => b.addEventListener('click', () => this.h.onMode(b.dataset.mode)));
   }
 
   fillHelp() {
@@ -83,10 +84,13 @@ export class UI {
     const b = $('mode-badge');
     b.className = `badge ${mode}`;
     b.textContent = text;
-    const rec = mode === 'rec';
-    $('transport').hidden = !rec;
-    $('live-info').hidden = rec;
-    $('scenario-select').disabled = !rec;
+    const own = mode === 'rec' || mode === 'sim'; // 이 화면이 재생이나 계산을 직접 하는 방식(라이브가 아님)
+    $('transport').hidden = !own;
+    $('live-info').hidden = own;
+    $('scenario-select').disabled = !own;
+    $('timebar').hidden = mode === 'sim';
+    $('loop-label').hidden = mode === 'sim';
+    document.querySelectorAll('#mode-group [data-mode]').forEach((x) => x.classList.toggle('on', x.dataset.mode === mode));
   }
 
   setLiveText(t) {
@@ -146,8 +150,12 @@ export class UI {
 
   renderTransport(player) {
     $('play-btn').textContent = player.playing ? '⏸' : '▶';
-    $('time-slider').value = String(player.time);
-    $('time-text').textContent = `${clock(player.time)} / ${clock(player.duration)}`;
+    if (player.duration === null) {
+      $('time-text').textContent = `${clock(player.time)} 경과`; // 직접 시뮬레이션은 끝이 없다
+    } else {
+      $('time-slider').value = String(player.time);
+      $('time-text').textContent = `${clock(player.time)} / ${clock(player.duration)}`;
+    }
     document.querySelectorAll('#speeds [data-speed]').forEach((b) => b.classList.toggle('on', Number(b.dataset.speed) === player.speed));
     $('loop-check').checked = player.loop;
   }

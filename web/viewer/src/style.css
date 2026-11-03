@@ -149,3 +149,24 @@ dialog ul { padding-left: 18px; }
   #exterior-card h2, #exterior-card .muted { display: none; }
   #exterior-card dl { grid-template-columns: auto 1fr auto 1fr; gap: 2px 10px; margin-bottom: 6px; }
 }
+
+/* 보기 방식(녹화 재생 / 직접 시뮬레이션) */
+#mode-group { display: inline-flex; gap: 0; }
+#mode-group button { border-radius: 0; padding: 3px 10px; }
+#mode-group button:first-child { border-radius: 6px 0 0 6px; }
+#mode-group button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+.badge.sim::before { color: var(--accent); }
+
+/* 직접 시뮬레이션 패널 */
+#sim-panel { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+#sim-panel h2 { margin: 0 0 6px; font-size: 15px; }
+#sim-panel h3 { margin: 10px 0 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+#sim-panel p { margin: 4px 0; font-size: 12px; }
+.sim-row { display: grid; grid-template-columns: 64px 1fr 44px; align-items: center; gap: 8px; padding: 1px 0; font-size: 12px; }
+.sim-row input[type="range"] { width: 100%; }
+.sim-val { text-align: right; font-variant-numeric: tabular-nums; }
+#sim-reset { margin-top: 10px; width: 100%; }
+#sim-log { margin: 0; padding: 0; list-style: none; font-size: 12px; max-height: 120px; overflow: auto; }
+#sim-log li { padding: 2px 0; }
+#sim-log time { color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
+#sim-selected .sim-row { grid-template-columns: auto 1fr 44px; }
