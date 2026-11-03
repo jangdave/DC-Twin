@@ -141,6 +141,8 @@ dialog ul { padding-left: 18px; }
 #exterior-card dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 #exterior-card .muted { margin: 0 0 8px; font-size: 12px; }
 #enter-btn { width: 100%; padding: 6px 10px; border-color: var(--accent); color: var(--accent); }
+#sky-btn { width: 100%; padding: 6px 10px; margin-top: 6px; }
+#sky-btn[aria-pressed="true"] { border-color: var(--accent); }
 #stage[data-stage="exterior"] canvas.over-building { cursor: pointer; }
 
 /* 좁은 화면: 외관 카드를 얇은 띠로 줄여 건물을 가리지 않게 한다 */

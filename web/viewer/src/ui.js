@@ -28,7 +28,7 @@ const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 export class UI {
   constructor(store, handlers) {
     this.store = store;
-    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on), onFlow(on), onServer(url) }
+    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on), onFlow(on), onSky(name), onServer(url) }
     this.metricTab = null;
     this.selected = null;
     this._lastAlarmCount = -1;
@@ -55,6 +55,12 @@ export class UI {
       const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
       e.currentTarget.setAttribute('aria-pressed', String(on));
       this.h.onFlow(on);
+    });
+    $('sky-btn').addEventListener('click', (e) => {
+      const dusk = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+      e.currentTarget.setAttribute('aria-pressed', String(dusk));
+      e.currentTarget.textContent = dusk ? '낮으로 보기' : '저녁으로 보기';
+      this.h.onSky(dusk ? 'dusk' : 'day');
     });
     $('play-btn').addEventListener('click', () => this.h.onPlay());
     document.querySelectorAll('#speeds [data-speed]').forEach((b) => b.addEventListener('click', () => this.h.onSpeed(Number(b.dataset.speed))));

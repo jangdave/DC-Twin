@@ -57,6 +57,11 @@ async function main() {
   const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage });
 
   scene.setSky(params.sky);
+  if (params.sky === 'dusk') {
+    const b = document.getElementById('sky-btn');
+    b.setAttribute('aria-pressed', 'true');
+    b.textContent = '낮으로 보기';
+  }
   // 건물 모델(glb)도 화면이 뜬 뒤에 받는다. 실패하면 단순 상자 건물로 계속 쓴다.
   scene.loadExteriorModel(BASE).catch((e) => console.warn('건물 모양을 받지 못해 상자로 보여 준다:', e.message));
 
@@ -112,6 +117,7 @@ async function main() {
     onLabels: (b) => scene.setLabels(b),
     onModels: (b) => scene.setModels(b),
     onFlow: (b) => scene.setAirflow(b),
+    onSky: (n) => scene.setSky(n),
     onBackToRec: () => startRecording(),
     onEnter: () => queue.push({ name: 'view.goto', value: 'hall' }),
     onBack: () => queue.push({ name: 'view.back' }),

@@ -5,7 +5,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 // 하루 중 시간대. sun은 해의 방향(높이각 도, 방위각 도), 나머지는 색.
 export const SKY_PRESETS = {
   day: { elev: 40, azim: 70, zenith: 0x2f6fc0, horizon: 0xbcd6ee, sun: 0xfff1d6, sunI: 3.0, hemiSky: 0xbfd8f5, hemiGround: 0x5a6a4a, hemiI: 1.4, fog: 0xbcd6ee, grass: 0x39502c },
-  dusk: { elev: 9, azim: 130, zenith: 0x1f2f5c, horizon: 0xf0a070, sun: 0xffb27a, sunI: 3.2, hemiSky: 0x8f9fd0, hemiGround: 0x5a4a3a, hemiI: 1.0, fog: 0xc99a85, grass: 0x2a3a22 },
+  dusk: { elev: 9, azim: 130, zenith: 0x1f2f5c, horizon: 0xf0a070, sun: 0xffb27a, sunI: 3.2, hemiSky: 0x8f9fd0, hemiGround: 0x5a4a3a, hemiI: 1.5, fog: 0xc99a85, grass: 0x4a5a32 },
 };
 
 export function sunVector(elevDeg, azimDeg) {
