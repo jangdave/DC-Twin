@@ -443,9 +443,14 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   }
   updateCars(0);
 
+  // 하늘 반사는 유리 외벽과 금속 외벽에만 준다. 바닥, 도로, 콘크리트, 벽돌은 반사하지 않아 보는 각도에 따라 색이 변하지 않는다.
+  const ENV = { glass: 0.8, glass2: 0.8, metal: 0.5, metal2: 0.5 };
+  const reflective = FACADES.filter((f) => ENV[f]).map((f) => ({ mat: mats[f], k: ENV[f] })); // scene.js가 반사 지도를 걸어 준다
+
   return {
     group,
     plan,
+    reflective,
     // 낮이면 창이 어둡고 저녁이면 창과 가로등에 불이 켜지며, 먼 윤곽은 어두워진다
     setSky(name) {
       const dusk = name === 'dusk';
