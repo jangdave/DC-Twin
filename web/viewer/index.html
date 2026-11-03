@@ -10,17 +10,15 @@
 </head>
 <body>
   <header id="top">
-    <h1>DC-Twin 가상 데이터센터</h1>
-    <button id="back-btn" type="button" hidden aria-label="외관 화면으로 돌아가기 (Esc)">← 외관으로</button>
-    <span id="mode-badge" class="badge" role="status">불러오는 중</span>
+    <div class="brand">
+      <h1>DC-Twin 가상 데이터센터</h1>
+      <button id="back-btn" type="button" hidden aria-label="외관 화면으로 돌아가기 (Esc)">← 외관으로</button>
+    </div>
     <div id="mode-group" role="group" aria-label="보기 방식">
       <button type="button" data-mode="rec" class="on">녹화 재생</button>
       <button type="button" data-mode="sim">직접 시뮬레이션</button>
       <button type="button" data-mode="server">로컬 서버</button>
     </div>
-    <label class="field">시나리오
-      <select id="scenario-select" aria-label="시나리오"></select>
-    </label>
     <div class="agg" aria-label="집계 값">
       <span>IT 전력 <b id="agg-it">–</b></span>
       <span>냉각 전력 <b id="agg-cool">–</b></span>
@@ -34,21 +32,32 @@
       <canvas id="canvas" tabindex="0" aria-label="데이터센터 3D 장면. 방향키로 랙을 선택할 수 있다"></canvas>
       <div id="labels"></div>
       <div id="tooltip" role="tooltip" hidden></div>
+      <span id="mode-badge" class="badge" role="status">불러오는 중</span>
       <div id="stage-tools">
         <fieldset id="view-group">
           <legend>보기 값</legend>
-          <label><input type="radio" name="view" value="temp_in" checked /> 입구 온도</label>
-          <label><input type="radio" name="view" value="temp_out" /> 배기 온도</label>
-          <label><input type="radio" name="view" value="power" /> 전력</label>
+          <label><input type="radio" name="view" value="temp_in" checked /><span>입구 온도</span></label>
+          <label><input type="radio" name="view" value="temp_out" /><span>배기 온도</span></label>
+          <label><input type="radio" name="view" value="power" /><span>전력</span></label>
         </fieldset>
-        <div id="presets">
-          <button type="button" data-preset="top">위에서</button>
-          <button type="button" data-preset="iso">비스듬히</button>
-          <button type="button" data-preset="home">처음 위치</button>
-          <button type="button" id="labels-btn" aria-pressed="false">통로 이름</button>
-          <button type="button" id="model-btn" aria-pressed="true" hidden>장비 모양</button>
-          <button type="button" id="flow-btn" aria-pressed="true" hidden title="시각화 목적의 공기 흐름. 실제 계산 결과가 아니다">공기 흐름</button>
+        <div class="tool-groups">
+          <div id="presets" class="tool-group" role="group" aria-label="시점">
+            <span class="tool-title">시점</span>
+            <button type="button" data-preset="top">위에서</button>
+            <button type="button" data-preset="iso">비스듬히</button>
+            <button type="button" data-preset="home">처음 위치</button>
+          </div>
+          <div id="layers" class="tool-group" role="group" aria-label="표시">
+            <span class="tool-title">표시</span>
+            <button type="button" id="labels-btn" aria-pressed="false">통로 이름</button>
+            <button type="button" id="model-btn" aria-pressed="true" hidden>장비 모양</button>
+            <button type="button" id="flow-btn" aria-pressed="true" hidden title="시각화 목적의 공기 흐름. 실제 계산 결과가 아니다">공기 흐름</button>
+          </div>
         </div>
+      </div>
+      <div id="legend" aria-label="색 범례">
+        <span class="legend-title" id="legend-title">입구 온도</span>
+        <span id="legend-min">18</span><span id="legend-ramp" aria-hidden="true"></span><span id="legend-max">35 °C</span>
       </div>
       <div id="exterior-card" hidden aria-live="polite">
         <h2>가상 데이터센터</h2>
@@ -68,48 +77,69 @@
       </div>
     </section>
 
-    <aside id="side">
-      <section id="scenario-card" aria-label="시나리오 설명과 상황 요약">
-        <h2 id="sc-title">시나리오</h2>
-        <p id="sc-desc" class="muted"></p>
-        <dl id="sc-state">
-          <dt>가장 높은 입구 온도</dt><dd><button type="button" id="sc-max" class="linkish">–</button></dd>
-          <dt>알람</dt><dd id="sc-alarms">–</dd>
-          <dt>첫 알람</dt><dd id="sc-first">없음</dd>
-        </dl>
-        <h3 id="sc-events-title" hidden>일어나는 일</h3>
-        <ol id="sc-events"></ol>
-      </section>
-      <section id="sim-panel" hidden aria-label="직접 시뮬레이션 조작">
-        <h2>직접 시뮬레이션</h2>
-        <p class="muted sim-note" id="sim-note">간이 모델(1차 지연 식)을 이 브라우저에서 계산한 값이다. 보정 모델(AI)은 쓰지 않아 신뢰 막대가 나오지 않는다.</p>
-        <div id="sim-speed" hidden role="group" aria-label="서버 속도">
-          <span class="muted">서버 속도</span>
-          <button type="button" data-xspeed="0.5">0.5x</button><button type="button" data-xspeed="1" class="on">1x</button><button type="button" data-xspeed="2">2x</button><button type="button" data-xspeed="5">5x</button><button type="button" data-xspeed="10">10x</button>
-        </div>
-        <h3>CRAC 팬 속도</h3>
-        <div id="sim-fans"></div>
-        <h3>줄별 랙 전력</h3>
-        <div id="sim-rows"></div>
-        <div id="sim-selected" hidden>
-          <h3>선택한 랙만</h3>
-          <label class="sim-row"><span id="sim-selected-name" class="sim-name"></span><input id="sim-selected-power" type="range" min="0" max="300" step="10" value="100" aria-label="선택한 랙 전력 배수" /><output id="sim-selected-val" class="sim-val">100%</output></label>
-        </div>
-        <button id="sim-reset" type="button">시나리오 처음부터 다시</button>
-        <h3>조작 기록</h3>
-        <ol id="sim-log"></ol>
-        <p class="muted" id="sim-log-empty">아직 없다.</p>
-      </section>
-      <section id="detail" aria-live="polite" aria-label="선택한 장비">
-        <h2>선택한 장비</h2>
-        <p class="muted" id="detail-empty">랙이나 냉각 장치(CRAC)를 눌러 보세요.</p>
-        <div id="detail-body" hidden></div>
-      </section>
-      <section id="alarms" aria-label="알람 목록">
-        <h2>알람 <span id="alarm-count" class="muted"></span></h2>
-        <ol id="alarm-list"></ol>
-        <p class="muted" id="alarm-empty">지금까지 알람이 없다.</p>
-      </section>
+    <aside id="side" aria-label="상세 정보">
+      <div id="side-tabs" role="tablist" aria-label="정보 구분">
+        <button type="button" role="tab" id="tab-summary" data-tab="summary" aria-controls="pane-summary" aria-selected="true">요약</button>
+        <button type="button" role="tab" id="tab-detail" data-tab="detail" aria-controls="pane-detail" aria-selected="false">장비</button>
+        <button type="button" role="tab" id="tab-control" data-tab="control" aria-controls="pane-control" aria-selected="false" hidden>조작</button>
+        <button type="button" role="tab" id="tab-alarms" data-tab="alarms" aria-controls="pane-alarms" aria-selected="false">알람 <span id="tab-alarm-count" class="count" hidden>0</span></button>
+      </div>
+
+      <div class="pane" id="pane-summary" role="tabpanel" aria-labelledby="tab-summary">
+        <label class="field scenario-field">시나리오
+          <select id="scenario-select" aria-label="시나리오"></select>
+        </label>
+        <section id="scenario-card" aria-label="시나리오 설명과 상황 요약">
+          <h2 id="sc-title">시나리오</h2>
+          <p id="sc-desc" class="muted"></p>
+          <dl id="sc-state">
+            <dt>가장 높은 입구 온도</dt><dd><button type="button" id="sc-max" class="linkish">–</button></dd>
+            <dt>알람</dt><dd id="sc-alarms">–</dd>
+            <dt>첫 알람</dt><dd id="sc-first">없음</dd>
+          </dl>
+          <h3 id="sc-events-title" hidden>일어나는 일</h3>
+          <ol id="sc-events"></ol>
+        </section>
+      </div>
+
+      <div class="pane" id="pane-detail" role="tabpanel" aria-labelledby="tab-detail" hidden>
+        <section id="detail" aria-live="polite" aria-label="선택한 장비">
+          <h2>선택한 장비</h2>
+          <p class="muted" id="detail-empty">3D 화면에서 랙이나 냉각 장치(CRAC)를 눌러 보세요.</p>
+          <div id="detail-body" hidden></div>
+        </section>
+      </div>
+
+      <div class="pane" id="pane-control" role="tabpanel" aria-labelledby="tab-control" hidden>
+        <section id="sim-panel" hidden aria-label="직접 시뮬레이션 조작">
+          <h2>직접 시뮬레이션</h2>
+          <p class="muted sim-note" id="sim-note">간이 모델(1차 지연 식)을 이 브라우저에서 계산한 값이다. 보정 모델(AI)은 쓰지 않아 신뢰 막대가 나오지 않는다.</p>
+          <div id="sim-speed" hidden role="group" aria-label="서버 속도">
+            <span class="muted">서버 속도</span>
+            <button type="button" data-xspeed="0.5">0.5x</button><button type="button" data-xspeed="1" class="on">1x</button><button type="button" data-xspeed="2">2x</button><button type="button" data-xspeed="5">5x</button><button type="button" data-xspeed="10">10x</button>
+          </div>
+          <h3>CRAC 팬 속도</h3>
+          <div id="sim-fans"></div>
+          <h3>줄별 랙 전력</h3>
+          <div id="sim-rows"></div>
+          <div id="sim-selected" hidden>
+            <h3>선택한 랙만</h3>
+            <label class="sim-row"><span id="sim-selected-name" class="sim-name"></span><input id="sim-selected-power" type="range" min="0" max="300" step="10" value="100" aria-label="선택한 랙 전력 배수" /><output id="sim-selected-val" class="sim-val">100%</output></label>
+          </div>
+          <button id="sim-reset" type="button">시나리오 처음부터 다시</button>
+          <h3>조작 기록</h3>
+          <ol id="sim-log"></ol>
+          <p class="muted" id="sim-log-empty">아직 없다.</p>
+        </section>
+      </div>
+
+      <div class="pane" id="pane-alarms" role="tabpanel" aria-labelledby="tab-alarms" hidden>
+        <section id="alarms" aria-label="알람 목록">
+          <h2>알람 <span id="alarm-count" class="muted"></span></h2>
+          <ol id="alarm-list"></ol>
+          <p class="muted" id="alarm-empty">지금까지 알람이 없다.</p>
+        </section>
+      </div>
     </aside>
   </main>
 
@@ -132,14 +162,6 @@
     <div id="live-info" hidden>
       <span id="live-text"></span>
       <button id="live-back" type="button">녹화 재생으로 돌아가기</button>
-    </div>
-    <div id="legend">
-      <span class="legend-title" id="legend-title">입구 온도</span>
-      <span id="legend-min">18</span><span id="legend-ramp" aria-hidden="true"></span><span id="legend-max">35 °C</span>
-      <span class="sep">|</span>
-      <span class="chip c-ok">ok</span><span class="chip c-caution">caution</span><span class="chip c-low">low</span><span class="chip c-fallback">보정 없음</span>
-      <span class="sep">|</span>
-      <span class="chip a-warn">주의 테두리</span><span class="chip a-critical">위험 테두리</span>
     </div>
     <p id="disclaimer">시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않는다. 가상 시설이다.</p>
   </footer>
@@ -164,6 +186,7 @@ uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ../out
       <li><b>랙 위의 막대</b>는 AI 대리 모델 보정값의 믿을 수 있는 정도다. 막대가 짧을수록 90% 구간이 넓다(불확실하다).</li>
       <li><b>테두리</b>는 알람이다. 노랑은 주의, 빨강(깜박임)은 위험이다.</li>
       <li><b>직접 시뮬레이션</b>은 위의 "직접 시뮬레이션"을 누르면 이 브라우저가 간이 모델로 계산한다. CRAC 팬 속도와 줄별 전력을 슬라이더로 바꿔 보세요. 시나리오는 처음부터 다시 시작할 수 있다.</li>
+      <li><b>오른쪽 패널</b>은 탭으로 나뉜다. <b>요약</b>(시나리오 선택과 상황), <b>장비</b>(3D 화면에서 고른 랙이나 CRAC), <b>조작</b>(직접 시뮬레이션과 로컬 서버일 때만), <b>알람</b>(목록, 누르면 그 장비로 이동).</li>
       <li><b>외관</b>에서 건물을 누르거나 Enter를 누르면 홀로 들어간다. 홀에서 Esc나 "외관으로" 단추로 돌아온다.</li>
       <li><b>조작</b>: 끌어서 돌리고, 휠로 확대하고, 랙을 누르면 상세를 본다. 스페이스바는 재생과 정지, 좌우 화살표는 5초 이동(Shift는 30초), 캔버스에서 방향키는 랙 이동이다.</li>
     </ul>
