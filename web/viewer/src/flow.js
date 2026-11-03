@@ -85,15 +85,20 @@ export function summarize(store, rackKeys) {
   let alarms = 0;
   for (const e of store.latest.values()) if (e.alarm && e.alarm !== 'normal') alarms++;
   let maxIn = null;
+  let maxRack = null;
   for (const k of rackKeys) {
     const m = store.metric(k, 'temp_in');
-    if (m && Number.isFinite(m.value) && (maxIn === null || m.value > maxIn)) maxIn = m.value;
+    if (m && Number.isFinite(m.value) && (maxIn === null || m.value > maxIn)) {
+      maxIn = m.value;
+      maxRack = k;
+    }
   }
   const a = store.aggregates ?? {};
   return {
     hasData: store.latest.size > 0,
     alarms,
     maxTempIn: maxIn,
+    maxRack,
     itPower: Number.isFinite(a.it_power) ? a.it_power : null,
     pue: Number.isFinite(a.pue) ? a.pue : null,
   };

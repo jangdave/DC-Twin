@@ -66,9 +66,19 @@
     </section>
 
     <aside id="side">
+      <section id="scenario-card" aria-label="시나리오 설명과 상황 요약">
+        <h2 id="sc-title">시나리오</h2>
+        <p id="sc-desc" class="muted"></p>
+        <dl id="sc-state">
+          <dt>가장 높은 입구 온도</dt><dd><button type="button" id="sc-max" class="linkish">–</button></dd>
+          <dt>알람</dt><dd id="sc-alarms">–</dd>
+          <dt>첫 알람</dt><dd id="sc-first">없음</dd>
+        </dl>
+        <h3 id="sc-events-title" hidden>일어나는 일</h3>
+        <ol id="sc-events"></ol>
+      </section>
       <section id="sim-panel" hidden aria-label="직접 시뮬레이션 조작">
         <h2>직접 시뮬레이션</h2>
-        <p id="sim-scenario-desc" class="muted"></p>
         <p class="muted sim-note">간이 모델(1차 지연 식)을 이 브라우저에서 계산한 값이다. 보정 모델(AI)은 쓰지 않아 신뢰 막대가 나오지 않는다.</p>
         <h3>CRAC 팬 속도</h3>
         <div id="sim-fans"></div>

@@ -59,6 +59,7 @@ export class UI {
     $('live-back').addEventListener('click', () => this.h.onBackToRec());
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
     $('back-btn').addEventListener('click', () => this.h.onBack());
+    $('sc-max').addEventListener('click', (e) => e.currentTarget.dataset.rack && this.h.onSelect(e.currentTarget.dataset.rack, true));
     document.querySelectorAll('#mode-group [data-mode]').forEach((b) => b.addEventListener('click', () => this.h.onMode(b.dataset.mode)));
   }
 
@@ -119,6 +120,39 @@ export class UI {
     $('ext-temp').textContent = s.maxTempIn === null ? none : `${fmt(s.maxTempIn, 1)} °C`;
     $('ext-it').textContent = s.itPower === null ? none : `${fmt(s.itPower, 1)} kW`;
     $('ext-pue').textContent = s.pue === null ? none : fmt(s.pue, 2);
+  }
+
+  // 시나리오 이름과 설명, 일어나는 일 목록(녹화 재생에서만 눌러서 그 시각으로 이동)
+  setScenarioCard(title, desc, events = [], seekable = false) {
+    $('sc-title').textContent = title;
+    $('sc-desc').textContent = desc;
+    const ol = $('sc-events');
+    ol.replaceChildren();
+    $('sc-events-title').hidden = events.length === 0;
+    for (const e of events) {
+      const li = el('li');
+      const t = el('time', '', clock(e.t));
+      li.append(t, document.createTextNode(describeEvent(e)));
+      if (seekable) {
+        li.tabIndex = 0;
+        li.classList.add('seekable');
+        const go = () => this.h.onSeek(e.t);
+        li.addEventListener('click', go);
+        li.addEventListener('keydown', (ev) => (ev.key === 'Enter' || ev.key === ' ') && (ev.preventDefault(), go()));
+      }
+      ol.append(li);
+    }
+  }
+
+  // 지금 상황: 가장 높은 입구 온도 랙, 알람 수, 첫 알람 시각
+  renderSummary(s, log) {
+    const btn = $('sc-max');
+    btn.textContent = s.maxTempIn === null ? '데이터 없음' : `${prettyName(s.maxRack)} ${fmt(s.maxTempIn, 1)} °C`;
+    btn.disabled = s.maxRack === null;
+    btn.dataset.rack = s.maxRack ?? '';
+    $('sc-alarms').textContent = s.hasData ? `지금 ${s.alarms}건` : '데이터 없음';
+    const first = log.find((a) => a.to !== 'normal');
+    $('sc-first').textContent = first ? `${first.t !== undefined ? clock(first.t) : (first.ts ?? '').slice(11, 19)} ${prettyName(this.store.byId.get(first.sensorId)?.equipment ?? '')}` : '없음';
   }
 
   renderAggregates() {
@@ -289,8 +323,10 @@ export class UI {
 }
 
 export function describeEvent(e) {
-  if (e.kind === 'crac_fan') return `${prettyName(e.target)} 팬 ${Math.round(e.value * 100)}%`;
+  const pct = Number.isFinite(e.value) ? `${Math.round(e.value * 100)}%` : '';
+  if (e.kind === 'crac_fan') return e.value === 0 ? `${prettyName(e.target)} 팬 정지` : `${prettyName(e.target)} 팬 속도 ${pct}`;
   if (e.kind === 'crac_off') return `${prettyName(e.target)} 정지`;
+  if (e.kind === 'rack_power_scale') return `${String(e.target).startsWith('row:') ? `${Number(String(e.target).slice(4))}번 줄` : prettyName(e.target)} 랙 전력 ${pct}`;
   if (e.kind === 'rack_power') return `${prettyName(e.target)} 전력 변화`;
   return `${e.kind} ${e.target ?? ''}`.trim();
 }

@@ -1,5 +1,4 @@
 // 직접 시뮬레이션 조작 패널 (docs/21 4장). 값은 textContent로만 넣는다.
-import { SCENARIOS } from './core.js';
 import { describeControl } from './runner.js';
 
 const $ = (id) => document.getElementById(id);
@@ -69,11 +68,6 @@ export class SimPanel {
 
   show(on) {
     $('sim-panel').hidden = !on;
-  }
-
-  setScenario(id) {
-    const sc = SCENARIOS[id];
-    $('sim-scenario-desc').textContent = sc ? sc.description : '';
   }
 
   // 시나리오가 값을 바꿨을 때 슬라이더가 따라가게 엔진 상태를 반영한다
