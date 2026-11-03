@@ -235,6 +235,10 @@ const extInfo = await p7.evaluate(() => {
   return { model: !!s.exteriorModel, sky: s.sky.visible, fog: !!s.scene.fog, box: s.building.length, hallLights: s.hallLights.visible };
 });
 ok('EXT 건물 모델과 하늘이 보이고 홀 조명은 꺼짐', extInfo.model && extInfo.sky && extInfo.fog && !extInfo.hallLights, JSON.stringify(extInfo));
+await p7.evaluate(() => document.getElementById('sky-btn').click());
+ok('EXT 저녁 단추로 하늘이 바뀜', (await p7.evaluate(() => window.__viewer.scene.skyName)) === 'dusk' && (await p7.$eval('#sky-btn', (e) => e.textContent)).includes('낮'));
+await p7.evaluate(() => document.getElementById('sky-btn').click());
+ok('EXT 다시 누르면 낮', (await p7.evaluate(() => window.__viewer.scene.skyName)) === 'day');
 await p7.evaluate(() => window.__viewer.dispatch?.({ name: 'view.goto', args: ['hall'] }));
 await p7.evaluate(() => document.getElementById('enter-btn')?.click());
 await p7.waitForFunction(() => window.__viewer.scene.stage === 'hall' && window.__viewer.scene.airflow, { timeout: 20000 }).catch(() => {});
