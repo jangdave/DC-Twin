@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CITY, FACADES, planCity } from '../src/city.js';
+import { CITY, FACADES, PALETTES, baseFacade, planCity } from '../src/city.js';
 
 describe('planCity', () => {
   const plan = planCity({ cx: 0, cz: 0, rings: 3, seed: 11 });
@@ -52,7 +52,9 @@ describe('planCity', () => {
   });
 
   it('건물이 다양하다: 외벽 5종, 모양 5종, 높이 차이, 공원과 주차장', () => {
-    expect(new Set(plan.buildings.map((b) => b.facade)).size).toBe(FACADES.length);
+    expect(new Set(plan.buildings.map((b) => baseFacade(b.facade))).size).toBe(5);
+    expect(new Set(plan.buildings.map((b) => b.facade)).size).toBeGreaterThanOrEqual(9); // 10종 중 거의 다
+    expect(plan.buildings.every((b) => FACADES.includes(b.facade))).toBe(true);
     expect(new Set(plan.buildings.map((b) => b.kind)).size).toBe(5);
     const hs = plan.buildings.map((b) => b.h);
     const mean = hs.reduce((a, v) => a + v, 0) / hs.length;
@@ -61,6 +63,12 @@ describe('planCity', () => {
     expect(plan.parks.length).toBeGreaterThan(2);
     expect(plan.lots.length).toBeGreaterThan(2);
     expect(plan.buildings.some((b) => b.roof.length > 0)).toBe(true);
+  });
+
+  it('외벽마다 색 팔레트가 있고 건물마다 다른 색을 고른다', () => {
+    for (const b of plan.buildings) expect(PALETTES[baseFacade(b.facade)][b.pal]).toBeDefined();
+    const combos = new Set(plan.buildings.map((b) => `${b.facade}/${b.pal}`));
+    expect(combos.size).toBeGreaterThan(30); // 외벽 10종 x 색 5종 중 30가지 넘게 쓴다
   });
 
   it('가까운 블록은 낮고 먼 블록에 높은 건물이 있다', () => {

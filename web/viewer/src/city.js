@@ -11,6 +11,15 @@ export const CITY = {
   road: 20, // 도로 폭
 };
 export const FACADES = Object.keys(FACADE_TILE);
+export const baseFacade = (f) => f.replace('2', '');
+// 외벽 종류마다 색 팔레트(그림 색에 곱한다). 같은 외벽이라도 건물마다 다른 색으로 보이게 한다.
+export const PALETTES = {
+  glass: [[1, 1, 1], [0.7, 1, 0.92], [1, 0.82, 0.62], [0.78, 0.84, 1], [0.8, 0.9, 0.92]],
+  ribbon: [[1, 1, 1], [1, 0.9, 0.78], [0.82, 0.9, 1], [0.78, 0.78, 0.82], [1, 0.82, 0.78]],
+  concrete: [[1, 1, 1], [1.05, 0.94, 0.8], [0.8, 0.82, 0.86], [1.05, 0.82, 0.74], [0.68, 0.7, 0.72]],
+  brick: [[1, 1, 1], [0.78, 0.68, 0.62], [1.12, 1.0, 0.85], [1, 0.82, 0.68], [0.88, 0.78, 0.84]],
+  metal: [[1, 1, 1], [0.78, 0.84, 0.96], [1.05, 0.93, 0.76], [0.62, 0.66, 0.72], [0.82, 1, 0.9]],
+};
 
 const pick = (rng, table) => {
   let r = rng() * table.reduce((a, [, w]) => a + w, 0);
@@ -98,7 +107,8 @@ function makeBuilding(rng, p, ring) {
   }
   const topY = Math.max(...parts.map((q) => q.y0 + q.h));
   if (topY > 90 && rng() < 0.5) roof.push({ x: top.x, z: top.z, w: 0.7, d: 0.7, y0: top.y0 + top.h, h: 10 + rng() * 8 });
-  return { kind, facade: pick(rng, FACADE_BY_KIND[kind]), h: topY, parts, roof };
+  const facade = pick(rng, FACADE_BY_KIND[kind]) + (rng() < 0.5 ? '2' : '');
+  return { kind, facade, pal: Math.floor(rng() * 5), h: topY, parts, roof };
 }
 
 // 블록마다 필지로 나누고 공원, 주차장, 건물을 놓는다. 가운데 블록(0,0)은 비운다.
@@ -185,8 +195,8 @@ function boxGeometry(q, b) {
   const ou = Math.floor(b.uvSeed * 4) / 4;
   const ov = Math.floor((b.uvSeed * 16) % 4) / 4;
   const sides = [q.d / tw, q.d / tw, 0, 0, q.w / tw, q.w / tw];
-  const t = 0.62 + 0.36 * b.tint;
-  const warm = b.tint > 0.55 ? [1.0, 0.96, 0.9] : [0.92, 0.96, 1.0];
+  const t = 0.8 + 0.28 * b.tint;
+  const warm = PALETTES[baseFacade(b.facade)][b.pal];
   for (let f = 0; f < 6; f++) {
     for (let k = 0; k < 4; k++) {
       const n = f * 4 + k;
