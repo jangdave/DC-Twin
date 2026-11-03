@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CITY, FACADES, PALETTES, baseFacade, planCity } from '../src/city.js';
+import { CITY, FACADES, PALETTES, SITE, baseFacade, planCity } from '../src/city.js';
 
 describe('planCity', () => {
   const plan = planCity({ cx: 0, cz: 0, rings: 3, seed: 11 });
@@ -99,5 +99,55 @@ describe('planCity', () => {
     const small = planCity({ cx: 0, cz: 0, rings: 2 });
     expect(small.buildings.length).toBeLessThan(plan.buildings.length);
     expect(small.roads.length).toBeLessThan(plan.roads.length);
+  });
+
+  // ---- 가운데 블록(부지)과 도로가 자연스럽게 이어지는지, 깜빡임 원인인 겹친 면이 없는지 ----
+  const rect = (r) => ({ x0: r.x - r.w / 2, x1: r.x + r.w / 2, z0: r.z - r.d / 2, z1: r.z + r.d / 2 });
+  const overlap = (a, b, tol = 1e-6) => a.x0 < b.x1 - tol && b.x0 < a.x1 - tol && a.z0 < b.z1 - tol && b.z0 < a.z1 - tol;
+  const site = { x0: -SITE.hw, x1: SITE.hw, z0: -SITE.hd, z1: SITE.hd };
+  const center = { x0: -hx, x1: hx, z0: -hz, z1: hz };
+
+  it('가운데 블록의 인도와 잔디는 블록 안에 있고 부지(울타리 안)를 덮지 않는다', () => {
+    for (const r of [...plan.apron.sidewalks, ...plan.apron.lawns].map(rect)) {
+      expect(r.x0).toBeGreaterThanOrEqual(center.x0 - 1e-6);
+      expect(r.x1).toBeLessThanOrEqual(center.x1 + 1e-6);
+      expect(r.z0).toBeGreaterThanOrEqual(center.z0 - 1e-6);
+      expect(r.z1).toBeLessThanOrEqual(center.z1 + 1e-6);
+      expect(overlap(r, site)).toBe(false);
+    }
+  });
+
+  it('가운데 블록의 인도, 잔디, 진입로는 서로 겹치지 않는다', () => {
+    const all = [...plan.apron.sidewalks, ...plan.apron.lawns, plan.apron.drive].map(rect);
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) expect(overlap(all[i], all[j])).toBe(false);
+  });
+
+  it('진입로는 정문(남쪽 가운데)에서 시작해 블록 가장자리(도로)까지 닿는다', () => {
+    const d = rect(plan.apron.drive);
+    expect(d.z0).toBeCloseTo(SITE.hd, 6);
+    expect(d.z1).toBeCloseTo(hz, 6);
+    expect(Math.abs(plan.apron.drive.x)).toBeLessThan(1e-6);
+    expect(d.x1 - d.x0).toBeGreaterThanOrEqual(SITE.gateW - 1e-6);
+  });
+
+  it('가운데 블록은 인도와 잔디와 진입로로 빈틈없이 이어진다(부지 바깥 30 m 띠가 비지 않는다)', () => {
+    // 울타리 바깥 1.5 m 이후부터 인도 안쪽까지를 잔디가, 그 바깥을 인도가 덮는다: 면적 합 = 블록 - 부지 - 울타리 둘레 1.5 m
+    const area = (rs) => rs.reduce((a, r) => a + r.w * r.d, 0);
+    const blockA = (hx * 2) * (hz * 2);
+    const fenceGap = (2 * (SITE.hw + 1.5)) * (2 * (SITE.hd + 1.5)) - 4 * SITE.hw * SITE.hd;
+    const total = area(plan.apron.sidewalks) + area(plan.apron.lawns) + area(plan.apron.sidewalks.length ? [plan.apron.drive] : []);
+    const siteA = 4 * SITE.hw * SITE.hd;
+    expect(total).toBeGreaterThan(blockA - siteA - fenceGap - 1200); // 진입로가 인도와 잔디를 대신하는 만큼의 오차를 허용
+    expect(total).toBeLessThan(blockA - siteA);
+  });
+
+  it('도로 조각은 서로 겹치지 않고 교차로 정사각형과도 겹치지 않는다', () => {
+    const segs = plan.roadSegments.map((s) => rect({ x: s.x, z: s.z, w: s.dir === 'x' ? s.len : CITY.road, d: s.dir === 'x' ? CITY.road : s.len }));
+    const xs = plan.intersections.map((i) => rect({ x: i.x, z: i.z, w: CITY.road, d: CITY.road }));
+    for (let i = 0; i < segs.length; i++) {
+      for (let j = i + 1; j < segs.length; j++) expect(overlap(segs[i], segs[j])).toBe(false);
+      for (const q of xs) expect(overlap(segs[i], q)).toBe(false);
+    }
+    expect(plan.intersections.length).toBe(64);
   });
 });

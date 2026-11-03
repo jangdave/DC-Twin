@@ -10,6 +10,10 @@ export const CITY = {
   pitchZ: 185,
   road: 20, // 도로 폭
 };
+// 데이터센터 부지(건물 glb의 울타리 안쪽, m). 정문은 남쪽(+z) 가운데에 있다.
+export const SITE = { hw: 65.05, hd: 52.65, gateW: 12 };
+const SIDEWALK = 9; // 블록 가장자리 인도 폭
+const LAWN_GAP = 1.5; // 울타리와 잔디 사이
 export const FACADES = Object.keys(FACADE_TILE);
 export const baseFacade = (f) => f.replace('2', '');
 // 외벽 종류마다 색 팔레트(그림 색에 곱한다). 같은 외벽이라도 건물마다 다른 색으로 보이게 한다.
@@ -180,7 +184,51 @@ export function planCity({ cx, cz, rings, seed = 11 }) {
       }
     }
   }
-  return { blocks, buildings, parks, lots, roads, trees, lamps, crosswalks };
+  // 도로 조각: 교차로 정사각형을 비우고 그 사이만 잇는다(겹치는 면이 없어 깜빡이지 않는다). 교차로는 따로 칠한다.
+  const roadSegments = [];
+  const intersections = [];
+  const halfRoad = CITY.road / 2;
+  for (const rx of xRoads) for (const rz of zRoads) intersections.push({ x: rz.x, z: rx.z });
+  const cut = (r, cross, key) => {
+    const edges = [-r.len / 2];
+    for (const c of cross) edges.push(c[key] - (key === 'x' ? r.x : r.z) - halfRoad, c[key] - (key === 'x' ? r.x : r.z) + halfRoad);
+    edges.push(r.len / 2);
+    for (let i = 0; i < edges.length; i += 2) {
+      const len = edges[i + 1] - edges[i];
+      if (len < 0.5) continue;
+      const mid = (edges[i] + edges[i + 1]) / 2;
+      roadSegments.push(r.dir === 'x' ? { dir: 'x', x: r.x + mid, z: r.z, len } : { dir: 'z', x: r.x, z: r.z + mid, len });
+    }
+  };
+  for (const r of xRoads) cut(r, zRoads.slice().sort((a, b) => a.x - b.x), 'x');
+  for (const r of zRoads) cut(r, xRoads.slice().sort((a, b) => a.z - b.z), 'z');
+
+  // 가운데 블록: 가장자리 인도 띠, 울타리 둘레 잔디, 정문(남쪽)에서 도로로 이어지는 진입로(인도는 진입로 앞에서 끊는다)
+  const gw = SITE.gateW / 2;
+  const ix0 = bw / 2 - SIDEWALK; // 인도 안쪽 경계
+  const iz0 = bd / 2 - SIDEWALK;
+  const lx = SITE.hw + LAWN_GAP; // 잔디가 시작하는 곳(울타리 바깥)
+  const lz = SITE.hd + LAWN_GAP;
+  const R = (x0, x1, z0, z1) => ({ x: cx + (x0 + x1) / 2, z: cz + (z0 + z1) / 2, w: x1 - x0, d: z1 - z0 });
+  const apron = {
+    sidewalks: [
+      R(-bw / 2, bw / 2, -bd / 2, -iz0), // 북
+      R(-bw / 2, -gw - 2, iz0, bd / 2), R(gw + 2, bw / 2, iz0, bd / 2), // 남(진입로 앞이 열림)
+      R(-bw / 2, -ix0, -iz0, iz0), R(ix0, bw / 2, -iz0, iz0), // 서, 동
+    ],
+    lawns: [
+      R(-ix0, -lx, -iz0, iz0), R(lx, ix0, -iz0, iz0), // 서, 동
+      R(-lx, lx, -iz0, -lz), // 북
+      R(-lx, -gw, lz, iz0), R(gw, lx, lz, iz0), // 남(진입로 양쪽)
+    ],
+    drive: R(-gw, gw, SITE.hd, bd / 2),
+  };
+  // 잔디 둘레 나무
+  for (let t = -ix0 + 6; t < ix0; t += 14) {
+    trees.push([cx + t, cz - iz0 + 4], [cx - ix0 + 4, cz + t * (iz0 / ix0)], [cx + ix0 - 4, cz + t * (iz0 / ix0)]);
+    if (Math.abs(t) > gw + 6) trees.push([cx + t, cz + iz0 - 4]);
+  }
+  return { blocks, buildings, parks, lots, roads, roadSegments, intersections, apron, trees, lamps, crosswalks };
 }
 
 // ---- 형상 ----
@@ -274,7 +322,7 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
 
   // 인도 판(블록마다), 공원(잔디), 주차장
   const sw = track(sidewalkTexture());
-  const slabs = plan.blocks.map((b) => {
+  const slabs = [...plan.blocks.filter(() => true), ...plan.apron.sidewalks].map((b) => {
     const g = new THREE.BoxGeometry(b.w, 0.25, b.d);
     const uv = g.attributes.uv;
     for (let k = 8; k < 12; k++) uv.setXY(k, (uv.getX(k) * b.w) / 8, (uv.getY(k) * b.d) / 8); // 윗면만 8 m 마다 반복
@@ -282,28 +330,31 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     return g;
   });
   mesh(mergeGeometries(slabs, false), new THREE.MeshStandardMaterial({ map: sw, roughness: 0.95 }), true);
-  if (plan.parks.length) mesh(flatRects(plan.parks, 0.27, 6), new THREE.MeshStandardMaterial({ map: track(grassTexture()), roughness: 1 }), true);
-  if (plan.lots.length) mesh(flatRects(plan.lots, 0.27, 16), new THREE.MeshStandardMaterial({ map: track(lotTexture()), roughness: 0.95 }), true);
+  mesh(flatRects(plan.apron.lawns, 0.06, 6), new THREE.MeshStandardMaterial({ map: track(grassTexture()), roughness: 1 }), true);
+  mesh(flatRects([plan.apron.drive], 0.07, 16), new THREE.MeshStandardMaterial({ color: 0x3b3d41, roughness: 0.92 }), true);
+  if (plan.parks.length) mesh(flatRects(plan.parks, 0.33, 6), new THREE.MeshStandardMaterial({ map: track(grassTexture()), roughness: 1 }), true);
+  if (plan.lots.length) mesh(flatRects(plan.lots, 0.33, 16), new THREE.MeshStandardMaterial({ map: track(lotTexture()), roughness: 0.95 }), true);
 
   // 도로와 횡단보도
   const rt = track(roadTexture());
-  const strips = plan.roads.map((r, n) => {
+  const strips = plan.roadSegments.map((r) => {
     const g = new THREE.PlaneGeometry(CITY.road, r.len);
     g.rotateX(-Math.PI / 2);
     const uv = g.attributes.uv;
     for (let k = 0; k < uv.count; k++) uv.setY(k, uv.getY(k) * (r.len / 16));
     if (r.dir === 'x') g.rotateY(Math.PI / 2);
-    g.translate(r.x, 0.02 + (r.dir === 'x' ? 0.01 : 0) + n * 0.0005, r.z);
+    g.translate(r.x, 0.05, r.z); // 모든 도로 조각은 같은 높이이고 서로 겹치지 않는다
     return g;
   });
-  mesh(mergeGeometries(strips, false), new THREE.MeshStandardMaterial({ map: rt, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  mesh(mergeGeometries(strips, false), new THREE.MeshStandardMaterial({ map: rt, roughness: 0.92 }));
+  mesh(flatRects(plan.intersections.map((i) => ({ x: i.x, z: i.z, w: CITY.road, d: CITY.road })), 0.05, 16), new THREE.MeshStandardMaterial({ color: 0x3b3d41, roughness: 0.92 }));
   const zebra = plan.crosswalks.map((r) => {
     const g = new THREE.PlaneGeometry(r.w, r.d);
     g.rotateX(-Math.PI / 2);
-    g.translate(r.x, 0.06, r.z);
+    g.translate(r.x, 0.11, r.z);
     return g;
   });
-  mesh(mergeGeometries(zebra, false), new THREE.MeshStandardMaterial({ color: 0xdfe1e3, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
+  mesh(mergeGeometries(zebra, false), new THREE.MeshStandardMaterial({ color: 0xdfe1e3, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
 
   // 가로수와 가로등(인스턴스)
   const rng = mulberry32(seed + 3);
