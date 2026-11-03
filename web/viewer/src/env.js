@@ -24,7 +24,7 @@ void main() {
 }`;
 
 const SKY_FRAG = `
-uniform vec3 zenith; uniform vec3 horizon; uniform vec3 sunColor; uniform vec3 sunDir; uniform float time;
+uniform vec3 zenith; uniform vec3 horizon; uniform vec3 sunColor; uniform vec3 sunDir; uniform vec3 groundColor; uniform float time;
 varying vec3 vDir;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -36,6 +36,7 @@ void main() {
   vec3 d = normalize(vDir);
   float h = clamp(d.y, 0.0, 1.0);
   vec3 col = mix(horizon, zenith, pow(h, 0.55));
+  if (d.y < 0.0) col = mix(horizon, groundColor, smoothstep(0.0, -0.3, d.y)); // 지평선 아래는 땅 색(유리가 땅도 비추게)
   float s = max(dot(d, normalize(sunDir)), 0.0);
   col += sunColor * (pow(s, 600.0) * 3.0 + pow(s, 12.0) * 0.28);
   if (d.y > 0.02) { // 구름: 하늘 위의 평면에 잡음 무늬를 얹는다
@@ -60,6 +61,7 @@ export function makeSky() {
       horizon: { value: new THREE.Color() },
       sunColor: { value: new THREE.Color() },
       sunDir: { value: new THREE.Vector3(0, 1, 0) },
+      groundColor: { value: new THREE.Color(0x2a3326) },
       time: { value: 0 },
     },
   });

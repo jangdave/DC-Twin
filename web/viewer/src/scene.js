@@ -19,10 +19,22 @@ export const VIEWS = {
 
 const CM = 0.01;
 
+// 반사하지 않는 면을 보는 각도와 무관한 재질(Lambert, 빛과 면의 방향만 쓴다)로 바꾼다. 색, 그림, 법선 지도, 투명도는 그대로 옮긴다.
+export function toLambert(src) {
+  const m = new THREE.MeshLambertMaterial({
+    name: src.name, color: src.color?.clone() ?? new THREE.Color(0xffffff), map: src.map ?? null, normalMap: src.normalMap ?? null,
+    transparent: src.transparent, opacity: src.opacity, side: src.side, alphaTest: src.alphaTest,
+    polygonOffset: src.polygonOffset, polygonOffsetFactor: src.polygonOffsetFactor, polygonOffsetUnits: src.polygonOffsetUnits,
+  });
+  if (src.normalScale) m.normalScale.copy(src.normalScale);
+  src.dispose();
+  return m;
+}
+
 // 재질별 하늘 반사 세기. 유리와 금속만 반사하고 바닥, 콘크리트, 지붕, 잔디는 반사하지 않는다.
 // (거친 바닥이 반사를 받으면 낮은 각도에서 하늘색이 섞여 보는 각도에 따라 바닥 색이 달라 보인다.)
 export function envIntensityFor(name = '') {
-  if (/Glass/i.test(name)) return 0.8;
+  if (/Glass/i.test(name)) return 2.2; // 정면은 어둡고 비스듬히 볼수록 하늘이 많이 비치는 유리
   if (/PanelMetal/i.test(name)) return 0.5;
   if (/Fan/i.test(name)) return 0.35;
   if (/Mullion|Louver|OutdoorEquip/i.test(name)) return 0.25;
@@ -333,7 +345,7 @@ export class HallScene {
       g.add(mesh);
       return mesh;
     };
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(1100, 64), mat(0x39502c, { roughness: 1 }));
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(1100, 64), new THREE.MeshLambertMaterial({ color: 0x39502c }));
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(c.x, -0.35, c.z);
     ground.receiveShadow = true;
@@ -445,6 +457,7 @@ export class HallScene {
     u.zenith.value.set(p.zenith);
     u.horizon.value.set(p.horizon);
     u.sunColor.value.set(p.sun);
+    u.groundColor.value.set(p.grass).multiplyScalar(0.5);
     u.sunDir.value.copy(dir);
     this.sunExt.color.set(p.sun);
     this.sunExt.intensity = p.sunI;
@@ -476,7 +489,13 @@ export class HallScene {
       // 바닥과 같은 높이에 겹친 면(주차선, 횡단보도)은 앞으로, 아스팔트는 뒤로 밀어 깜빡임을 막는다
       const n = m.material.name || '';
       const k = envIntensityFor(n);
-      if (k > 0) (this._reflective ??= []).push({ mat: m.material, k });
+      if (k > 0) {
+        // 유리와 금속만 반사하는 재질로 둔다. 유리는 짙은 색에 반사가 강하고 거의 불투명하게 해서 안쪽 벽이 비치지 않게 한다.
+        if (/Glass/i.test(n)) Object.assign(m.material, { color: new THREE.Color(0x35506a), metalness: 0.3, roughness: 0.05, opacity: 0.9, transparent: true });
+        (this._reflective ??= []).push({ mat: m.material, k });
+      } else {
+        m.material = toLambert(m.material); // 바닥, 콘크리트, 지붕, 울타리, 식재: 보는 각도에 따라 색이 변하지 않는 재질
+      }
       if (/Paint|Crosswalk/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
       else if (/Asphalt/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
     }
