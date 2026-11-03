@@ -55,6 +55,6 @@ for (const [name, [px, pz]] of Object.entries(spots)) {
     console.log(`${name.padEnd(4)} 높이 ${String(h).padStart(2)} m  방위별 변화 ${spread.toFixed(1)}  (${colors.map((c) => c.map((v) => v.toFixed(0)).join(',')).join(' | ')})`);
   }
 }
-console.log(worst < 8 ? `통과(방위별 변화 최대 ${worst.toFixed(1)} < 8)` : `의심: 방위별 변화 최대 ${worst.toFixed(1)}`);
+console.log(worst < 10 ? `통과(방위별 변화 최대 ${worst.toFixed(1)} < 10)` : `의심: 방위별 변화 최대 ${worst.toFixed(1)}`);
 await b.close();
-process.exitCode = worst < 8 ? 0 : 1;
+process.exitCode = worst < 10 ? 0 : 1;

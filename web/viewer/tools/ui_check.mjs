@@ -317,6 +317,56 @@ const rf = await prf.evaluate(() => {
 });
 ok('REFLECT 높음: 장면 전체 반사 없음, 유리와 금속에만 반사 지도, 나머지는 Lambert(표준 재질이 남아 있지 않음)', rf.sceneEnv && rf.reflective > 4 && rf.allWithEnv && rf.badStandard.length === 0 && rf.ground === 'MeshLambertMaterial', JSON.stringify(rf));
 await prf.close();
+// 깊이 정밀도: 카메라 가까운 면이 멀리 볼수록 커지고, 정밀도가 아주 낮은 기기를 흉내 내도(near 0.003, far 50000) 부지 아스팔트가 아래 바닥으로 뒤집히지 않는다
+const pdp = await browser.newPage();
+await pdp.setViewport({ width: 1100, height: 700 });
+await pdp.goto(`${base}?stage=exterior&q=high`, { waitUntil: 'networkidle0' });
+await pdp.waitForFunction(() => window.__viewer?.scene?.exteriorModel, { timeout: 30000 }).catch(() => {});
+const nearAt = async (h, dz) => pdp.evaluate(async ([h, dz]) => {
+  const s = window.__viewer.scene;
+  s.controls.minDistance = 0.5; s.controls.enableDamping = false;
+  s.camera.position.set(s.center.x, h, s.center.z + dz);
+  s.controls.target.set(s.center.x, 0, s.center.z); s.controls.update();
+  await new Promise((r) => setTimeout(r, 400));
+  return s.camera.near;
+}, [h, dz]);
+const nearClose = await nearAt(8, 20);
+const nearFar = await nearAt(160, 330);
+ok('DEPTH 외관의 카메라 가까운 면(near)은 멀리 볼수록 커진다(깊이 정밀도)', nearFar > nearClose * 1.8 && nearClose >= 0.5 && nearFar <= 8, JSON.stringify({ nearClose, nearFar }));
+const pointsAt = async () => {
+  await sleep(700);
+  const shot = await (await pdp.$('#canvas')).screenshot({ encoding: 'base64' });
+  return pdp.evaluate(async ([b64]) => {
+    const s = window.__viewer.scene;
+    const pts = [[-55, 44], [-35, 44], [35, 44], [55, 44], [-55, 30], [55, 30], [-58, -10], [58, -35], [-55, -44], [-30, -44], [30, -44], [55, -44], [0, 44], [-20, 40], [20, 40], [-45, -30], [45, 35], [-62, 20], [62, -20], [10, -46]];
+    const r = document.getElementById('canvas').getBoundingClientRect();
+    const im = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = `data:image/png;base64,${b64}`; });
+    const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
+    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+    return pts.map(([x, z]) => {
+      const v = new s.center.constructor(s.center.x + x, 0.05, s.center.z + z).project(s.camera);
+      const px = Math.round(((v.x + 1) / 2) * r.width), py = Math.round(((1 - v.y) / 2) * r.height);
+      if (v.z >= 1 || px < 4 || py < 4 || px > im.width - 4 || py > im.height - 4) return null;
+      const d = g.getImageData(px - 2, py - 2, 4, 4).data;
+      let a = 0, b = 0, c = 0, n = 0; for (let k = 0; k < d.length; k += 4) { a += d[k]; b += d[k + 1]; c += d[k + 2]; n++; }
+      return [a / n, b / n, c / n];
+    });
+  }, [shot]);
+};
+await pdp.evaluate(() => {
+  const s = window.__viewer.scene;
+  s.controls.minDistance = 0.5; s.controls.enableDamping = false;
+  s.camera.position.set(s.center.x + 55, 62, s.center.z + 105);
+  s.controls.target.set(s.center.x, 4, s.center.z + 4); s.controls.update();
+  s.depthOverride = undefined;
+});
+const ptsNormal = await pointsAt();
+await pdp.evaluate(() => { window.__viewer.scene.depthOverride = [0.003, 50000]; });
+const ptsStress = await pointsAt();
+let usedPts = 0, changedPts = 0;
+ptsNormal.forEach((c, i) => { const d = ptsStress[i]; if (!c || !d) return; usedPts++; if (Math.max(...[0, 1, 2].map((k) => Math.abs(c[k] - d[k]))) > 25) changedPts++; });
+ok('DEPTH 깊이 정밀도를 아주 낮춰도 부지 바닥 색이 바뀌지 않는다(땅 원판이 깊이를 쓰지 않음)', usedPts >= 12 && changedPts === 0, JSON.stringify({ usedPts, changedPts }));
+await pdp.close();
 // 건물 모델과 공기 흐름
 const p7 = await browser.newPage();
 await p7.goto(`${base}?scenario=cooling_failure&t=30&stage=exterior`, { waitUntil: 'networkidle0' });
