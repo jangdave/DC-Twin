@@ -1,6 +1,6 @@
 """건물 외관(building_exterior.blend)을 웹 보기용 .glb로 내보낸다 (docs/22).
 
-텍스처는 기본색(BaseColor) 한 장만 1K(1024)로 줄여 넣는다(4K 원본 4종은 약 230 MB). 거칠기, 법선, 금속 지도는 버리고
+텍스처는 기본색(BaseColor) 한 장만 1K(1024)로 줄여 넣는다(4K 원본 4종은 약 230 MB). 거칠기, 금속 지도는 버리고(콘크리트와 외벽 패널은 법선 지도를 남긴다)
 재질 이름마다 정한 값을 쓴다. 나머지 재질은 정한 색, 금속성, 거칠기, 투명도만 쓴다. 메시는 Draco로 압축한다.
 모델 크기는 cm 숫자 그대로 나가므로 뷰어가 0.01배로 줄여 쓴다.
 
@@ -35,6 +35,7 @@ FALLBACK = ((0.3, 0.3, 0.3), 0.2, 0.7, 1.0)
 
 TEX_SIZE = 1024
 KEEP_BASECOLOR = {"M_Asphalt", "M_BldgConcrete", "M_BldgPanelMetal", "M_BldgRoof"}
+KEEP_NORMAL = {"M_BldgConcrete", "M_BldgPanelMetal"}  # 눈에 크게 띄는 벽면만 법선 지도도 넣는다
 
 
 def flatten_materials() -> list[str]:
@@ -55,6 +56,13 @@ def flatten_materials() -> list[str]:
                     img = link.from_node.image if link.from_node.type == "TEX_IMAGE" else None
                     if img and max(img.size) > TEX_SIZE:
                         img.scale(TEX_SIZE, TEX_SIZE)
+                continue
+            if m.name in KEEP_NORMAL and name == "Normal":
+                for link in bsdf.inputs[name].links:  # 법선 지도 노드 -> 그림
+                    for l2 in link.from_node.inputs["Color"].links:
+                        img = l2.from_node.image if l2.from_node.type == "TEX_IMAGE" else None
+                        if img and max(img.size) > TEX_SIZE:
+                            img.scale(TEX_SIZE, TEX_SIZE)
                 continue
             inp = bsdf.inputs.get(name)
             for link in list(inp.links) if inp else []:

@@ -1,4 +1,4 @@
-// 외관 화면 캡처(개발 서버용): node tools/ext_shot.mjs "<쿼리>" 파일이름 [--url http://127.0.0.1:5173/]
+// 외관 화면 캡처(개발 서버용): node tools/ext_shot.mjs "<쿼리>" 파일이름 ["실행할 JS"] [--url http://127.0.0.1:5173/]
 import puppeteer from 'puppeteer-core';
 const q = process.argv[2] ?? '?stage=exterior';
 const name = process.argv[3] ?? 'ext';
@@ -12,6 +12,7 @@ p.on('console', (m) => ['error', 'warning'].includes(m.type()) && logs.push(m.te
 p.on('pageerror', (e) => logs.push('pageerror ' + e.message));
 await p.goto(url, { waitUntil: 'networkidle0' });
 await p.waitForFunction(() => window.__viewer?.scene?.exteriorModel, { timeout: 30000 }).catch(() => logs.push('건물 모델 없음'));
+if (process.argv[4]) await p.evaluate(process.argv[4]); // 선택: 카메라를 옮기는 코드
 await new Promise((r) => setTimeout(r, 1500));
 await p.screenshot({ path: `shots/${name}.png` });
 console.log(name, logs.length ? logs : 'ok');
