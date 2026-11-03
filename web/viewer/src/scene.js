@@ -345,16 +345,19 @@ export class HallScene {
       g.add(mesh);
       return mesh;
     };
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(1100, 64), new THREE.MeshLambertMaterial({ color: 0x39502c }));
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(1100, 64), new THREE.MeshLambertMaterial({ color: 0x39502c, depthWrite: false }));
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(c.x, -0.35, c.z);
     ground.receiveShadow = true;
+    ground.renderOrder = -10; // 가장 먼저 그리고 깊이를 쓰지 않아, 깊이 정밀도가 모자란 기기에서도 아스팔트와 다투지 않는다
     g.add(ground);
     this.ground = ground;
     this.sky = makeSky();
     this.sky.position.copy(c);
     g.add(this.sky);
     this.hills = makeHills(0x39502c, 1100, 2000, 60);
+    this.hills.material.depthWrite = false;
+    this.hills.renderOrder = -9;
     this.hills.position.set(c.x, -0.3, c.z);
     g.add(this.hills);
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
@@ -474,6 +477,18 @@ export class HallScene {
     this._dirty = true;
   }
 
+  // 카메라의 가까운 면(near)을 멀리 볼수록 키워 깊이 정밀도를 높인다(깊이 값은 near에 거의 비례해 정밀해진다).
+  // 홀에서는 가까운 장비를 보므로 0.3 m 고정. depthOverride는 정밀도가 낮은 기기를 흉내 내는 시험용 [near, far].
+  _updateDepthRange() {
+    const d = this.camera.position.distanceTo(this.controls.target);
+    const [near, far] = this.depthOverride ?? [this.stage === 'exterior' ? Math.min(Math.max(d * 0.004, 0.5), 8) : 0.3, 2500];
+    if (Math.abs(near - this.camera.near) > this.camera.near * 0.05 || far !== this.camera.far) {
+      this.camera.near = near;
+      this.camera.far = far;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
   // 건물 모델(glb)을 받아 단순 상자 건물을 바꾼다. 실패하면 상자로 계속 쓴다.
   async loadExteriorModel(baseUrl) {
     const draco = new DRACOLoader().setDecoderPath(`${baseUrl}draco/`); // 메시 압축 해제기는 public/draco에 둔다
@@ -486,7 +501,8 @@ export class HallScene {
     }
     const meshes = mergeByMaterial(gltf.scene, CM);
     for (const m of meshes) {
-      // 바닥과 같은 높이에 겹친 면(주차선, 횡단보도)은 앞으로, 아스팔트는 뒤로 밀어 깜빡임을 막는다
+      // 바닥에 겹친 면(주차선, 횡단보도)만 깊이 값 6단계만큼 앞으로 당긴다. 기울기에 비례하는 값(factor)은 쓰지 않는다:
+      // 낮은 각도에서 값이 커져 아스팔트가 아래 바닥 뒤로 밀려나는 문제가 있었다. 단계(units)는 기기의 깊이 정밀도에 맞춰 자동으로 조절된다.
       const n = m.material.name || '';
       const k = envIntensityFor(n);
       if (k > 0) {
@@ -496,8 +512,7 @@ export class HallScene {
       } else {
         m.material = toLambert(m.material); // 바닥, 콘크리트, 지붕, 울타리, 식재: 보는 각도에 따라 색이 변하지 않는 재질
       }
-      if (/Paint|Crosswalk/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-      else if (/Asphalt/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+      if (/Paint|Crosswalk/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -6 });
     }
     const box = new THREE.Box3();
     for (const m of meshes) box.union(m.geometry.boundingBox);
@@ -782,6 +797,7 @@ export class HallScene {
       }
     }
     this.controls.update();
+    this._updateDepthRange();
     this._stepAirflow(dtSec, timeSec);
     if (this.stage === 'exterior') {
       this.city?.update(this.reducedMotion ? 0 : dtSec);

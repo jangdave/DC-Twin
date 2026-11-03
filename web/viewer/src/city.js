@@ -333,10 +333,10 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     return g;
   });
   mesh(mergeGeometries(slabs, false), new THREE.MeshLambertMaterial({ map: sw }), true);
-  mesh(flatRects(plan.apron.lawns, 0.06, 6), new THREE.MeshLambertMaterial({ map: track(grassTexture()) }), true);
-  mesh(flatRects([plan.apron.drive], 0.07, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }), true);
-  if (plan.parks.length) mesh(flatRects(plan.parks, 0.33, 6), new THREE.MeshLambertMaterial({ map: track(grassTexture()) }), true);
-  if (plan.lots.length) mesh(flatRects(plan.lots, 0.33, 16), new THREE.MeshLambertMaterial({ map: track(lotTexture()) }), true);
+  mesh(flatRects(plan.apron.lawns, 0.12, 6), new THREE.MeshLambertMaterial({ map: track(grassTexture()) }), true);
+  mesh(flatRects([plan.apron.drive], 0.14, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }), true);
+  if (plan.parks.length) mesh(flatRects(plan.parks, 0.4, 6), new THREE.MeshLambertMaterial({ map: track(grassTexture()) }), true);
+  if (plan.lots.length) mesh(flatRects(plan.lots, 0.4, 16), new THREE.MeshLambertMaterial({ map: track(lotTexture()) }), true);
 
   // 도로와 횡단보도
   const rt = track(roadTexture());
@@ -346,18 +346,18 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     const uv = g.attributes.uv;
     for (let k = 0; k < uv.count; k++) uv.setY(k, uv.getY(k) * (r.len / 16));
     if (r.dir === 'x') g.rotateY(Math.PI / 2);
-    g.translate(r.x, 0.05, r.z); // 모든 도로 조각은 같은 높이이고 서로 겹치지 않는다
+    g.translate(r.x, 0.1, r.z); // 모든 도로 조각은 같은 높이이고 서로 겹치지 않는다
     return g;
   });
   mesh(mergeGeometries(strips, false), new THREE.MeshLambertMaterial({ map: rt }));
-  mesh(flatRects(plan.intersections.map((i) => ({ x: i.x, z: i.z, w: CITY.road, d: CITY.road })), 0.05, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }));
+  mesh(flatRects(plan.intersections.map((i) => ({ x: i.x, z: i.z, w: CITY.road, d: CITY.road })), 0.1, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }));
   const zebra = plan.crosswalks.map((r) => {
     const g = new THREE.PlaneGeometry(r.w, r.d);
     g.rotateX(-Math.PI / 2);
-    g.translate(r.x, 0.11, r.z);
+    g.translate(r.x, 0.2, r.z);
     return g;
   });
-  mesh(mergeGeometries(zebra, false), new THREE.MeshLambertMaterial({ color: 0xdfe1e3, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  mesh(mergeGeometries(zebra, false), new THREE.MeshLambertMaterial({ color: 0xdfe1e3, polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -6 }));
 
   // 가로수와 가로등(인스턴스)
   const rng = mulberry32(seed + 3);
