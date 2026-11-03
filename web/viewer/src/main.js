@@ -135,8 +135,8 @@ async function main() {
     state.player = state.sim;
     ui.setMode('sim', '직접 시뮬레이션 (이 브라우저의 간이 모델, 실제 계산이 아님)');
     ui.setScenarios(simList, id);
+    ui.setScenarioCard(SCENARIOS[id].title, SCENARIOS[id].description, SCENARIOS[id].events, false);
     panel.show(true);
-    panel.setScenario(id);
     state.sim.start(id);
     panel.syncFromEngine(state.sim.engine);
     panel.setSelected(state.selected, state.sim.engine);
@@ -214,6 +214,8 @@ async function main() {
       state.player.seek(t0);
       state.lastSec = -1;
       ui.setupTimebar(rec.n, rec.events);
+      const meta = index.find((x) => x.id === id);
+      ui.setScenarioCard(meta?.title ?? id, meta?.note ?? '', rec.events, true);
       ui.setScenarios(index, id);
       ui.renderTransport(state.player);
       refresh();
@@ -241,6 +243,7 @@ async function main() {
     panel.show(false);
     store.clear();
     ui.setMode('connecting', '라이브 연결 중');
+    ui.setScenarioCard('라이브', '게이트웨이가 보내는 센서 값을 그대로 보여 준다.', [], false);
     state.live = new LiveClient(url, store, {
       onState: (s, c) => {
         const text = { connecting: '라이브 연결 중', open: '라이브 연결됨', closed: `연결 끊김, ${Math.round(c.retryInMs / 1000)}초 뒤 다시 시도`, idle: '라이브 중지' }[s];
@@ -257,6 +260,7 @@ async function main() {
   function refresh() {
     lastRefresh = { version: store.version, at: performance.now() };
     ui.renderAggregates();
+    ui.renderSummary(summarize(store, rackKeys), store.alarmLog);
     ui.renderAlarms(sensorInfo, state.mode);
     if (state.mode === 'sim' && state.sim) panel.renderLog(state.sim.log);
     ui.renderDetail(state.view);

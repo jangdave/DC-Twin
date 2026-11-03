@@ -93,6 +93,6 @@ describe('건물 요약', () => {
     store.aggregates = { it_power: 120.5, pue: 1.4 };
     const eq = [...store.byEquipment.entries()].find(([, m]) => m.temp_in === 'R1-T')?.[0];
     const s = summarize(store, [eq]);
-    expect(s).toMatchObject({ hasData: true, alarms: 1, maxTempIn: 27.5, itPower: 120.5, pue: 1.4 });
+    expect(s).toMatchObject({ hasData: true, alarms: 1, maxTempIn: 27.5, maxRack: eq, itPower: 120.5, pue: 1.4 });
   });
 });

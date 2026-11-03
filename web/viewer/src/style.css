@@ -170,3 +170,18 @@ dialog ul { padding-left: 18px; }
 #sim-log li { padding: 2px 0; }
 #sim-log time { color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
 #sim-selected .sim-row { grid-template-columns: auto 1fr 44px; }
+
+/* 시나리오 설명과 상황 요약 */
+#scenario-card h2 { margin: 0 0 4px; font-size: 15px; }
+#scenario-card h3 { margin: 10px 0 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
+#scenario-card p { margin: 0 0 8px; font-size: 12px; }
+#sc-state { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: 13px; }
+#sc-state dt { color: var(--muted); }
+#sc-state dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; }
+.linkish:disabled { color: var(--muted); text-decoration: none; cursor: default; }
+#sc-events { margin: 0; padding: 0; list-style: none; font-size: 12px; }
+#sc-events li { padding: 3px 0; }
+#sc-events li.seekable { cursor: pointer; }
+#sc-events li.seekable:hover { color: var(--accent); }
+#sc-events time { color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }

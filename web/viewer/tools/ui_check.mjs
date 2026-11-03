@@ -226,6 +226,16 @@ const p6 = await browser.newPage();
 await p6.goto(`${base}?stage=hall&models=0`, { waitUntil: 'networkidle0' });
 await p6.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 ok('MODEL models=0이면 받지 않고 상자만 씀', (await p6.evaluate(() => window.__viewer.getModelsState())) === 'off' && (await p6.$eval('#model-btn', (e) => e.hidden)));
+const card = await p4.evaluate(() => ({ title: document.getElementById('sc-title').textContent, desc: document.getElementById('sc-desc').textContent.length, max: document.getElementById('sc-max').textContent, ev: [...document.querySelectorAll('#sc-events li')].map((l) => l.textContent) }));
+ok('CARD 시나리오 설명과 가장 높은 입구 온도, 일어나는 일이 보임', card.title.length > 1 && card.desc > 5 && /Rack_\d+ [\d.]+ °C/.test(card.max) && card.ev.length >= 1 && card.ev[0].includes('CRAC_02'), JSON.stringify(card));
+await p4.evaluate(() => document.querySelector('#sc-events li').click());
+await sleep(300);
+ok('CARD 일어나는 일을 누르면 그 시각으로 이동', (await p4.evaluate(() => window.__viewer.state.player.time)) >= 59);
+await p4.evaluate(() => window.__viewer.state.player.seek(250));
+await sleep(1500);
+await p4.evaluate(() => document.getElementById('sc-max').click());
+await sleep(300);
+ok('CARD 가장 높은 입구 온도 랙을 누르면 선택됨', (await p4.evaluate(() => window.__viewer.state.selected)) !== null);
 await p3.screenshot({ path: path.join(OUT, 'stage_exterior.png') });
 
 // 10) 직접 시뮬레이션(docs/21): 브라우저가 간이 모델로 계산하고 조작이 반영된다
