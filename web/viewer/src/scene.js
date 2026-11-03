@@ -1,6 +1,7 @@
 // Three.js 장면 (docs/18 5.1, 5.3장). 랙은 InstancedMesh 묶음으로 그리고 값은 인스턴스 색으로 칠한다.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
@@ -369,7 +370,14 @@ export class HallScene {
 
   // 건물 모델(glb)을 받아 단순 상자 건물을 바꾼다. 실패하면 상자로 계속 쓴다.
   async loadExteriorModel(baseUrl) {
-    const gltf = await new GLTFLoader().loadAsync(`${baseUrl}models/building.glb`);
+    const draco = new DRACOLoader().setDecoderPath(`${baseUrl}draco/`); // 메시 압축 해제기는 public/draco에 둔다
+    const loader = new GLTFLoader().setDRACOLoader(draco);
+    let gltf;
+    try {
+      gltf = await loader.loadAsync(`${baseUrl}models/building.glb`);
+    } finally {
+      draco.dispose();
+    }
     const meshes = mergeByMaterial(gltf.scene, CM);
     const box = new THREE.Box3();
     for (const m of meshes) box.union(m.geometry.boundingBox);

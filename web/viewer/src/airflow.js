@@ -2,6 +2,7 @@
 // 시각화 목적이다: 질량 보존 퍼텐셜 흐름이라 점성, 난류, 부력이 없고 실제 CFD 결과가 아니다.
 // 정상 가동 장과 CRAC 1대씩 멈춘 장을 겹쳐(근사) 켜진 CRAC 상태를 반영한다.
 import * as THREE from 'three';
+import { sampleColor } from './colors.js';
 
 const CM = 0.01;
 const COLD = [0.2, 0.6, 1.0];
@@ -46,6 +47,8 @@ export class Airflow {
     this.rackId = new Int16Array(this.nx * this.ny * this.nz).fill(-1);
     data.racks.forEach((r, i) => this._mark(r, i));
     this.rackColor = rackKeys.map(() => [1, 0.5, 0.15]);
+    this.coldColor = rackKeys.map(() => COLD); // 가까운 랙의 입구 온도 색(차가운 공기)
+    this.nearRack = this._nearestRacks(data.racks);
     this._lastColorAt = -1;
 
     this.pos = new Float32Array(count * 3); // 장면 좌표(m, z가 위)
@@ -67,6 +70,24 @@ export class Airflow {
       this.age[i] = this.rng() * this.life[i]; // 처음부터 고르게 퍼지게
     }
     this._write();
+  }
+
+  // 위에서 본 칸마다 가장 가까운 랙(중심 거리). 차가운 공기를 그 랙의 입구 온도 색으로 칠할 때 쓴다.
+  _nearestRacks(racks) {
+    const out = new Int16Array(this.nx * this.ny);
+    const cx = racks.map((r) => ((r.min[0] + r.max[0]) / 2) * CM);
+    const cy = racks.map((r) => ((r.min[1] + r.max[1]) / 2) * CM);
+    for (let i = 0; i < this.nx; i++)
+      for (let j = 0; j < this.ny; j++) {
+        const x = (i + 0.5) * this.cell, y = (j + 0.5) * this.cell;
+        let best = 0, bd = Infinity;
+        for (let r = 0; r < cx.length; r++) {
+          const d = (cx[r] - x) ** 2 + (cy[r] - y) ** 2;
+          if (d < bd) { bd = d; best = r; }
+        }
+        out[i * this.ny + j] = best;
+      }
+    return out;
   }
 
   _mark(box, id) {
@@ -139,6 +160,11 @@ export class Airflow {
       const t = view.metric(k, 'temp_out')?.value;
       const f = t == null ? 0.3 : Math.min(1, Math.max(0, (t - 25) / 20)); // 25도 호박색 -> 45도 빨강
       this.rackColor[i] = [1, 0.75 - 0.55 * f, 0.2 - 0.12 * f];
+      const tin = view.metric(k, 'temp_in');
+      if (tin?.value != null) {
+        const [r, g, b] = sampleColor(tin, 18, 35); // 입구 온도 색(18도 파랑 -> 35도 빨강)을 밝게
+        this.coldColor[i] = [r * 0.7 + 0.3, g * 0.7 + 0.3, b * 0.7 + 0.3];
+      }
     });
   }
 
@@ -186,7 +212,13 @@ export class Airflow {
       position[q + 3] = this.pos[o] - this.vel[o] * TAIL;
       position[q + 4] = this.pos[o + 2] - this.vel[o + 2] * TAIL;
       position[q + 5] = -(this.pos[o + 1] - this.vel[o + 1] * TAIL);
-      const c = this.heat[p] >= 0 ? this.rackColor[this.heat[p]] : COLD;
+      let c;
+      if (this.heat[p] >= 0) c = this.rackColor[this.heat[p]];
+      else {
+        const gi = Math.min(this.nx - 1, Math.max(0, Math.floor(this.pos[o] / this.cell)));
+        const gj = Math.min(this.ny - 1, Math.max(0, Math.floor(this.pos[o + 1] / this.cell)));
+        c = this.coldColor[this.nearRack[gi * this.ny + gj]];
+      }
       const fade = Math.min(1, this.age[p] / 0.6, (this.life[p] - this.age[p]) / 1.5);
       color[q] = c[0] * fade;
       color[q + 1] = c[1] * fade;

@@ -28,6 +28,6 @@
 | 웹 보기 화면용 장비 모양 `web/viewer/public/models/{rack,crac}.glb` | **직접 제작.** `blender/rack.blend`, `crac.blend`를 `blender/scripts/export_glb.py`로 내보냈다. 텍스처를 넣지 않았고 재질 색은 스크립트에 직접 적은 값이다(외부 이미지 없음) | 이 저장소의 라이선스를 따른다 (직접 제작) | 웹 보기 화면 |
 
 ## 웹 외관 환경 (2026-11-03)
-- `web/viewer/public/models/building.glb`: `blender/building_exterior.blend`(직접 모델링)에서 `blender/scripts/export_building_glb.py`로 내보낸 건물과 옥외 설비. 텍스처는 넣지 않고 재질별로 정한 색만 쓴다. 외부 에셋 없음.
+- `web/viewer/public/models/building.glb`: `blender/building_exterior.blend`(직접 모델링)에서 `blender/scripts/export_building_glb.py`로 내보낸 건물과 옥외 설비. 콘크리트, 외벽 패널, 지붕, 아스팔트의 기본색 그림을 1K로 줄여 넣었다. 원본은 `blender/textures/building/`이고, 출처는 직접 절차적으로 만든 것(`blender/scripts/make_building_textures.py`)과 ambientCG CC0 자료(`blender/textures/cc0_sources.json`)이다. Draco 압축 해제기(`public/draco/`)는 three.js 예제의 파일이며 MIT 라이선스다.
 - 하늘, 구름, 먼 언덕, 풀밭은 `web/viewer/src/env.js`가 코드로 만든다. 외부 이미지를 쓰지 않는다.
 - `web/viewer/public/data/flow.bin`, `flow.json`: 우리 솔버(`experiments/omniverse_probe/hall60_sim.py`)가 홀 장면에서 계산해 `export_web_flow.py`로 내보낸 속도장. 외부 데이터 없음.
