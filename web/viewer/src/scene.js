@@ -18,6 +18,20 @@ export const VIEWS = {
 };
 
 const CM = 0.01;
+
+// 부드러운 원형 빛 번짐 그림(표시등용)
+function glowTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,0.95)');
+  g.addColorStop(0.25, 'rgba(255,255,255,0.35)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
 // 장면 좌표(cm, Z가 위) -> three.js 좌표(m, Y가 위). 손 방향이 바뀌지 않게 y는 부호를 뒤집는다.
 const toThree = (x, y, z) => new THREE.Vector3(x * CM, z * CM, -y * CM);
 const keyOf = (name) => name.toLowerCase(); // Rack_01 -> rack_01
@@ -54,7 +68,7 @@ export class HallScene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0e1218);
-    this.camera = new THREE.PerspectiveCamera(45, 1, 0.2, 2500);
+    this.camera = new THREE.PerspectiveCamera(45, 1, 0.5, 2500);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = !reducedMotion;
     this.controls.maxPolarAngle = Math.PI * 0.49;
@@ -309,7 +323,7 @@ export class HallScene {
       g.add(mesh);
       return mesh;
     };
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(1800, 64), mat(0x39502c, { roughness: 1 }));
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(1100, 64), mat(0x39502c, { roughness: 1 }));
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(c.x, -0.35, c.z);
     ground.receiveShadow = true;
@@ -343,6 +357,11 @@ export class HallScene {
     for (let i = -1; i <= 1; i++) this.building.push(add(2.4, 1.4, 2.4, c.x + i * (W / 4), H + 1.2, c.z - D / 4, mat(0x5b6675))); // 지붕 설비
     this.beacon = add(1.0, 1.0, 1.0, c.x, H + 1.5, c.z + D / 4, new THREE.MeshBasicMaterial({ color: 0x19cc4d }));
     this.building.push(this.beacon);
+    // 메인 건물이 눈에 띄도록 옥상 표시등에 빛 번짐을 붙인다(상태 색을 따라간다)
+    this.beaconGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0x19cc4d, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    this.beaconGlow.scale.set(26, 26, 1);
+    this.beaconGlow.renderOrder = 6;
+    g.add(this.beaconGlow);
     this._extR = Math.max(W, D);
     this._extH = H;
     g.visible = false;
@@ -428,6 +447,12 @@ export class HallScene {
       draco.dispose();
     }
     const meshes = mergeByMaterial(gltf.scene, CM);
+    for (const m of meshes) {
+      // 바닥과 같은 높이에 겹친 면(주차선, 횡단보도)은 앞으로, 아스팔트는 뒤로 밀어 깜빡임을 막는다
+      const n = m.material.name || '';
+      if (/Paint|Crosswalk/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      else if (/Asphalt/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+    }
     const box = new THREE.Box3();
     for (const m of meshes) box.union(m.geometry.boundingBox);
     const size = box.getSize(new THREE.Vector3());
@@ -444,6 +469,7 @@ export class HallScene {
     this.building = [proxy];
     this.beacon.visible = true;
     this.beacon.position.set(c.x, size.y + 2, c.z);
+    this.beaconGlow.position.copy(this.beacon.position);
     this.exteriorModel = model;
     this.renderer.shadowMap.needsUpdate = true;
     this._extR = Math.max(size.x, size.z) * 0.9;
@@ -543,7 +569,7 @@ export class HallScene {
     };
     if (this._extR) {
       const r = this._extR;
-      presets.ext = { pos: new THREE.Vector3(c.x + r * 1.25, r * 0.72, c.z + r * 1.6), target: new THREE.Vector3(c.x, this._extH / 2, c.z) };
+      presets.ext = { pos: new THREE.Vector3(c.x + r * 0.95, r * 0.5, c.z + r * 1.2), target: new THREE.Vector3(c.x, this._extH / 2, c.z) };
     }
     presets.home = { pos: new THREE.Vector3(c.x + 8, 10, c.z + 12), target: new THREE.Vector3(c.x, 0.3, c.z) };
     const p = presets[name] ?? presets.home;
@@ -689,7 +715,11 @@ export class HallScene {
     }
     for (const m of [this.rackFront, this.rackTop, this.rackHull, this.bar, this.cracFront]) m.instanceColor.needsUpdate = true;
     for (const m of [this.rackHull, this.barTrack, this.bar]) m.instanceMatrix.needsUpdate = true;
-    if (this.beacon) this.beacon.material.color.setRGB(...(worst === 'normal' ? [0.1, 0.8, 0.3] : ALARM_COLOR[worst]));
+    if (this.beacon) {
+      const rgb = worst === 'normal' ? [0.1, 0.8, 0.3] : ALARM_COLOR[worst];
+      this.beacon.material.color.setRGB(...rgb);
+      this.beaconGlow?.material.color.setRGB(...rgb);
+    }
     this._blink = anyCritical && !this.reducedMotion;
   }
 

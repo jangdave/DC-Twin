@@ -34,6 +34,8 @@ FALLBACK = ((0.3, 0.3, 0.3), 0.2, 0.7, 1.0)
 
 
 TEX_SIZE = 1024
+TEX_SIZE_WALL = 2048  # 메인 건물의 콘크리트와 외벽 패널 기본색만 2K로 올려 가까이서도 거칠지 않게 한다
+WALL = {"M_BldgConcrete", "M_BldgPanelMetal"}
 KEEP_BASECOLOR = {"M_Asphalt", "M_BldgConcrete", "M_BldgPanelMetal", "M_BldgRoof"}
 KEEP_NORMAL = {"M_BldgConcrete", "M_BldgPanelMetal"}  # 눈에 크게 띄는 벽면만 법선 지도도 넣는다
 
@@ -54,8 +56,9 @@ def flatten_materials() -> list[str]:
             if keep and name == "Base Color":
                 for link in bsdf.inputs[name].links:
                     img = link.from_node.image if link.from_node.type == "TEX_IMAGE" else None
-                    if img and max(img.size) > TEX_SIZE:
-                        img.scale(TEX_SIZE, TEX_SIZE)
+                    size = TEX_SIZE_WALL if m.name in WALL else TEX_SIZE
+                    if img and max(img.size) > size:
+                        img.scale(size, size)
                 continue
             if m.name in KEEP_NORMAL and name == "Normal":
                 for link in bsdf.inputs[name].links:  # 법선 지도 노드 -> 그림
@@ -88,7 +91,7 @@ def main() -> None:
         filepath=str(path),
         export_format="GLB",
         export_image_format="JPEG",
-        export_jpeg_quality=80,
+        export_jpeg_quality=82,
         export_draco_mesh_compression_enable=True,
         export_draco_mesh_compression_level=6,
         export_draco_position_quantization=14,
