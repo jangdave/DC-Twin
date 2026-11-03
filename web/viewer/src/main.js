@@ -56,6 +56,16 @@ async function main() {
   const rackKeys = sceneData.racks.map((r) => r.name.toLowerCase());
   const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage });
 
+  scene.setSky(params.sky);
+  // 건물 모델(glb)도 화면이 뜬 뒤에 받는다. 실패하면 단순 상자 건물로 계속 쓴다.
+  scene.loadExteriorModel(BASE).catch((e) => console.warn('건물 모양을 받지 못해 상자로 보여 준다:', e.message));
+
+  // 공기 흐름 속도장도 화면이 뜬 뒤에 받는다. 실패하면 단추를 숨기고 흐름 없이 쓴다.
+  scene
+    .loadAirflow(BASE)
+    .then(() => (document.getElementById('flow-btn').hidden = false))
+    .catch((e) => console.warn('공기 흐름을 받지 못해 생략한다:', e.message));
+
   // 장비 모양(glb)은 화면이 뜬 뒤에 받는다. 실패하면 단순 상자로 계속 쓴다.
   scene.useModels = params.models;
   let modelsState = params.models ? 'loading' : 'off';
@@ -101,6 +111,7 @@ async function main() {
     onPreset: (p) => scene.setPreset(p),
     onLabels: (b) => scene.setLabels(b),
     onModels: (b) => scene.setModels(b),
+    onFlow: (b) => scene.setAirflow(b),
     onBackToRec: () => startRecording(),
     onEnter: () => queue.push({ name: 'view.goto', value: 'hall' }),
     onBack: () => queue.push({ name: 'view.back' }),
