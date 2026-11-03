@@ -84,6 +84,7 @@ try {
 // 3) 게이트웨이가 죽으면 값이 오래된 값(회색)이 되고 끊김이 보여야 한다(4.4장)
 await page.waitForFunction(() => document.getElementById('mode-badge').textContent.includes('끊김'), { timeout: 20000 });
 const stale = await page.evaluate(() => [...window.__viewer.store.latest.values()].filter((e) => e.quality === 'stale').length);
+if (stale <= 100) console.log('진단:', JSON.stringify(await page.evaluate(() => ({ live: window.__viewer.state.live?.state, size: window.__viewer.store.latest.size, q: [...window.__viewer.store.latest.values()].reduce((a, e) => ((a[e.quality] = (a[e.quality] ?? 0) + 1), a), {}), badge: document.getElementById('mode-badge').textContent }))));
 ok('끊기면 값이 오래된 값으로 표시됨', stale > 100, `(${stale}개)`);
 
 // 4) 나쁜 라이브 주소는 거부(FR-63)

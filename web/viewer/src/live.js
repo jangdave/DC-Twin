@@ -24,6 +24,18 @@ export class LiveClient {
     this.lastMessageAt = null;
     this.retryInMs = 0;
     this._stopped = false;
+    this.lastError = null; // 서버가 거절한 조작의 이유
+  }
+
+  // 서버에 조작을 보낸다. 연결되어 있을 때만 보내고, 보냈는지 돌려준다.
+  send(obj) {
+    if (this.state !== 'open' || !this.ws) return false;
+    try {
+      this.ws.send(JSON.stringify(obj));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   _set(state) {
@@ -77,6 +89,7 @@ export class LiveClient {
     ws.onerror = () => {};
     ws.onclose = () => {
       if (this._stopped || this.ws !== ws) return;
+      this.flush(); // 끊기기 전에 받아 둔 메시지를 먼저 반영해야 그 뒤의 '오래된 값' 표시가 덮어써지지 않는다
       this._markStale();
       this._scheduleRetry();
     };
@@ -99,7 +112,13 @@ export class LiveClient {
     const q = this.queue;
     if (!q.length) return 0;
     this.queue = [];
-    for (const m of q) applyMessage(this.store, m);
+    for (const m of q) {
+      if (m.kind === 'error') {
+        this.lastError = { message: m.message, at: Date.now() };
+        continue;
+      }
+      applyMessage(this.store, m);
+    }
     return q.length;
   }
 }

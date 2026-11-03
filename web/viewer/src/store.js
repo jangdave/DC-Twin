@@ -22,6 +22,8 @@ export class SensorStore {
     this.history = new Map(); // sensorId -> [{ value, lower, upper }]
     this.aggregates = {};
     this.alarmLog = []; // { t 또는 ts, sensorId, from, to, value }
+    this.events = []; // 서버가 알려 준 조작 { t, kind, target, value }
+    this.controls = null; // 서버가 snapshot으로 알려 준 조작 상태 { fan, powerScale }
     this.scenario = null;
     this.version++;
   }
@@ -97,6 +99,7 @@ export class SensorStore {
     for (const s of snap.sensors) this.setSample(s, { pushHistory: false });
     this.aggregates = { ...snap.aggregates };
     this.scenario = snap.scenario;
+    this.controls = snap.controls ?? null;
     // 접속 전에 일어난 알람의 변화는 모르지만 지금 알람 상태인 센서는 목록에 보인다(이전 상태는 정상으로 본다)
     for (const s of snap.sensors) {
       if (s.alarm && s.alarm !== 'normal' && this.byId.has(s.sensorId)) this.alarmLog.push({ ts: s.ts, sensorId: s.sensorId, from: 'normal', to: s.alarm, value: s.value });

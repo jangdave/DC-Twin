@@ -9,6 +9,9 @@ class FakeWS {
     this.url = url;
     FakeWS.last = this;
   }
+  send(data) {
+    (FakeWS.sent ??= []).push(data);
+  }
   close() {
     this.onclose?.();
   }
@@ -118,5 +121,52 @@ describe('라이브 연결', () => {
     FakeWS.last.onmessage({ data: JSON.stringify({ type: 'sample', sensorId: 'ZZZ', value: 1 }) });
     c.flush();
     expect(store.ignored).toBe(1);
+  });
+  it('연결된 동안만 조작을 보낸다', () => {
+    const store = new SensorStore(sensors);
+    const c = mk(store);
+    FakeWS.sent = [];
+    expect(c.send({ type: 'control', kind: 'speed', value: 2 })).toBe(false); // 시작 전
+    c.start();
+    expect(c.send({ type: 'control', kind: 'speed', value: 2 })).toBe(false); // 연결 중
+    FakeWS.last.onopen();
+    expect(c.send({ type: 'control', kind: 'speed', value: 2 })).toBe(true);
+    expect(JSON.parse(FakeWS.sent[0])).toEqual({ type: 'control', kind: 'speed', value: 2 });
+    FakeWS.last.onclose();
+    expect(c.send({ type: 'control', kind: 'speed', value: 2 })).toBe(false); // 끊김
+  });
+  it('서버의 거절 이유는 저장소에 넣지 않고 기억만 한다', () => {
+    const store = new SensorStore(sensors);
+    const c = mk(store);
+    c.start();
+    FakeWS.last.onmessage({ data: JSON.stringify({ type: 'error', message: '알 수 없는 CRAC' }) });
+    const v = store.version;
+    expect(c.flush()).toBe(1);
+    expect(c.lastError.message).toBe('알 수 없는 CRAC');
+    expect(store.version).toBe(v);
+  });
+  it('조작 이벤트와 snapshot의 controls를 저장소에 모은다', () => {
+    const store = new SensorStore(sensors);
+    const c = mk(store);
+    c.start();
+    FakeWS.last.onmessage({ data: JSON.stringify({ type: 'snapshot', sensors: [], aggregates: {}, controls: { fan: { crac_01: 0.4 }, powerScale: {} } }) });
+    FakeWS.last.onmessage({ data: JSON.stringify({ type: 'scenario', name: 'normal', event: 'event', kind: 'crac_fan', target: 'crac_01', value: 0, t: 5 }) });
+    c.flush();
+    expect(store.controls.fan.crac_01).toBe(0.4);
+    expect(store.events).toEqual([{ t: 5, kind: 'crac_fan', target: 'crac_01', value: 0 }]);
+    FakeWS.last.onmessage({ data: JSON.stringify({ type: 'scenario', name: 'cooling_failure', event: 'start' }) });
+    c.flush();
+    expect(store.events).toEqual([]);
+    expect(store.controls).toBeNull();
+  });
+  it('끊기기 직전에 받아 둔 메시지가 있어도 끊긴 뒤에는 값이 오래된 값으로 남는다', () => {
+    const store = new SensorStore(sensors);
+    const c = mk(store);
+    c.start();
+    FakeWS.last.onopen();
+    FakeWS.last.onmessage({ data: JSON.stringify({ type: 'sample', sensorId: 'R1-T', value: 22 }) }); // 아직 flush 전
+    FakeWS.last.onclose();
+    c.flush(); // 다음 프레임
+    expect(store.get('R1-T')).toMatchObject({ value: 22, quality: 'stale' });
   });
 });

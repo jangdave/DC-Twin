@@ -46,4 +46,19 @@ describe('라이브 메시지 검사', () => {
     expect(parseMessage(null)).toBeNull();
     expect(parseMessage(42)).toBeNull();
   });
+  it('시나리오 이벤트의 조작 정보를 통과시키고 이상한 것은 뺀다', () => {
+    const ok = parseMessage({ type: 'scenario', name: 'normal', event: 'event', kind: 'crac_fan', target: 'crac_02', value: 0, t: 12 });
+    expect(ok).toMatchObject({ kind: 'scenario', event: 'event', t: 12, info: { kind: 'crac_fan', target: 'crac_02', value: 0 } });
+    expect(parseMessage({ type: 'scenario', name: 'normal', event: 'event', kind: 'reboot', target: 'x', value: 1 }).info).toBeUndefined();
+    expect(parseMessage({ type: 'scenario', name: 'normal', event: 'event', kind: 'crac_fan', target: 'crac_02', value: 'a' }).info).toBeUndefined();
+  });
+  it('error 메시지는 이유만 통과', () => {
+    expect(parseMessage({ type: 'error', message: '알 수 없는 CRAC' })).toEqual({ kind: 'error', message: '알 수 없는 CRAC' });
+    expect(parseMessage({ type: 'error' })).toBeNull();
+  });
+  it('snapshot의 controls는 장비 이름과 숫자만 남긴다', () => {
+    const m = parseMessage({ type: 'snapshot', sensors: [], aggregates: {}, controls: { fan: { crac_01: 0.5, evil: 1, crac_02: 'x' }, powerScale: { rack_01: 1.2, 'row:02': 1 } } });
+    expect(m.controls).toEqual({ fan: { crac_01: 0.5 }, powerScale: { rack_01: 1.2 } });
+    expect(parseMessage({ type: 'snapshot', sensors: [], aggregates: {} }).controls).toBeNull();
+  });
 });

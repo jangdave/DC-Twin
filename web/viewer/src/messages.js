@@ -47,7 +47,16 @@ export function parseMessage(raw) {
     case 'scenario': {
       const name = str(m.name);
       if (!name || (m.event !== 'start' && m.event !== 'end' && m.event !== 'event')) return null;
-      return { kind: 'scenario', name, event: m.event, ts: str(m.ts) };
+      const out = { kind: 'scenario', name, event: m.event, ts: str(m.ts) };
+      if (m.event === 'event' && ['crac_fan', 'rack_power_scale'].includes(m.kind) && str(m.target) && num(m.value) !== null) {
+        out.info = { kind: m.kind, target: m.target, value: m.value };
+        if (num(m.t) !== null) out.t = m.t;
+      }
+      return out;
+    }
+    case 'error': {
+      const message = str(m.message);
+      return message ? { kind: 'error', message } : null;
     }
     case 'aggregate': {
       const name = str(m.name);
@@ -70,7 +79,13 @@ export function parseMessage(raw) {
         if (a && str(a.name)) aggregates[a.name] = num(a.value);
       }
       const scenario = typeof m.scenario === 'string' ? str(m.scenario) : m.scenario && typeof m.scenario === 'object' ? str(m.scenario.name) : null;
-      return { kind: 'snapshot', ts: str(m.ts), scenario, sensors, aggregates };
+      let controls = null;
+      const c = m.controls;
+      if (c && typeof c === 'object' && c.fan && c.powerScale) {
+        const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => /^(rack|crac)_\d+$/.test(k) && num(v) !== null));
+        controls = { fan: clean(c.fan), powerScale: clean(c.powerScale) };
+      }
+      return { kind: 'snapshot', ts: str(m.ts), scenario, sensors, aggregates, controls };
     }
     default:
       return null;

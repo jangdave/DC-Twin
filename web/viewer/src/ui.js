@@ -28,7 +28,7 @@ const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 export class UI {
   constructor(store, handlers) {
     this.store = store;
-    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on) }
+    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on), onServer(url) }
     this.metricTab = null;
     this.selected = null;
     this._lastAlarmCount = -1;
@@ -60,7 +60,14 @@ export class UI {
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
     $('back-btn').addEventListener('click', () => this.h.onBack());
     $('sc-max').addEventListener('click', (e) => e.currentTarget.dataset.rack && this.h.onSelect(e.currentTarget.dataset.rack, true));
-    document.querySelectorAll('#mode-group [data-mode]').forEach((b) => b.addEventListener('click', () => this.h.onMode(b.dataset.mode)));
+    document.querySelectorAll('#mode-group [data-mode]').forEach((b) => b.addEventListener('click', () => (b.dataset.mode === 'server' ? this.openServerDialog() : this.h.onMode(b.dataset.mode))));
+    $('server-connect').addEventListener('click', () => {
+      const r = this.h.onServer($('server-url').value.trim());
+      $('server-error').hidden = r === true;
+      if (r !== true) $('server-error').textContent = r;
+      else $('server-dialog').close();
+    });
+    $('server-url').addEventListener('keydown', (e) => e.key === 'Enter' && (e.preventDefault(), $('server-connect').click()));
   }
 
   fillHelp() {
@@ -97,6 +104,18 @@ export class UI {
     $('timebar').hidden = mode === 'sim';
     $('loop-label').hidden = mode === 'sim';
     document.querySelectorAll('#mode-group [data-mode]').forEach((x) => x.classList.toggle('on', x.dataset.mode === mode));
+  }
+
+  openServerDialog() {
+    $('server-error').hidden = true;
+    $('server-dialog').showModal();
+    $('server-url').focus();
+  }
+
+  // 서버에 조작을 보내는 모드: 시나리오 선택을 열고 "로컬 서버" 단추를 강조한다
+  setControlMode(on) {
+    $('scenario-select').disabled = !on;
+    document.querySelectorAll('#mode-group [data-mode]').forEach((x) => x.classList.toggle('on', on && x.dataset.mode === 'server'));
   }
 
   setLiveText(t) {

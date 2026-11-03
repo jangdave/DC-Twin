@@ -64,6 +64,19 @@ export class SimPanel {
       this.rowInputs.set(r, { input, val });
     }
     $('sim-reset').addEventListener('click', () => this.h.onReset());
+    document.querySelectorAll('#sim-speed [data-xspeed]').forEach((b) =>
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#sim-speed [data-xspeed]').forEach((x) => x.classList.toggle('on', x === b));
+        this.h.onSpeed(Number(b.dataset.xspeed));
+      }),
+    );
+  }
+
+  // 서버 모드: 속도 단추를 보이고 안내 문구를 바꾼다
+  setServerMode(on) {
+    $('sim-speed').hidden = !on;
+    $('sim-note').textContent = on ? '이 컴퓨터의 계산 서버가 계산한 값이다. 슬라이더는 서버로 전달되고, 서버가 알려 준 상태로 맞춰진다. 서버 모델(l0, l1, l2)에 따라 신뢰 막대가 나올 수 있다.' : '간이 모델(1차 지연 식)을 이 브라우저에서 계산한 값이다. 보정 모델(AI)은 쓰지 않아 신뢰 막대가 나오지 않는다.';
+    $('sim-panel').querySelector('h2').textContent = on ? '로컬 서버 조작' : '직접 시뮬레이션';
   }
 
   show(on) {
