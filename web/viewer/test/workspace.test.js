@@ -16,11 +16,11 @@ describe('왼쪽 메뉴는 눌린 단추가 하나뿐이다', () => {
   });
   it('모든 상태 조합에서 눌린 단추는 많아야 하나', () => {
     for (const stage of ['exterior', 'hall'])
-      for (const mode of ['rec', 'sim', 'connecting', 'open', 'closed'])
+      for (const mode of ['rec', 'lib', 'sim', 'connecting', 'open', 'closed'])
         for (const control of [false, true])
           for (const overlay of [null, 'cctv']) {
             const d = derive({ ...initial, stage, mode, control, overlay });
-            expect([null, 'rec', 'sim', 'cctv']).toContain(d.rail.active);
+            expect([null, 'rec', 'lib', 'sim', 'cctv']).toContain(d.rail.active);
             if (d.cctvOpen) expect(d.rail.active).toBe('cctv');
           }
   });
@@ -53,7 +53,7 @@ describe('시뮬레이션과 보기 값', () => {
     const d = derive(run(hall, { type: 'mode', mode: 'sim' }));
     expect(d.heat).toBe(true);
     expect(d.legendHidden).toBe(false);
-    expect(d.controlTabs).toBe(true);
+    expect(d.tabs).toEqual({ control: true, energy: true, prep: true });
     expect(d.homeTab).toBe('control');
   });
   it('녹화에서는 기본으로 색칠 없음, 기록 재생 막대는 켰을 때만 보인다', () => {
@@ -61,7 +61,7 @@ describe('시뮬레이션과 보기 값', () => {
     expect(d.heat).toBe(false);
     expect(d.viewGroupHidden).toBe(true);
     expect(d.transportHidden).toBe(true);
-    expect(d.controlTabs).toBe(false);
+    expect(d.tabs).toEqual({ control: false, energy: false, prep: false });
     d = derive(run(hall, { type: 'mode', mode: 'rec' }, { type: 'timeline', on: true }));
     expect(d.transportHidden).toBe(false);
   });
@@ -75,5 +75,26 @@ describe('시뮬레이션과 보기 값', () => {
     expect(d.rail.hidden).toBe(true);
     expect(d.stageToolsHidden).toBe(true);
     expect(d.exteriorCard).toBe(true);
+  });
+});
+
+describe('미리 계산한 값(lib)', () => {
+  it('들어가면 색칠이 켜지고, 재생 막대와 시간 막대가 보이며, 에너지와 이상 대비 탭만 나온다(슬라이더 조작 탭은 없음)', () => {
+    const d = derive(run(hall, { type: 'mode', mode: 'lib' }));
+    expect(d.rail.active).toBe('lib');
+    expect(d.heat).toBe(true);
+    expect(d.transportHidden).toBe(false);
+    expect(d.timebarHidden).toBe(false); // 기록이라 시간 이동이 된다
+    expect(d.tabs).toEqual({ control: false, energy: true, prep: true });
+    expect(d.homeTab).toBe('energy');
+    expect(d.scenarioDisabled).toBe(false);
+  });
+  it('서버 연결 안내는 서버에 연결하지 않았을 때만 보인다', () => {
+    for (const mode of ['rec', 'lib', 'sim']) expect(derive(run(hall, { type: 'mode', mode })).serverCta).toBe(true);
+    expect(derive(run(hall, { type: 'mode', mode: 'open', control: true })).serverCta).toBe(false);
+  });
+  it('간이 계산(sim)과 미리 계산한 값(lib)은 서로 다른 메뉴 단추다', () => {
+    expect(derive(run(hall, { type: 'mode', mode: 'sim' })).rail.active).toBe('sim');
+    expect(derive(run(hall, { type: 'mode', mode: 'lib' })).rail.active).toBe('lib');
   });
 });

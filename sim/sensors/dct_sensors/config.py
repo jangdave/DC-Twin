@@ -38,6 +38,9 @@ class Config:
     fan_power_kw: float = 3.0        # CRAC 1기 팬 100%일 때 전력 추정
     cooling_base_kw: float = 1.0     # CRAC 1기 기본 소비
     loss_ratio: float = 0.06         # 손실(IT 전력의 비율)
+    # 급기 온도와 냉각 효율(가정, 실측 아님): 기준보다 1도 올리면 냉각 전력이 약 3% 줄고 내리면 늘며 0.6~1.3배로 제한한다. 웹 간이 시뮬레이션과 같은 값.
+    t_supply_ref: float = 18.0       # 기준 급기 온도(degC). 보정 모델(L2)도 이 온도에서 배웠다
+    cooling_gain_per_c: float = 0.03
 
     @classmethod
     def load(cls, path: str | Path | None) -> "Config":

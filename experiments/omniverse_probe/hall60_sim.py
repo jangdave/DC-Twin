@@ -457,18 +457,21 @@ def sample_points(T: wp.array3d(dtype=float), pts: wp.array(dtype=wp.vec3), out:
 
 
 class Sim:
-    def __init__(self, hall: dict, lay: Layout, power_kw: float, slow: float, device: str = "cuda:0", advection: str = "maccormack"):
+    def __init__(self, hall: dict, lay: Layout, power_kw: float, slow: float, device: str = "cuda:0", advection: str = "maccormack", t_supply: float = T_SUPPLY):
         if advection not in ("linear", "maccormack"):
             raise ValueError(f"advection은 linear 또는 maccormack이어야 한다: {advection}")
         self.advection = advection  # linear: 거슬러 올라가 선형 보간(수치 확산이 큼), maccormack: 오차 보정 + 값 제한(확산이 작음)
         self.hall, self.lay, self.device, self.slow = hall, lay, device, slow
+        # 급기 온도. 식이 온도에 대해 선형이라 급기를 올리면 장 전체가 같은 폭으로 오른다(초기 온도도 같은 폭으로 옮겨 과도 구간을 같게 한다).
+        self.t_supply = float(t_supply)
+        self.t_init = T_INIT + (self.t_supply - T_SUPPLY)
         self.dt_phys = min(0.04, 0.09 * DX * DX / K_DIFF)  # 확산 안정 조건 K dt/dx^2 <= 0.1
         self.dt = self.dt_phys / slow  # 물리 시간을 늘려 응답을 늦춘다
         d = device
         self.solid = wp.array(lay.solid.astype(np.int32), dtype=int, device=d)
         self.rack_id = wp.array(lay.rack_id, dtype=int, device=d)
         self.vent = wp.array(lay.vent.astype(np.int32), dtype=int, device=d)
-        self.T = wp.array(np.full(lay.shape, T_INIT, dtype=np.float32), dtype=float, device=d)
+        self.T = wp.array(np.full(lay.shape, self.t_init, dtype=np.float32), dtype=float, device=d)
         self.T2 = wp.zeros(lay.shape, dtype=float, device=d)
         self.T_hat = wp.zeros(lay.shape, dtype=float, device=d)
         # 새는 공기(격벽 지붕 틈): 빨려 들어간 칸의 온도를 나오는 칸으로 옮긴다(옮기지 않으면 열이 사라진다)
@@ -510,10 +513,10 @@ class Sim:
         if self.advection == "maccormack":
             wp.launch(advect_forward_kernel, dim=self.lay.shape, inputs=[self.T, self.T_hat, self.u, self.solid, self.rack_id, self.dt, DX], device=self.device)
             wp.launch(step_kernel_mc, dim=self.lay.shape, inputs=[self.T, self.T_hat, self.T2, self.u, self.solid, self.rack_id, self.vent, self.heat_rate,
-                                                                   self.dt, DX, K_DIFF, T_SUPPLY, self.vent_on], device=self.device)
+                                                                   self.dt, DX, K_DIFF, self.t_supply, self.vent_on], device=self.device)
         else:
             wp.launch(step_kernel, dim=self.lay.shape, inputs=[self.T, self.T2, self.u, self.solid, self.rack_id, self.vent, self.heat_rate,
-                                                               self.dt, DX, K_DIFF, T_SUPPLY, self.vent_on], device=self.device)
+                                                               self.dt, DX, K_DIFF, self.t_supply, self.vent_on], device=self.device)
         self.T, self.T2 = self.T2, self.T
         wp.launch(leak_apply_kernel, dim=self.lay.shape, inputs=[self.T, self.leak_src_id, self.leak_sums, self.leak_counts, self.leak_on], device=self.device)
 

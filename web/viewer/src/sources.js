@@ -2,7 +2,7 @@
 // 화면과 3D를 모른다(DOM 없음). 화면은 describe()가 돌려주는 값만 읽는다.
 //
 // 모든 출처가 가진 것:
-//   kind      'rec' | 'sim' | 'live'
+//   kind      'rec'(모니터링 기록) | 'lib'(미리 계산한 상태와 시나리오 모음) | 'sim'(브라우저 간이 계산) | 'live'(라이브, 로컬 서버)
 //   control   서버에 조작을 보내는가(로컬 서버)
 //   player    재생 막대가 다루는 객체(time, duration, playing, speed, loop, seek) 또는 null
 //   open(args)  시작(비동기일 수 있음)      close()  멈춤
@@ -36,25 +36,29 @@ class SecondClock {
   }
 }
 
-// ---- 녹화 ----
+// ---- 녹화(모니터링 기록)와 라이브러리(미리 계산한 상태와 시나리오 모음) ----
+// 둘은 같은 재생 방식이고 목록과 표시만 다르다. alias 항목(file)은 다른 항목의 녹화 파일을 쓴다.
 export class RecSource {
-  // opts: { store, sensorIds, index(시나리오 목록), loadJson(id) -> 녹화 JSON }
-  constructor({ store, sensorIds, index, loadJson }) {
-    this.kind = 'rec';
+  // opts: { store, sensorIds, index(목록), loadJson(file) -> 녹화 JSON, cache(여러 출처가 같은 파일을 한 번만 받게 공유), kind, badgeText, groups }
+  constructor({ store, sensorIds, index, loadJson, cache = new Map(), kind = 'rec', badgeText = '녹화 재생 · 실시간 아님', groups = null }) {
+    this.kind = kind;
+    this.badgeText = badgeText;
+    this.groups = groups;
     this.control = false;
     this.store = store;
     this.sensorIds = sensorIds;
     this.index = index;
     this.loadJson = loadJson;
-    this.cache = new Map();
+    this.cache = cache;
     this.player = null;
     this.scenarioId = null;
     this._clock = new SecondClock();
   }
 
   async _load(id) {
-    if (!this.cache.has(id)) this.cache.set(id, parseRecording(await this.loadJson(id), this.sensorIds));
-    return this.cache.get(id);
+    const file = this.index.find((x) => x.id === id)?.file ?? id; // alias는 가리키는 녹화를 쓴다
+    if (!this.cache.has(file)) this.cache.set(file, parseRecording(await this.loadJson(file), this.sensorIds));
+    return this.cache.get(file);
   }
 
   // args: { scenarioId, t } 같은 출처 안에서 시나리오를 바꾸면 재생 설정(반복, 속도, 일시정지)을 이어 간다
@@ -85,11 +89,11 @@ export class RecSource {
     const rec = this.player?.rec;
     const meta = this.index.find((x) => x.id === this.scenarioId);
     return {
-      kind: 'rec',
+      kind: this.kind,
       control: false,
-      badge: { mode: 'rec', text: '녹화 재생 · 실시간 아님' },
+      badge: { mode: this.kind, text: this.badgeText },
       panel: 'none',
-      scenarios: { list: this.index, current: this.scenarioId },
+      scenarios: { list: this.index, current: this.scenarioId, groups: this.groups },
       card: { title: meta?.title ?? this.scenarioId, desc: meta?.note ?? '', events: rec?.events ?? [], seekable: true },
       timebar: rec ? { n: rec.n, events: rec.events } : null,
     };
@@ -226,5 +230,12 @@ export class LiveSource {
       },
       timebar: null,
     };
+  }
+}
+
+// 미리 계산한 상태와 시나리오 모음(Warp 열 시뮬레이션 + 보정 모델로 계산해 둔 값). 서버 없이 보이는 "시뮬레이션" 메뉴의 기본이다.
+export class LibSource extends RecSource {
+  constructor(opts) {
+    super({ kind: 'lib', badgeText: '미리 계산한 값 · Warp 열 시뮬레이션 + 보정 모델', ...opts });
   }
 }

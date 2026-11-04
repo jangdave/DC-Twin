@@ -106,6 +106,7 @@ export class UI {
     $('live-back').addEventListener('click', () => this.h.onBackToRec());
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
     $('back-btn').addEventListener('click', () => this.h.onBack());
+    $('server-cta-btn').addEventListener('click', () => this.openServerDialog());
     $('sc-max').addEventListener('click', (e) => e.currentTarget.dataset.rack && this.h.onSelect(e.currentTarget.dataset.rack, true));
     document.querySelectorAll('#mode-group [data-mode], #rail [data-mode]').forEach((b) => b.addEventListener('click', () => (b.dataset.mode === 'server' ? this.openServerDialog() : this.h.onMode(b.dataset.mode))));
     $('server-connect').addEventListener('click', () => {
@@ -159,14 +160,28 @@ export class UI {
   }
 
   // ---- 상단 ----
-  setScenarios(list, current) {
+  // groups(선택)가 있고 목록이 둘 이상의 그룹에 걸치면 그룹별로 묶어 보인다(예: 이상 상황, 급기 온도, 부하)
+  setScenarios(list, current, groups = null) {
     const sel = $('scenario-select');
     sel.replaceChildren();
-    for (const s of list) {
+    const kinds = new Set(list.map((s) => s.group).filter(Boolean));
+    const option = (s) => {
       const o = el('option', '', s.title);
       o.value = s.id;
       o.title = s.note;
-      sel.append(o);
+      return o;
+    };
+    if (groups && kinds.size > 1) {
+      for (const g of groups) {
+        const items = list.filter((s) => s.group === g.id);
+        if (!items.length) continue;
+        const og = el('optgroup');
+        og.label = g.title;
+        og.append(...items.map(option));
+        sel.append(og);
+      }
+    } else {
+      sel.append(...list.map(option));
     }
     sel.value = current;
   }
@@ -244,10 +259,15 @@ export class UI {
     $('live-info').hidden = vm.liveInfoHidden;
     $('scenario-select').disabled = vm.scenarioDisabled;
     // 오른쪽 패널 탭
-    const was = !$('tab-control').hidden;
-    for (const t of ['control', 'energy', 'prep']) $(`tab-${t}`).hidden = !vm.controlTabs;
-    if (vm.controlTabs && !was) this.showTab(vm.homeTab);
-    else if (!vm.controlTabs && ['control', 'energy', 'prep'].includes(this.tab)) this.showTab('summary');
+    const extra = ['control', 'energy', 'prep'];
+    const key = extra.map((t) => (vm.tabs[t] ? 1 : 0)).join('');
+    const hadAny = !!this._tabKey && this._tabKey !== '000';
+    const changed = key !== this._tabKey;
+    this._tabKey = key;
+    for (const t of extra) $(`tab-${t}`).hidden = !vm.tabs[t];
+    if (extra.includes(this.tab) && !vm.tabs[this.tab]) this.showTab(key === '000' ? 'summary' : vm.homeTab); // 보던 탭이 사라지면 옮긴다
+    else if (changed && !hadAny && key !== '000') this.showTab(vm.homeTab); // 처음 나타나면 그 출처의 첫 탭을 연다
+    $('server-cta').hidden = !vm.serverCta;
     // 단계가 바뀐 때만
     if (prevStage !== ws.stage) {
       const ext = ws.stage === 'exterior';

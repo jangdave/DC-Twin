@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "_comment": "미리 계산해 두는 상태와 시나리오 모음. 생성: scripts/make_sim_library.py, 웹 자료 변환: web/viewer/tools/build_data.mjs. 모두 Warp 열 시뮬레이션(L1) + 보정 모델(L2). 시각화 목적이며 공학적 정확성을 주장하지 않는다.",
+  "groups": [
+    { "id": "event", "title": "이상 상황", "note": "시나리오 4종. 시간에 따라 상황이 바뀐다." },
+    { "id": "supply", "title": "급기 온도", "note": "급기 온도를 고정하고 300초 동안 본다. 냉각 효율 가정(1도당 3%)을 쓴다." },
+    { "id": "load", "title": "부하", "note": "랙 전력을 기준의 몇 %로 고정하고 300초 동안 본다." }
+  ],
+  "entries": [
+    { "id": "normal", "group": "event", "title": "정상 가동", "note": "랙 온도가 완만하게 움직인다.", "scenario": "normal", "config": {} },
+    { "id": "cooling_failure", "group": "event", "title": "CRAC 고장", "note": "냉각 장치 한 대가 멈추면 가까운 랙부터 오른다.", "scenario": "cooling_failure", "config": {} },
+    { "id": "fan_fault", "group": "event", "title": "팬 이상", "note": "냉각 장치 팬이 15%로 떨어진다. 보정 모델이 낮은 신뢰 등급을 보이는 랙이 생긴다.", "scenario": "fan_fault", "config": {} },
+    { "id": "power_spike", "group": "event", "title": "전력 급증", "note": "일부 랙의 전력이 갑자기 올라간다.", "scenario": "power_spike", "config": {} },
+
+    { "id": "supply_16", "group": "supply", "value": 16, "title": "급기 16 °C", "note": "급기를 2도 낮춘 상태. 입구 온도가 내려가고 냉각 전력이 늘어난다(가정).", "scenario": "normal", "config": { "t_supply": 16.0 } },
+    { "id": "supply_18", "group": "supply", "value": 18, "title": "급기 18 °C (기준)", "note": "기준 상태. 정상 가동과 같은 녹화다.", "alias": "normal" },
+    { "id": "supply_20", "group": "supply", "value": 20, "title": "급기 20 °C", "note": "급기를 2도 올린 상태. 냉각 전력이 줄고 입구 온도 여유가 줄어든다(가정).", "scenario": "normal", "config": { "t_supply": 20.0 } },
+    { "id": "supply_22", "group": "supply", "value": 22, "title": "급기 22 °C", "note": "냉각 장치 공급 온도 주의 기준(22도)에 닿는 상태.", "scenario": "normal", "config": { "t_supply": 22.0 } },
+    { "id": "supply_24", "group": "supply", "value": 24, "title": "급기 24 °C", "note": "급기를 크게 올린 상태. 냉각 장치 공급 온도 알람이 난다.", "scenario": "normal", "config": { "t_supply": 24.0 } },
+
+    { "id": "load_70", "group": "load", "value": 70, "title": "부하 70%", "note": "랙 전력이 기준의 70%인 상태.", "scenario": "normal", "config": { "power_base_min": 4.2, "power_base_max": 5.95 } },
+    { "id": "load_100", "group": "load", "value": 100, "title": "부하 100% (기준)", "note": "기준 상태. 정상 가동과 같은 녹화다.", "alias": "normal" },
+    { "id": "load_130", "group": "load", "value": 130, "title": "부하 130%", "note": "랙 전력이 기준의 130%인 상태. 입구 온도와 전력 여유가 빠듯해진다.", "scenario": "normal", "config": { "power_base_min": 7.8, "power_base_max": 11.05 } }
+  ]
+}

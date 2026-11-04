@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { LiveSource, RecSource, SimSource } from '../src/sources.js';
+import { LibSource, LiveSource, RecSource, SimSource } from '../src/sources.js';
 import { SCENARIOS } from '../src/sim/core.js';
 import { layoutFrom, SimEngine } from '../src/sim/engine.js';
 import { SensorStore } from '../src/store.js';
@@ -164,5 +164,52 @@ describe('LiveSource', () => {
     expect(s.advance()).toBe(false);
     client.flushed = true;
     expect(s.advance()).toBe(true);
+  });
+});
+
+describe('LibSource(미리 계산한 값)', () => {
+  const mk = (cache) => {
+    const loaded = [];
+    const src = new LibSource({ store: new SensorStore(sensors), sensorIds: ids, index, cache, loadJson: async (file) => (loaded.push(file), read(`../public/data/rec/${file}.json`)), groups: [{ id: 'event', title: '이상 상황' }] });
+    return { src, loaded };
+  };
+  it('모든 항목을 목록에 담고 모드 표시는 lib다', async () => {
+    const { src } = mk();
+    await src.open({ scenarioId: 'supply_24' });
+    const d = src.describe();
+    expect(d.kind).toBe('lib');
+    expect(d.badge.mode).toBe('lib');
+    expect(d.scenarios.list.length).toBe(index.length);
+    expect(d.scenarios.groups).toEqual([{ id: 'event', title: '이상 상황' }]);
+    expect(d.card.seekable).toBe(true);
+  });
+  it('alias 항목(급기 18도)은 가리키는 녹화 파일을 받고 같은 파일은 한 번만 받는다', async () => {
+    const { src, loaded } = mk(new Map());
+    await src.open({ scenarioId: 'supply_18' });
+    await src.open({ scenarioId: 'load_100' });
+    await src.open({ scenarioId: 'normal' });
+    expect(loaded).toEqual(['normal']); // 세 항목이 같은 녹화
+    expect(src.scenarioId).toBe('normal');
+  });
+  it('급기 온도가 높은 항목일수록 냉각 전력이 낮다(녹화 값)', async () => {
+    const { src } = mk();
+    const cool = [];
+    for (const id of ['supply_16', 'supply_18', 'supply_20', 'supply_22', 'supply_24']) {
+      await src.open({ scenarioId: id, t: 200 });
+      cool.push(src.store.aggregates.cooling_power);
+    }
+    expect(cool.every((v, i) => i === 0 || v < cool[i - 1])).toBe(true);
+  });
+  it('모니터링(RecSource)과 같은 캐시를 쓰면 같은 녹화를 다시 받지 않는다', async () => {
+    const cache = new Map();
+    const loaded = [];
+    const loadJson = async (f) => (loaded.push(f), read(`../public/data/rec/${f}.json`));
+    const store = new SensorStore(sensors);
+    const rec = new RecSource({ store, sensorIds: ids, index: index.filter((i) => i.group === 'event'), loadJson, cache });
+    const lib = new LibSource({ store, sensorIds: ids, index, loadJson, cache });
+    await rec.open({ scenarioId: 'fan_fault' });
+    await lib.open({ scenarioId: 'fan_fault' });
+    expect(loaded).toEqual(['fan_fault']);
+    expect(rec.describe().scenarios.list.every((i) => i.group === 'event')).toBe(true);
   });
 });

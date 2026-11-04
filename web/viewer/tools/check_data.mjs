@@ -57,9 +57,12 @@ console.log(`      (랙 지표: ${[...rackMetrics].join(', ')} / 센서 ${sensor
 
 // ---- 3. 녹화 ----
 const byId = new Map(sensors.map((s) => [s.sensorId, s]));
-ok('시나리오 목록과 녹화 파일이 같음', JSON.stringify((await readdir(path.join(DATA, 'rec'))).sort()) === JSON.stringify(index.map((i) => `${i.id}.json`).sort()), '');
-for (const it of index) {
+const fileOf = (it) => it.file ?? it.id; // alias 항목(예: 급기 18도)은 다른 항목의 녹화 파일을 가리킨다
+ok('시나리오 목록과 녹화 파일이 같음', JSON.stringify((await readdir(path.join(DATA, 'rec'))).sort()) === JSON.stringify([...new Set(index.map((i) => `${fileOf(i)}.json`))].sort()), '');
+const recOf = new Map();
+for (const it of index.filter((x) => !x.file)) {
   const r = await json(path.join(DATA, 'rec', `${it.id}.json`));
+  recOf.set(it.id, r);
   const tag = `녹화 ${it.id}`;
   ok(`${tag}: 길이가 목록(${it.n})과 같고 모든 값 배열이 같은 길이`, r.n === it.n && Object.values(r.values).every((v) => v.length === r.n), '');
   const ids = Object.keys(r.values);
@@ -106,12 +109,33 @@ ok('흐름 자료: 시각화 목적 문구가 있음', /시각화/.test(flow.not
 // ---- 5. 시뮬레이션 설정과 화면 안내 ----
 
 const simIds = Object.keys(core.SCENARIOS);
-ok('시나리오: 시뮬레이션 엔진의 이름이 녹화 목록과 같음', JSON.stringify([...simIds].sort()) === JSON.stringify(index.map((i) => i.id).sort()), simIds.join());
+ok('시나리오: 시뮬레이션 엔진의 이름이 "이상 상황" 녹화와 같음', JSON.stringify([...simIds].sort()) === JSON.stringify(index.filter((i) => i.group === 'event').map((i) => i.id).sort()), simIds.join());
 ok('시나리오: 모두 대응 순서 안내가 있음', simIds.every((k) => insight.RESPONSE[k]), '');
 const warnIn = sensors.find((s) => s.metric === 'temp_in')?.warn;
 ok(`센서: 입구 온도 주의 기준(${warnIn})이 화면의 기본값(${insight.WARN_IN_DEFAULT})과 같음`, warnIn === insight.WARN_IN_DEFAULT, '');
 const rated = Math.max(...sensors.filter((s) => s.metric === 'power' && s.equipmentType === 'rack').map((s) => s.range[1]));
 console.log(`      (랙 전력 센서 범위 최대 ${rated} kW, 화면 정격 가정 ${insight.RATED_KW} kW)`);
+
+// ---- 5-1. 미리 계산한 상태 모음(라이브러리) ----
+const lib = await json(path.join(DATA, 'library.json'));
+const libDef = await json(path.join(ROOT, 'sim/library.json')).catch(() => null);
+ok('라이브러리: 모든 항목의 그룹이 library.json에 있고 alias 대상이 있음', index.every((i) => lib.groups.some((g) => g.id === i.group) && (!i.file || index.some((x) => x.id === i.file && !x.file))), '');
+if (libDef) ok('라이브러리: 정의(sim/library.json)와 웹 목록의 항목이 같음', JSON.stringify(libDef.entries.map((e) => e.id).sort()) === JSON.stringify(index.map((i) => i.id).sort()), '');
+{
+  const mean = (a) => a.reduce((p, q) => p + q, 0) / a.length;
+  const last = (r, name) => r.aggregates[name][r.n - 1];
+  const maxIn = (r) => Math.max(...racks.map((n) => r.values[`H01-RK${n.split('_')[1]}-TEMP-IN`][r.n - 1]));
+  const rec = (id) => recOf.get(index.find((i) => i.id === id).file ?? id);
+  const sup = index.filter((i) => i.group === 'supply').sort((a, b) => a.value - b.value);
+  const cool = sup.map((i) => last(rec(i.id), 'cooling_power'));
+  const tin = sup.map((i) => maxIn(rec(i.id)));
+  ok('라이브러리: 급기 온도가 오를수록 냉각 전력은 줄고 가장 높은 입구 온도는 오른다', cool.every((v, i) => i === 0 || v < cool[i - 1]) && tin.every((v, i) => i === 0 || v > tin[i - 1]), `냉각 ${cool.map((v) => v.toFixed(1))} 입구 ${tin.map((v) => v.toFixed(1))}`);
+  const ld = index.filter((i) => i.group === 'load').sort((a, b) => a.value - b.value);
+  const it = ld.map((i) => last(rec(i.id), 'it_power'));
+  const fac = ld.map((i) => last(rec(i.id), 'facility_power'));
+  ok('라이브러리: 부하가 오를수록 IT 전력과 설비 전력이 늘고 IT 전력은 기준 대비 비율에 가깝다', it.every((v, i) => i === 0 || v > it[i - 1]) && fac.every((v, i) => i === 0 || v > fac[i - 1]) && ld.every((l, i) => Math.abs(it[i] / it[ld.findIndex((x) => x.value === 100)] - l.value / 100) < 0.03), `IT ${it.map((v) => v.toFixed(0))}`);
+  void mean;
+}
 
 // ---- 5-2. 시뮬레이션 시작값(sim_init)이 정상 녹화와 이어지는가 ----
 const simInit = await json(path.join(DATA, 'sim_init.json'));
@@ -138,7 +162,8 @@ if (src.every(existsSync) && (await readdir(path.join(ROOT, 'sim/out/recordings'
     execFileSync(process.execPath, [path.join(HERE, 'build_data.mjs'), '--out', tmp], { stdio: 'pipe' });
     for (const f of ['scene.json', 'sensors.json', 'index.json']) ok(`재생성: ${f}가 웹 자료와 같음`, (await readFile(path.join(tmp, f), 'utf8')) === (await readFile(path.join(DATA, f), 'utf8')), '');
     ok('재생성: sim_init.json이 웹 자료와 같음', (await readFile(path.join(tmp, 'sim_init.json'), 'utf8')) === (await readFile(path.join(DATA, 'sim_init.json'), 'utf8')), '');
-    for (const it of index) ok(`재생성: rec/${it.id}.json이 웹 자료와 같음`, (await readFile(path.join(tmp, 'rec', `${it.id}.json`), 'utf8')) === (await readFile(path.join(DATA, 'rec', `${it.id}.json`), 'utf8')), '');
+    ok('재생성: library.json이 웹 자료와 같음', (await readFile(path.join(tmp, 'library.json'), 'utf8')) === (await readFile(path.join(DATA, 'library.json'), 'utf8')), '');
+    for (const it of index.filter((x) => !x.file)) ok(`재생성: rec/${it.id}.json이 웹 자료와 같음`, (await readFile(path.join(tmp, 'rec', `${it.id}.json`), 'utf8')) === (await readFile(path.join(DATA, 'rec', `${it.id}.json`), 'utf8')), '');
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

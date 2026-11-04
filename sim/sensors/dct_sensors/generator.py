@@ -157,7 +157,8 @@ class Generator:
                 self.alarms[s.sensor_id].break_run()
         # 집계(11 데이터 규격 9장): 합성 추정
         n_crac = len(self.m.cracs)
-        cooling = n_crac * cfg.cooling_base_kw + cfg.fan_power_kw * fan_sum
+        chiller = min(max(1.0 - cfg.cooling_gain_per_c * (cfg.t_supply - cfg.t_supply_ref), 0.6), 1.3)  # 급기 온도에 따른 냉각 효율(가정). 기준(18도)에서 1
+        cooling = (n_crac * cfg.cooling_base_kw + cfg.fan_power_kw * fan_sum) * chiller
         facility = it_power + cooling + it_power * cfg.loss_ratio
         self.energy_kwh += facility * cfg.interval_s / 3600.0
         for name, val, unit in (("it_power", it_power, "kW"), ("cooling_power", cooling, "kW"), ("facility_power", facility, "kW"),
