@@ -294,3 +294,14 @@ dialog input[type="text"]:focus { border-color: var(--border-dark); }
 #ext-status[data-state="ok"]::before, #ext-status[data-state="alarm"]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--success, #2e9f5b); }
 #ext-status[data-state="alarm"]::before { background: var(--emergency); }
 #ext-status[data-state="alarm"] { color: var(--tag-danger-text); font-weight: var(--weight-semibold); }
+
+/* 왼쪽 메뉴(모니터링, 시뮬레이션). 서버실 화면에서만 보인다 */
+#rail { position: absolute; left: 10px; top: 10px; z-index: 2; display: flex; flex-direction: column; gap: var(--p-1); padding: var(--p-1); border-radius: var(--radius-large); background: var(--surface-page); backdrop-filter: blur(5px); box-shadow: var(--shadow-md); }
+#rail button { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 64px; height: auto; padding: var(--p-2) var(--p-1); border: 0; border-radius: var(--radius-medium); background: transparent; font-size: var(--text-xs); }
+#rail button.on { background: var(--brand-20); color: var(--fill-primary); font-weight: var(--weight-semibold); }
+#stage[data-stage="hall"] #stage-tools { left: 88px; }
+@media (max-width: 700px) {
+  #rail { flex-direction: row; }
+  #rail button { flex-direction: row; width: auto; gap: var(--p-1-5); padding: var(--p-1-5) var(--p-3); }
+  #stage[data-stage="hall"] #stage-tools { left: 10px; right: 10px; top: 58px; }
+}

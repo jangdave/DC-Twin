@@ -88,6 +88,9 @@ const t2 = await page.evaluate(() => window.__viewer.state.player.time);
 ok('FR-52 Shift+왼쪽 화살표로 30초 뒤로', Math.abs(t1 - t2 - 30) < 0.5, `(${t1.toFixed(1)} -> ${t2.toFixed(1)})`);
 await page.keyboard.press('Space');
 ok('FR-52 스페이스로 재생', await page.evaluate(() => window.__viewer.state.player.playing));
+ok('RAIL 기본 모니터링 화면에서는 재생 막대가 숨겨져 있고 "기록 재생 막대" 단추가 있음', (await page.$eval('#transport', (e) => e.hidden)) && !(await page.$eval('#timeline-btn', (e) => e.hidden)));
+await page.click('#timeline-btn');
+ok('RAIL "기록 재생 막대"를 켜면 재생 막대가 보임', !(await page.$eval('#transport', (e) => e.hidden)));
 await page.click('#speeds [data-speed="10"]');
 ok('FR-50 속도 10배', (await page.evaluate(() => window.__viewer.state.player.speed)) === 10);
 await page.click('#play-btn');
@@ -276,14 +279,14 @@ ok('UX 선택을 풀면 요약으로 돌아감', (await pu.evaluate(() => docume
 await pu.focus('#tab-summary');
 await pu.keyboard.press('ArrowRight');
 ok('UX 탭은 좌우 화살표로 옮겨 감', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'detail');
-await pu.evaluate(() => document.querySelector('#mode-group [data-mode="sim"]').click());
+await pu.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
 await sleep(400);
 const ux2 = await pu.evaluate(() => ({ control: !document.getElementById('tab-control').hidden, active: document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab }));
 ok('UX 직접 시뮬레이션이면 "조작" 탭이 나타나 열림', ux2.control && ux2.active === 'control', JSON.stringify(ux2));
 await pu.evaluate(() => window.__viewer.selectEquipment('rack_21', false));
 await sleep(300);
 ok('UX 조작 중에 장비를 골라도 조작 탭에 머무름', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'control');
-await pu.evaluate(() => document.querySelector('#mode-group [data-mode="rec"]').click());
+await pu.evaluate(() => document.querySelector('#rail [data-mode="rec"]').click());
 await sleep(400);
 const ux3 = await pu.evaluate(() => ({ control: document.getElementById('tab-control').hidden, active: document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab }));
 ok('UX 녹화로 돌아가면 조작 탭이 사라지고 요약으로 감', ux3.control && ux3.active !== 'control', JSON.stringify(ux3));
@@ -456,10 +459,10 @@ await p5.select('#scenario-select', 'power_spike');
 await sleep(500);
 const reset = await p5.evaluate(() => ({ fan: window.__viewer.state.sim.engine.fan.crac_02, t: window.__viewer.state.sim.time, sc: window.__viewer.state.simScenario, slider: document.querySelector('#sim-fans input[aria-label="CRAC_02 팬 속도"]').value }));
 ok('SIM 시나리오를 바꾸면 처음부터 다시 시작하고 슬라이더도 되돌아옴', reset.fan === 1 && reset.t < 20 && reset.sc === 'power_spike' && reset.slider === '100', JSON.stringify(reset));
-await p5.click('#mode-group [data-mode="rec"]');
+await p5.click('#rail [data-mode="rec"]');
 await sleep(800);
 ok('SIM 녹화 재생으로 돌아오면 패널이 숨고 시간 막대가 다시 보임', !(await vis5('#sim-panel')) && (await vis5('#timebar')) && (await p5.$eval('#mode-badge', (e) => e.textContent)).includes('녹화'));
-await p5.click('#mode-group [data-mode="sim"]');
+await p5.click('#rail [data-mode="sim"]');
 await sleep(500);
 ok('SIM 다시 직접 시뮬레이션으로 전환', (await vis5('#sim-panel')) && (await p5.evaluate(() => window.__viewer.state.mode)) === 'sim');
 await p5.screenshot({ path: path.join(OUT, 'sim_mode.png') });
@@ -486,6 +489,26 @@ ok('BOOT 처음 HTML에 로딩 화면이 들어 있음(자바스크립트 전에
 await pc.waitForFunction(() => document.getElementById('boot')?.hidden === true, { timeout: 40000 });
 ok('BOOT 장면이 준비되면 로딩 화면이 사라지고 aria-busy도 풀림', !(await pc.evaluate(() => document.body.hasAttribute('aria-busy'))));
 await pc.close();
+
+// 왼쪽 메뉴: 상단에 "녹화 재생" 단추가 없고, 서버실에서만 메뉴가 보이며, 시뮬레이션 메뉴는 색칠을 켜고 조작 탭을 연다
+{
+  const rp = await browser.newPage();
+  await rp.setViewport({ width: 1280, height: 800 });
+  await rp.goto(base, { waitUntil: 'networkidle0' });
+  const ext = await rp.evaluate(() => ({ rail: !document.getElementById('rail').hidden, topRec: !!document.querySelector('#top [data-mode="rec"]') }));
+  await rp.evaluate(() => document.getElementById('enter-btn').click());
+  await sleep(500);
+  const r1 = await rp.evaluate(() => ({ rail: !document.getElementById('rail').hidden, mon: document.querySelector('#rail [data-mode="rec"]').getAttribute('aria-pressed') }));
+  await rp.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
+  await sleep(800);
+  const r2 = await rp.evaluate(() => ({ mode: window.__viewer.state.mode, heat: window.__viewer.scene.heat, ctl: !document.getElementById('tab-control').hidden, sim: document.querySelector('#rail [data-mode="sim"]').getAttribute('aria-pressed'), mon: document.querySelector('#rail [data-mode="rec"]').getAttribute('aria-pressed'), bar: !document.getElementById('transport').hidden }));
+  ok('RAIL 상단에 녹화 재생 단추 없음, 외관에서는 메뉴 숨김, 서버실에서는 모니터링이 선택됨', !ext.rail && !ext.topRec && r1.rail && r1.mon === 'true', JSON.stringify({ ext, r1 }));
+  ok('RAIL 시뮬레이션 메뉴: 시뮬레이션 모드, 색칠 켜짐, 조작 탭과 재생 막대 보임', r2.mode === 'sim' && r2.heat && r2.ctl && r2.sim === 'true' && r2.mon === 'false' && r2.bar, JSON.stringify(r2));
+  await rp.evaluate(() => document.querySelector('#rail [data-mode="rec"]').click());
+  await sleep(500);
+  ok('RAIL 모니터링으로 돌아오면 기록 데이터 모드, 재생 막대 숨김', await rp.evaluate(() => window.__viewer.state.mode === 'rec' && document.getElementById('transport').hidden));
+  await rp.close();
+}
 
 // 서버실 껍데기: 서버실로 들어가면 받고, 벽 밖에서는 그 벽을 숨기고, 위에서는 천장을 숨긴다
 {

@@ -29,6 +29,7 @@ export class UI {
   constructor(store, handlers) {
     this.store = store;
     this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on), onFlow(on), onHeat(on), onSky(name), onServer(url) }
+    this.mode = 'rec';
     this.metricTab = null;
     this.heatOn = false;
     this.selected = null;
@@ -65,6 +66,12 @@ export class UI {
       this.h.onFlow(on);
     });
     this.setHeat(false);
+    this.timelineOn = false;
+    $('timeline-btn').addEventListener('click', (e) => {
+      this.timelineOn = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+      e.currentTarget.setAttribute('aria-pressed', String(this.timelineOn));
+      this._syncTransport();
+    });
     $('sky-btn').addEventListener('click', (e) => {
       const dusk = e.currentTarget.getAttribute('aria-pressed') !== 'true';
       e.currentTarget.setAttribute('aria-pressed', String(dusk));
@@ -86,7 +93,7 @@ export class UI {
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
     $('back-btn').addEventListener('click', () => this.h.onBack());
     $('sc-max').addEventListener('click', (e) => e.currentTarget.dataset.rack && this.h.onSelect(e.currentTarget.dataset.rack, true));
-    document.querySelectorAll('#mode-group [data-mode]').forEach((b) => b.addEventListener('click', () => (b.dataset.mode === 'server' ? this.openServerDialog() : this.h.onMode(b.dataset.mode))));
+    document.querySelectorAll('#mode-group [data-mode], #rail [data-mode]').forEach((b) => b.addEventListener('click', () => (b.dataset.mode === 'server' ? this.openServerDialog() : this.h.onMode(b.dataset.mode))));
     $('server-connect').addEventListener('click', () => {
       const r = this.h.onServer($('server-url').value.trim());
       $('server-error').hidden = r === true;
@@ -159,12 +166,24 @@ export class UI {
     b.className = `badge ${mode}`;
     b.textContent = text;
     const own = mode === 'rec' || mode === 'sim'; // 이 화면이 재생이나 계산을 직접 하는 방식(라이브가 아님)
-    $('transport').hidden = !own;
+    this.mode = mode;
+    this._syncTransport();
+    $('timeline-btn').hidden = mode !== 'rec';
     $('live-info').hidden = own;
     $('scenario-select').disabled = !own;
     $('timebar').hidden = mode === 'sim';
     $('loop-label').hidden = mode === 'sim';
-    document.querySelectorAll('#mode-group [data-mode]').forEach((x) => x.classList.toggle('on', x.dataset.mode === mode));
+    document.querySelectorAll('#mode-group [data-mode], #rail [data-mode]').forEach((x) => {
+      const on = x.dataset.mode === mode;
+      x.classList.toggle('on', on);
+      if (x.closest('#rail')) x.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  // 재생 막대: 직접 시뮬레이션과 "기록 재생 막대"를 켠 기록 보기에서만 보인다(기본 모니터링 화면에서는 숨김)
+  _syncTransport() {
+    const own = this.mode === 'rec' || this.mode === 'sim';
+    $('transport').hidden = !own || (this.mode === 'rec' && !this.timelineOn);
   }
 
   openServerDialog() {
@@ -177,6 +196,7 @@ export class UI {
   setControlMode(on) {
     $('scenario-select').disabled = !on;
     document.querySelectorAll('#mode-group [data-mode]').forEach((x) => x.classList.toggle('on', on && x.dataset.mode === 'server'));
+    if (on) document.querySelectorAll('#rail [data-mode]').forEach((x) => { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
   }
 
   setLiveText(t) {
@@ -196,6 +216,7 @@ export class UI {
     const ext = stage === 'exterior';
     $('exterior-card').hidden = !ext;
     $('stage-tools').hidden = ext;
+    $('rail').hidden = ext;
     $('legend').hidden = ext || !this.heatOn;
     $('back-btn').hidden = ext;
     $('stage').dataset.stage = stage;
