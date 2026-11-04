@@ -40,3 +40,5 @@ kit\kit.exe apps\dctwin.base_editor.kit --/app/file/ignoreUnsavedOnExit=true --e
 uv pip install --target D:/omniverse-kit/pydeps --python-version 3.12 --python-platform windows --no-deps scipy
 ```
 `kit_sensors.py`는 환경 변수 `DCT_ARGS`(생성기 인자), `DCT_JSONL`(출력)로 시나리오와 솔버(l0, l1, l2)를 바꾼다. 스크립트 경로가 없으면 Kit이 끝나지 않고 남으니 경로를 먼저 확인한다.
+| `kit_flow_anchors.py` | Row01 랙 뒤에 Flow 방출기를 만들고 온도 채널을 OpenVDB로 내보내 센서 앵커 위치 값을 읽음(`FLOW_ANCHORS_NOTES.md`, E0 2.25장) | `out/kit/flow_anchors/` |
+| `kit_flow_anchors_probe.py` | Flow 프리셋의 모든 속성 이름과 값을 덤프 | `out/kit/flow_anchors/probe_attrs.json` |
