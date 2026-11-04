@@ -1,5 +1,7 @@
 // 시작과 화면 조립 (docs/18 8.1장). 입력(녹화 또는 라이브)은 같은 저장소를 갱신하고 화면은 저장소만 읽는다.
 import { CommandQueue, FlowState, summarize } from './flow.js';
+import { alarmSets, buildCameras } from './cctv.js';
+import { CctvPanel } from './cctv_ui.js';
 import { detectQuality, browserEnv, lowerTier, SETTINGS } from './quality.js';
 import { HallScene, VIEWS } from './scene.js';
 import { LiveClient } from './live.js';
@@ -212,6 +214,29 @@ async function main() {
     refresh();
   }
 
+  // ---- 가상 CCTV (docs/27 10장) ----
+  const cctvCams = buildCameras(sceneData);
+  const cctvSets = () => alarmSets(sceneData, (k) => store.worstAlarm(k));
+  const cctvBtn = $('cctv-btn');
+  const cctv = new CctvPanel({
+    onTiles: (t) => {
+      scene.setCctv(t);
+      $('stage').classList.toggle('cctv-on', !!t);
+    },
+    onClosed: () => cctvBtn.setAttribute('aria-pressed', 'false'),
+  }, tier);
+  const cctvClock = () => {
+    const t = state.mode === 'sim' ? state.sim?.time : state.player?.time;
+    if (!Number.isFinite(t)) return '가상 시각 –';
+    const s = Math.floor(t);
+    return `가상 시각 ${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  };
+  cctvBtn.addEventListener('click', () => {
+    if (cctv.isOpen) return cctv.close();
+    cctv.open(cctvCams, cctvSets(), scene.tier);
+    cctvBtn.setAttribute('aria-pressed', 'true');
+  });
+
   // ---- 화면 단계와 이동 명령 (docs/20) ----
   // 서버실 껍데기는 처음 서버실에 들어갈 때 받는다(첫 로딩 용량을 아끼려고). 실패하면 옛 어두운 바닥으로 계속 쓴다.
   let shellPromise = null;
@@ -222,6 +247,7 @@ async function main() {
     return shellPromise;
   }
   function applyStage(instant = false) {
+    if (flow.stage === 'exterior') cctv.close();
     if (flow.stage === 'hall') ensureShell();
     scene.setStage(flow.stage, instant);
     ui.setStage(flow.stage);
@@ -398,6 +424,7 @@ async function main() {
     if (state.server) syncServerPanel();
     ui.renderDetail(state.view);
     if (flow.stage === 'exterior') ui.renderExterior(summarize(store, rackKeys));
+    if (cctv.isOpen) cctv.setAlarms(cctvSets());
   }
 
   // ---- 장면 조작: 선택, 말풍선, 키보드 ----
@@ -455,7 +482,7 @@ async function main() {
     moveSelection(d[0], d[1]);
   });
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !e.target.closest?.('dialog')) return void queue.push({ name: 'view.back' });
+    if (e.key === 'Escape' && !e.target.closest?.('dialog')) return cctv.isOpen ? cctv.close() : void queue.push({ name: 'view.back' });
     if (e.target.closest?.('select, input, textarea, dialog, button')) return;
     if (e.key === 'Enter' && flow.stage === 'exterior') return void queue.push({ name: 'view.goto', value: 'hall' });
     if (!state.player) return;
@@ -520,6 +547,7 @@ async function main() {
     }
     // 값이 바뀌었는데 아직 반영하지 않았다면(시간 막대 밖의 이동, 라이브 등) 화면 조각을 갱신한다. 라이브는 초당 4번까지만.
     if (store.version !== lastRefresh.version && now - lastRefresh.at > 250) refresh();
+    if (cctv.isOpen) cctv.setTime(cctvClock());
     scene.update(dt, now / 1000);
     requestAnimationFrame(frame);
   }

@@ -335,3 +335,29 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   .agg span { flex: 1; flex-direction: column; align-items: flex-start; gap: 0; padding: var(--p-1) var(--p-2-5); white-space: nowrap; }
   .agg b { font-size: var(--text-sm); }
 }
+
+/* ---- 가상 CCTV ---- */
+#cctv { position: absolute; z-index: 3; top: 0; bottom: 0; left: 88px; right: 0; display: flex; flex-direction: column; gap: var(--p-2); padding: var(--p-3); }
+#stage.cctv-on #stage-tools, #stage.cctv-on #legend, #stage.cctv-on #mode-badge { visibility: hidden; }
+#cctv-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--p-2); padding: var(--p-2) var(--p-3); border-radius: var(--radius-large); background: var(--surface-page); box-shadow: var(--shadow-sm); font-size: var(--text-xs); }
+#cctv-bar .spacer { flex: 1; }
+#cctv-grid { flex: 1; min-height: 0; display: grid; gap: var(--p-2); grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+#cctv-grid[data-n="1"] { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+#cctv-grid[data-n="2"] { grid-template-rows: 1fr; }
+.cctv-tile { position: relative; min-height: 0; border: 2px solid var(--gray-30); border-radius: var(--radius-large); cursor: zoom-in; outline-offset: 2px; }
+.cctv-tile.alarm { border-color: var(--emergency); box-shadow: 0 0 0 2px rgba(216, 75, 75, 0.35), inset 0 0 24px rgba(216, 75, 75, 0.3); }
+.cctv-tile span { position: absolute; padding: 2px var(--p-2); border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.6); color: #fff; font-size: var(--text-xs); line-height: var(--leading-xs); pointer-events: none; }
+.cctv-name { left: var(--p-2); top: var(--p-2); font-weight: var(--weight-semibold); }
+.cctv-tag { left: var(--p-2); bottom: var(--p-2); color: #ff8c8c; letter-spacing: 0.04em; }
+.cctv-time { right: var(--p-2); bottom: var(--p-2); font-variant-numeric: tabular-nums; }
+.cctv-alarm { right: var(--p-2); top: var(--p-2); background: var(--emergency); font-weight: var(--weight-bold); }
+.cctv-alarm[hidden] { display: none; }
+@media (min-width: 901px) { #main:not(.side-closed) #cctv { right: 364px; } }
+@media (max-width: 700px) {
+  #cctv { left: 0; top: 52px; }
+  #cctv-grid, #cctv-grid[data-n="2"] { grid-template-columns: 1fr; grid-template-rows: repeat(2, 1fr); }
+  #cctv-grid[data-n="1"] { grid-template-rows: 1fr; }
+  #cctv-grid[data-n="3"], #cctv-grid[data-n="4"] { grid-template-rows: repeat(4, 1fr); }
+}
+#rail button[aria-pressed="true"] { background: var(--brand-20); color: var(--text-brand); font-weight: var(--weight-semibold); }
+@media (max-width: 700px) { .cctv-note { display: none; } #cctv-grid, #cctv-grid[data-n="2"], #cctv-grid[data-n="3"], #cctv-grid[data-n="4"] { grid-template-columns: 1fr; grid-template-rows: repeat(2, 1fr); } #cctv-grid[data-n="1"] { grid-template-rows: 1fr; } }
