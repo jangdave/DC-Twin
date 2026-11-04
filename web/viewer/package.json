@@ -12,7 +12,9 @@
     "dev": "vite",
     "build": "vite build && node tools/check_size.mjs",
     "test": "vitest run",
-    "shot": "node tools/screenshot.mjs"
+    "shot": "node tools/screenshot.mjs",
+    "check:ui": "node tools/ui_check.mjs",
+    "check:contrast": "node tools/contrast_check.mjs"
   },
   "dependencies": {
     "three": "^0.170.0"

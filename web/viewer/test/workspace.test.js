@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest';
+import { derive, initial, reduce } from '../src/workspace.js';
+
+const run = (...actions) => actions.reduce((s, a) => reduce(s, a), initial);
+const hall = { type: 'stage', stage: 'hall' };
+
+describe('왼쪽 메뉴는 눌린 단추가 하나뿐이다', () => {
+  it('시뮬레이션 중 CCTV를 열면 CCTV만 눌린다', () => {
+    const d = derive(run(hall, { type: 'mode', mode: 'sim' }, { type: 'overlay-toggle', value: 'cctv' }));
+    expect(d.rail.active).toBe('cctv');
+    expect(d.cctvOpen).toBe(true);
+  });
+  it('CCTV를 닫으면 데이터 출처 단추로 돌아간다', () => {
+    const s = run(hall, { type: 'mode', mode: 'sim' }, { type: 'overlay-toggle', value: 'cctv' }, { type: 'overlay-toggle', value: 'cctv' });
+    expect(derive(s).rail.active).toBe('sim');
+  });
+  it('모든 상태 조합에서 눌린 단추는 많아야 하나', () => {
+    for (const stage of ['exterior', 'hall'])
+      for (const mode of ['rec', 'sim', 'connecting', 'open', 'closed'])
+        for (const control of [false, true])
+          for (const overlay of [null, 'cctv']) {
+            const d = derive({ ...initial, stage, mode, control, overlay });
+            expect([null, 'rec', 'sim', 'cctv']).toContain(d.rail.active);
+            if (d.cctvOpen) expect(d.rail.active).toBe('cctv');
+          }
+  });
+  it('서버 조작 중에는 왼쪽 메뉴에 눌린 단추가 없고 위쪽 "로컬 서버"가 눌린다', () => {
+    const d = derive(run(hall, { type: 'mode', mode: 'open', control: true }));
+    expect(d.rail.active).toBeNull();
+    expect(d.serverOn).toBe(true);
+  });
+});
+
+describe('CCTV 규칙', () => {
+  it('외관에서는 열리지 않는다', () => {
+    expect(run({ type: 'overlay', value: 'cctv' }).overlay).toBeNull();
+  });
+  it('외관으로 나가면 닫힌다', () => {
+    const s = run(hall, { type: 'overlay', value: 'cctv' }, { type: 'stage', stage: 'exterior' });
+    expect(s.overlay).toBeNull();
+    expect(derive(s).cctvOpen).toBe(false);
+  });
+  it('열려 있는 동안 3D 위 도구와 범례, 모드 표시가 숨는다', () => {
+    const d = derive(run(hall, { type: 'mode', mode: 'sim' }, { type: 'overlay', value: 'cctv' }));
+    expect(d.stageToolsHidden).toBe(true);
+    expect(d.legendHidden).toBe(true);
+    expect(d.modeBadgeHidden).toBe(true);
+  });
+});
+
+describe('시뮬레이션과 보기 값', () => {
+  it('시뮬레이션에 들어가면 온도 색칠이 켜지고 범례가 보인다', () => {
+    const d = derive(run(hall, { type: 'mode', mode: 'sim' }));
+    expect(d.heat).toBe(true);
+    expect(d.legendHidden).toBe(false);
+    expect(d.controlTabs).toBe(true);
+    expect(d.homeTab).toBe('control');
+  });
+  it('녹화에서는 기본으로 색칠 없음, 기록 재생 막대는 켰을 때만 보인다', () => {
+    let d = derive(run(hall, { type: 'mode', mode: 'rec' }));
+    expect(d.heat).toBe(false);
+    expect(d.viewGroupHidden).toBe(true);
+    expect(d.transportHidden).toBe(true);
+    expect(d.controlTabs).toBe(false);
+    d = derive(run(hall, { type: 'mode', mode: 'rec' }, { type: 'timeline', on: true }));
+    expect(d.transportHidden).toBe(false);
+  });
+  it('시뮬레이션에서는 재생 막대가 항상 보이고 시간 막대는 숨는다', () => {
+    const d = derive(run(hall, { type: 'mode', mode: 'sim' }));
+    expect(d.transportHidden).toBe(false);
+    expect(d.timebarHidden).toBe(true);
+  });
+  it('외관에서는 왼쪽 메뉴와 도구가 숨고 요약 카드가 보인다', () => {
+    const d = derive(initial);
+    expect(d.rail.hidden).toBe(true);
+    expect(d.stageToolsHidden).toBe(true);
+    expect(d.exteriorCard).toBe(true);
+  });
+});

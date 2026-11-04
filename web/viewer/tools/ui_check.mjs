@@ -640,6 +640,40 @@ await pc.close();
   await sp.close();
 }
 
+// 메뉴 상태: 왼쪽 메뉴에서 눌린 단추는 항상 하나뿐(src/workspace.js의 규칙)
+{
+  const mp = await browser.newPage();
+  await mp.setViewport({ width: 1440, height: 860 });
+  await mp.goto(base + '?stage=hall', { waitUntil: 'networkidle0' });
+  await mp.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+  const rail = () => mp.evaluate(() => [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()));
+  const click = (sel) => mp.$eval(sel, (e) => e.click());
+  await click('#rail [data-mode="sim"]');
+  await sleep(300);
+  ok('MENU 시뮬레이션만 눌림', JSON.stringify(await rail()) === '["시뮬레이션"]');
+  await click('#cctv-btn');
+  await sleep(500);
+  const r1 = await rail();
+  ok('MENU 시뮬레이션 중 CCTV를 열면 CCTV만 눌림(동시에 눌리지 않음)', JSON.stringify(r1) === '["CCTV"]', JSON.stringify(r1));
+  await click('#rail [data-mode="sim"]');
+  await sleep(300);
+  const r2 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, mode: window.__viewer.state.mode }));
+  ok('MENU CCTV 중 시뮬레이션을 누르면 CCTV가 닫히고 시뮬레이션만 눌림', r2.cctv && r2.mode === 'sim' && JSON.stringify(await rail()) === '["시뮬레이션"]', JSON.stringify(r2));
+  await click('#cctv-btn');
+  await sleep(300);
+  await click('#rail [data-mode="rec"]');
+  await sleep(500);
+  const r3 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, mode: window.__viewer.state.mode }));
+  ok('MENU CCTV 중 모니터링을 누르면 CCTV가 닫히고 모니터링만 눌림', r3.cctv && r3.mode === 'rec' && JSON.stringify(await rail()) === '["모니터링"]', JSON.stringify(r3));
+  await click('#cctv-btn');
+  await sleep(300);
+  await click('#back-btn');
+  await sleep(600);
+  const r4 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, stage: window.__ws().stage, overlay: window.__ws().overlay, rail: document.getElementById('rail').hidden }));
+  ok('MENU 외관으로 나가면 CCTV가 닫히고 메뉴가 숨음', r4.cctv && r4.stage === 'exterior' && r4.overlay === null && r4.rail, JSON.stringify(r4));
+  await mp.close();
+}
+
 await browser.close();
 web.close();
 const bad = [...new Set(errors)];
