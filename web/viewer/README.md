@@ -14,7 +14,7 @@ npm run build          # dist/ 만들기 + 용량 기준 점검
 ```
 
 - 기본은 **녹화 재생**이다(서버 없음). 처음 화면은 건물 외관이고, 건물을 누르거나 Enter를 누르면 홀로 들어간다(Esc로 돌아옴). 주소 매개변수: `?stage=hall&scenario=fan_fault&t=60&view=power`
-- **직접 시뮬레이션**: 위의 "직접 시뮬레이션" 단추(또는 `?mode=sim`). 이 브라우저가 간이 모델(L0)로 계산하고 CRAC 팬 속도와 랙 전력을 슬라이더로 바꿀 수 있다([docs/21](../../docs/21_web_simulation_spec.md)). 배포한 페이지에서도 동작한다.
+- **직접 시뮬레이션**: 서버실 안 왼쪽 메뉴의 "시뮬레이션"(또는 `?mode=sim`). 시작값은 정상 녹화와 같다(`public/data/sim_init.json`). 이 브라우저가 간이 모델(L0)로 계산하고 CRAC 팬 속도와 랙 전력을 슬라이더로 바꿀 수 있다([docs/21](../../docs/21_web_simulation_spec.md)). 배포한 페이지에서도 동작한다.
 - **로컬 서버**: 위의 "로컬 서버" 단추(또는 `?server=ws://127.0.0.1:8765/ws`). 이 컴퓨터의 파이썬 계산 서버(`sim/sensors`, l0, l1, l2)가 실시간으로 계산하고 슬라이더 조작이 서버로 전달된다([docs/21](../../docs/21_web_simulation_spec.md) 4장). 서버 실행 방법은 단추를 누르면 나오는 안내에 있다.
 - **라이브**: 게이트웨이를 띄우고 `?live=ws://127.0.0.1:8080/ws`로 연다. 이 컴퓨터의 `ws://`와 모든 `wss://`만 받는다.
   ```
@@ -82,10 +82,12 @@ Edge나 Chrome이 기본 경로에 없으면 `--browser <경로>`로 알려 준�
 |---|---|
 | `src/colors.js` | 온도 색, 등급 색, 막대 길이(Unreal과 같은 규칙) |
 | `src/store.js`, `recording.js`, `live.js`, `messages.js`, `url.js` | 센서 값 저장소, 녹화 재생, 라이브 연결, 메시지 검사, 주소 규칙 |
-| `src/sim/` | 직접 시뮬레이션: `core.js`(L0 모델, 알람, 시나리오), `engine.js`, `runner.js`, `panel.js` |
+| `src/sim/` | 직접 시뮬레이션: `core.js`(L0 모델, 알람, 시나리오), `engine.js`, `runner.js`, `panel.js`, 에너지·용량·이상 대비(`insight.js`, `insight_panel.js`) |
 | `src/apply.js` | 메시지를 저장소에 반영(라이브와 시뮬레이션 공용) |
 | `src/flow.js` | 화면 단계(외관/홀), 화면 이동 명령과 명령 큐, 건물 요약 |
+| `src/workspace.js` | 작업 공간 상태: 눌린 메뉴, CCTV, 보기 값의 규칙과 화면 값 계산(순수 함수, 설계는 [docs/27](../../docs/27_web_ui_redesign_plan.md) 15장) |
+| `src/cctv.js`, `cctv_ui.js`, `hall_shell.js`, `views.js` | 가상 CCTV 카메라 계산과 화면, 서버실 껍데기, 보는 값 정의 |
 | `src/scene.js`, `ui.js`, `main.js` | 3D 장면, 화면 조각, 조립 |
-| `tools/` | 자료 변환, 용량 점검, 화면 확인 |
+| `tools/` | 자료 변환(`build_data`), 용량 점검, 화면 확인(`check:ui`), 글자 대비(`check:contrast`), 데이터 정합성(`check:data`) |
 | `test/` | 자동 시험 |
 | `public/data/` | 장면, 센서 목록, 시나리오 녹화(정적 자료) |

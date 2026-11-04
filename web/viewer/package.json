@@ -14,7 +14,8 @@
     "test": "vitest run",
     "shot": "node tools/screenshot.mjs",
     "check:ui": "node tools/ui_check.mjs",
-    "check:contrast": "node tools/contrast_check.mjs"
+    "check:contrast": "node tools/contrast_check.mjs",
+    "check:data": "node tools/check_data.mjs"
   },
   "dependencies": {
     "three": "^0.170.0"

@@ -1,6 +1,6 @@
 // 화면 조각들(상단 집계, 상세 패널, 알람 목록, 시간 막대, 범례, 추이 그래프). 값은 textContent로만 넣는다(6.4장).
 import { ALARM_LABEL, CONFIDENCE_HELP, CONFIDENCE_LABEL, barFraction, confidenceColor, tempColor, toCss } from './colors.js';
-import { VIEWS } from './scene.js';
+import { VIEWS } from './views.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -260,7 +260,7 @@ export class UI {
 
   renderExterior(s) {
     const none = '데이터 없음';
-    $('ext-total').textContent = s.totalPower === null ? none : `${fmt(s.totalPower, 1)} kW`;
+    $('ext-total').textContent = s.facilityPower === null ? none : `${fmt(s.facilityPower, 1)} kW`;
     $('ext-status').textContent = !s.hasData ? none : s.alarms > 0 ? '주의 필요' : '정상';
     $('ext-status').dataset.state = !s.hasData ? 'none' : s.alarms > 0 ? 'alarm' : 'ok';
     $('ext-pue').textContent = s.pue === null ? none : fmt(s.pue, 2);
@@ -346,15 +346,18 @@ export class UI {
   // ---- 알람 목록 ----
   renderAlarms(sensorInfo, mode, startTs) {
     const log = this.store.alarmLog;
-    if (log.length === this._lastAlarmCount && this._lastAlarmKey === log.at(-1)) return;
+    const active = this.store.activeAlarms(); // 지금 이상인 센서 수. 기록(log)의 줄 수와 다르다(기록은 지나간 변화까지 쌓인다)
+    if (log.length === this._lastAlarmCount && this._lastAlarmKey === log.at(-1) && active === this._lastActive) return;
     this._lastAlarmCount = log.length;
     this._lastAlarmKey = log.at(-1);
+    this._lastActive = active;
     const list = $('alarm-list');
     list.replaceChildren();
     $('alarm-empty').hidden = log.length > 0;
-    $('alarm-count').textContent = log.length ? `(${log.length}건)` : '';
-    $('tab-alarm-count').textContent = String(Math.min(log.length, 99));
-    $('tab-alarm-count').hidden = log.length === 0;
+    $('alarm-count').textContent = log.length ? `(지금 ${active}건, 기록 ${log.length}건)` : '';
+    $('tab-alarm-count').textContent = String(Math.min(active, 99));
+    $('tab-alarm-count').hidden = active === 0;
+    $('tab-alarm-count').title = `지금 이상인 센서 ${active}개`;
     for (const a of [...log].reverse().slice(0, 60)) {
       const info = sensorInfo.get(a.sensorId);
       if (!info) continue;

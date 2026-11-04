@@ -3,6 +3,13 @@ import { ALARM_RANK } from './colors.js';
 
 export const HISTORY_LENGTH = 120; // 최근 2분(초 단위 값 기준)
 
+// 지금 이상(주의 이상)인 센서 수. 화면 곳곳의 "알람 N건"은 모두 이 함수 하나에서 나온다(알람 기록의 줄 수와 다르다).
+export function countActiveAlarms(latest) {
+  let n = 0;
+  for (const e of latest.values()) if (e.alarm && e.alarm !== 'normal') n++;
+  return n;
+}
+
 export class SensorStore {
   constructor(sensors) {
     this.sensors = sensors; // 센서 정보 배열(sensors.json)
@@ -85,6 +92,10 @@ export class SensorStore {
       if (ALARM_RANK[a] > ALARM_RANK[worst]) worst = a;
     }
     return worst;
+  }
+
+  activeAlarms() {
+    return countActiveAlarms(this.latest);
   }
 
   countConfidence() {

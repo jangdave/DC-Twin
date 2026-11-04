@@ -674,6 +674,36 @@ await pc.close();
   await mp.close();
 }
 
+// 값 일관성: 같은 뜻의 값은 어느 화면에서 봐도 같다 (docs/27 16장)
+{
+  const cp = await browser.newPage();
+  await cp.setViewport({ width: 1440, height: 860 });
+  await cp.goto(base + '?scenario=power_spike&t=200', { waitUntil: 'networkidle0' });
+  await cp.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+  await cp.evaluate(() => (window.__viewer.state.player.playing = false));
+  await sleep(400);
+  const num = (t) => Number(String(t).replace(/[^0-9.]/g, ''));
+  const x = await cp.evaluate(() => {
+    const s = window.__viewer.store;
+    return { ext: document.getElementById('ext-total').textContent, fac: s.aggregates.facility_power, active: s.activeAlarms(), log: s.alarmLog.length, ext2: document.getElementById('ext-status').textContent };
+  });
+  ok('값 외관 카드의 건물 전체 전력 = 설비 전력(IT + 냉각 + 손실)', Math.abs(num(x.ext) - x.fac) < 0.06, JSON.stringify(x));
+  await cp.$eval('#enter-btn', (e) => e.click());
+  await sleep(500);
+  const y = await cp.evaluate(() => ({ badge: document.getElementById('tab-alarm-count').textContent, head: document.getElementById('alarm-count').textContent, active: window.__viewer.store.activeAlarms(), log: window.__viewer.store.alarmLog.length }));
+  ok('값 알람 탭 배지는 지금 이상인 센서 수이고 기록 줄 수와 구분해 보여 줌', Number(y.badge) === y.active && y.active !== y.log && y.head.includes(`지금 ${y.active}건`) && y.head.includes(`기록 ${y.log}건`), JSON.stringify(y));
+  await cp.$eval('#rail [data-mode="sim"]', (e) => e.click());
+  await sleep(1500);
+  const z = await cp.evaluate(async () => {
+    const rec = await (await fetch('data/rec/normal.json')).json();
+    const sim = window.__viewer.state.sim;
+    const i = Math.round(sim.time);
+    return { sim: window.__viewer.store.aggregates.it_power, rec: rec.aggregates.it_power[Math.min(i, rec.n - 1)], i };
+  });
+  ok('값 시뮬레이션 시작 IT 전력이 정상 녹화와 1% 안에서 이어짐', Math.abs(z.sim - z.rec) / z.rec < 0.01, JSON.stringify(z));
+  await cp.close();
+}
+
 await browser.close();
 web.close();
 const bad = [...new Set(errors)];

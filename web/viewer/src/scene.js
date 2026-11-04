@@ -9,15 +9,9 @@ import { Airflow, loadFlow } from './airflow.js';
 import { buildCity } from './city.js';
 import { prepareShell, shellVisibility } from './hall_shell.js';
 import { CCTV_LIMITS } from './cctv.js';
+import { VIEWS } from './views.js';
 import { SETTINGS } from './quality.js';
 import { ALARM_COLOR, barFraction, confidenceColor, sampleColor } from './colors.js';
-
-// 보는 값. 범위는 화면 색 곡선 기준이다(입구 온도는 Unreal과 같은 18~35도).
-export const VIEWS = {
-  temp_in: { label: '입구 온도', metric: 'temp_in', cold: 18, hot: 35, unit: '°C', digits: 1 },
-  temp_out: { label: '배기 온도', metric: 'temp_out', cold: 20, hot: 50, unit: '°C', digits: 1 },
-  power: { label: '전력', metric: 'power', cold: 0, hot: 15, unit: 'kW', digits: 1 },
-};
 
 const CM = 0.01;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HISTORY_LENGTH, SensorStore } from '../src/store.js';
+import { HISTORY_LENGTH, SensorStore, countActiveAlarms } from '../src/store.js';
 import { sensors } from './fixtures.js';
 
 describe('센서 값 저장소', () => {
@@ -54,5 +54,16 @@ describe('센서 값 저장소', () => {
     const s = new SensorStore(sensors);
     s.applySnapshot({ sensors: [{ sensorId: 'R2-T', value: 30, alarm: 'warn', ts: 't1' }, { sensorId: 'R1-T', value: 20, alarm: 'normal' }, { sensorId: 'ZZZ', value: 1, alarm: 'critical' }], aggregates: {}, scenario: null });
     expect(s.alarmLog).toEqual([{ ts: 't1', sensorId: 'R2-T', from: 'normal', to: 'warn', value: 30 }]);
+  });
+});
+
+describe('지금 알람 수', () => {
+  it('기록 줄 수가 아니라 지금 이상인 센서 수를 센다', () => {
+    const latest = new Map([['a', { alarm: 'warn' }], ['b', { alarm: 'normal' }], ['c', { alarm: 'critical' }], ['d', {}]]);
+    expect(countActiveAlarms(latest)).toBe(2);
+  });
+  it('저장소 메서드가 같은 값을 준다', () => {
+    const s = new SensorStore(sensors);
+    expect(s.activeAlarms()).toBe(0);
   });
 });
