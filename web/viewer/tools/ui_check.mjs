@@ -478,6 +478,26 @@ await pc.waitForFunction(() => document.getElementById('boot')?.hidden === true,
 ok('BOOT 장면이 준비되면 로딩 화면이 사라지고 aria-busy도 풀림', !(await pc.evaluate(() => document.body.hasAttribute('aria-busy'))));
 await pc.close();
 
+// 서버실 껍데기: 서버실로 들어가면 받고, 벽 밖에서는 그 벽을 숨기고, 위에서는 천장을 숨긴다
+{
+  const sp = await browser.newPage();
+  await sp.setViewport({ width: 1280, height: 800 });
+  await sp.goto(base + '?stage=hall', { waitUntil: 'domcontentloaded' });
+  await sp.waitForFunction(() => window.__viewer?.scene?.shell, { timeout: 40000 }).catch(() => {});
+  const r = await sp.evaluate(() => {
+    const s = window.__viewer?.scene;
+    if (!s?.shell) return null;
+    s.camera.position.set(-6, 2, -6.8); // 서쪽 벽 밖
+    s._updateShell();
+    const west = s.shellParts.get('wall_west').visible;
+    s.camera.position.set(5.5, 12, -6.8); // 천장 위
+    s._updateShell();
+    return { parts: s.shellParts.size, west, ceiling: s.shellParts.get('ceiling').visible, plain: s._plainHall.every((o) => !o.visible) };
+  });
+  ok('SHELL 서버실 껍데기를 받고, 벽 밖과 천장 위에서는 그 면을 숨김', !!r && r.parts >= 10 && r.west === false && r.ceiling === false && r.plain, JSON.stringify(r));
+  await sp.close();
+}
+
 await browser.close();
 web.close();
 const bad = [...new Set(errors)];
