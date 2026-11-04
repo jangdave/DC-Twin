@@ -537,4 +537,8 @@ async function main() {
   window.__viewer = { getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, panel, flow, queue, dispatch: (c) => queue.push(c) };
 }
 
-main();
+main().catch((e) => {
+  // 시작 중 예상 못 한 오류가 나도 로딩 화면이 영원히 남지 않게 이유와 다시 시도를 보인다
+  console.error(e);
+  new Boot(document, reducedMotion).fail('화면을 시작하지 못했다. 다시 시도해 달라.');
+});
