@@ -124,6 +124,8 @@
         <button type="button" role="tab" id="tab-summary" data-tab="summary" aria-controls="pane-summary" aria-selected="true">요약</button>
         <button type="button" role="tab" id="tab-detail" data-tab="detail" aria-controls="pane-detail" aria-selected="false">장비</button>
         <button type="button" role="tab" id="tab-control" data-tab="control" aria-controls="pane-control" aria-selected="false" hidden>조작</button>
+        <button type="button" role="tab" id="tab-energy" data-tab="energy" aria-controls="pane-energy" aria-selected="false" hidden>에너지·용량</button>
+        <button type="button" role="tab" id="tab-prep" data-tab="prep" aria-controls="pane-prep" aria-selected="false" hidden>이상 대비</button>
         <button type="button" role="tab" id="tab-alarms" data-tab="alarms" aria-controls="pane-alarms" aria-selected="false">알람 <span id="tab-alarm-count" class="count" hidden>0</span></button>
       </div>
 
@@ -174,6 +176,9 @@
           <p class="muted" id="sim-log-empty">아직 없다.</p>
         </section>
       </div>
+
+      <div class="pane" id="pane-energy" role="tabpanel" aria-labelledby="tab-energy" hidden></div>
+      <div class="pane" id="pane-prep" role="tabpanel" aria-labelledby="tab-prep" hidden></div>
 
       <div class="pane" id="pane-alarms" role="tabpanel" aria-labelledby="tab-alarms" hidden>
         <section id="alarms" aria-label="알람 목록">

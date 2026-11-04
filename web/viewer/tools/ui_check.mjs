@@ -546,6 +546,36 @@ await pc.close();
   await mp.close();
 }
 
+// 에너지·용량, 이상 대비: 시뮬레이션에서만 탭이 보이고, 기준 저장 후 공급 온도를 올리면 냉각 전력이 줄어든 차이가 보이며, 시나리오 단추와 대응 순서가 있음
+{
+  const ep = await browser.newPage();
+  await ep.setViewport({ width: 1440, height: 860 });
+  await ep.goto(`${base}?stage=hall`, { waitUntil: 'networkidle0' });
+  const t0 = await ep.evaluate(() => ({ energy: !document.getElementById('tab-energy').hidden, prep: !document.getElementById('tab-prep').hidden }));
+  await ep.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
+  await sleep(1500);
+  const t1 = await ep.evaluate(() => ({ energy: !document.getElementById('tab-energy').hidden, prep: !document.getElementById('tab-prep').hidden }));
+  ok('ENERGY 시뮬레이션 전에는 에너지·용량, 이상 대비 탭이 없고 시뮬레이션에서 나타남', !t0.energy && !t0.prep && t1.energy && t1.prep, JSON.stringify({ t0, t1 }));
+  await ep.evaluate(() => document.getElementById('tab-energy').click());
+  await sleep(1200);
+  const e1 = await ep.evaluate(() => ({ kv: [...document.querySelectorAll('#pane-energy .kv dd')].map((d) => d.textContent), cap: document.querySelectorAll('#pane-energy .caplist li').length, rows: document.querySelectorAll('#pane-energy .rowlist li').length, cool: window.__viewer.store.aggregates.cooling_power }));
+  ok('ENERGY 지금 값(IT, 냉각, 설비, PUE, 누적, 입구 온도)과 용량 5개, 줄 6개가 보임', e1.kv.length === 6 && e1.kv.every((t) => t !== '–') && e1.cap === 5 && e1.rows === 6, JSON.stringify(e1));
+  await ep.evaluate(() => [...document.querySelectorAll('#pane-energy button')].find((b) => b.textContent.includes('기준으로 저장')).click());
+  await ep.evaluate(() => { const i = document.querySelector('#pane-energy .sim-supply input'); i.value = '24'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  await sleep(3500);
+  const e2 = await ep.evaluate(() => ({ rows: [...document.querySelectorAll('#pane-energy .cmp .cmp-row')].map((r) => [...r.children].map((c) => c.textContent)), good: [...document.querySelectorAll('#pane-energy .cmp .delta.good')].map((d) => d.textContent), supply: window.__viewer.state.sim.engine.cfg.t_supply }));
+  const cool = e2.rows.find((r) => r[0] === '냉각 전력');
+  ok('ENERGY 공급 온도를 24도로 올리면 기준 대비 냉각 전력이 줄어든 차이(좋음 표시)가 나옴', e2.supply === 24 && cool && /^−/.test(cool[3]) && e2.good.some((t) => t.startsWith('−')), JSON.stringify(e2));
+  const hint = await ep.evaluate(() => document.querySelector('#pane-energy .supply p').textContent);
+  ok('ENERGY 공급 온도가 냉각 장치 주의 기준(22도)을 넘으면 알람이 난다는 안내가 나옴', hint.includes('주의 기준(22 °C)') && hint.includes('알람'), hint);
+  await ep.evaluate(() => document.getElementById('tab-prep').click());
+  await ep.evaluate(() => [...document.querySelectorAll('#pane-prep .btn-row button')].find((b) => b.textContent === '팬 이상').click());
+  await sleep(1500);
+  const p1 = await ep.evaluate(() => ({ btns: document.querySelectorAll('#pane-prep .btn-row button').length, on: document.querySelector('#pane-prep .btn-row button.on')?.textContent, steps: [...document.querySelectorAll('#pane-prep .steps li')].map((l) => l.textContent), supply: window.__viewer.state.sim.engine.cfg.t_supply }));
+  ok('PREP 시나리오 단추 4개, 팬 이상을 누르면 그 시나리오 대응 순서가 보이고 공급 온도는 처음 값으로 돌아감', p1.btns === 4 && p1.on === '팬 이상' && p1.steps.length >= 4 && p1.steps[0].includes('CRAC_01') && p1.supply === 18, JSON.stringify(p1));
+  await ep.close();
+}
+
 // 가상 CCTV: 메뉴로 열면 칸이 보이고 모든 칸에 "가상 CCTV" 표시, 칸마다 실제로 그려지고, 알람 구역은 빨간 테두리, Esc로 닫음
 {
   const cp = await browser.newPage();

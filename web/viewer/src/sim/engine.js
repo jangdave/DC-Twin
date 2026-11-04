@@ -1,6 +1,6 @@
 // 브라우저 간이 시뮬레이션 엔진 (docs/21). generator.py의 한 단계를 JS로 옮겼다.
 // 한 단계 = 시뮬레이션 1초. step()은 저장소에 바로 넣을 수 있는 메시지(parseMessage와 같은 모양)를 돌려준다.
-import { AlarmState, DEFAULT_CONFIG, L0Solver, SCENARIOS, mulberry32, normal, qualityFor } from './core.js';
+import { AlarmState, DEFAULT_CONFIG, L0Solver, SCENARIOS, SUPPLY_MAX, SUPPLY_MIN, chillerFactor, mulberry32, normal, qualityFor } from './core.js';
 
 const START_MS = Date.parse('2026-10-15T09:00:00.000Z');
 
@@ -18,6 +18,7 @@ export class SimEngine {
     this.racks = racks;
     this.cracs = cracs;
     this.cfg = { ...DEFAULT_CONFIG, ...cfg };
+    this._supply0 = this.cfg.t_supply; // 처음 설정값. 시나리오를 다시 시작하면 여기로 돌아간다
     this.seed = seed;
     this._fixedPower = basePower;
     this._fixedPhase = phase;
@@ -26,6 +27,7 @@ export class SimEngine {
 
   reset() {
     const cfg = this.cfg;
+    cfg.t_supply = this._supply0;
     this.rand = mulberry32(this.seed);
     this.basePower = {};
     this.phase = {};
@@ -63,6 +65,12 @@ export class SimEngine {
     if (!(crac in this.fan)) return null;
     this.fan[crac] = Math.min(Math.max(value, 0), 1);
     return { kind: 'scenario', name: this.scenario ?? 'manual', event: 'event', ts: this.ts(), info: { kind: 'crac_fan', target: crac, value: this.fan[crac] } };
+  }
+
+  // 냉각 장치가 내보내는 공기의 목표 온도(공급 온도 설정). 입구 온도 목표와 냉각 전력(가정 모델)에 반영된다.
+  setSupply(value) {
+    this.cfg.t_supply = Math.min(Math.max(value, SUPPLY_MIN), SUPPLY_MAX);
+    return { kind: 'scenario', name: this.scenario ?? 'manual', event: 'event', ts: this.ts(), info: { kind: 'supply_temp', value: this.cfg.t_supply } };
   }
 
   // target: 'rack_21' 또는 'row:02'
@@ -128,7 +136,7 @@ export class SimEngine {
         st.breakRun();
       }
     }
-    const cooling = this.cracs.length * cfg.cooling_base_kw + cfg.fan_power_kw * fanSum;
+    const cooling = (this.cracs.length * cfg.cooling_base_kw + cfg.fan_power_kw * fanSum) * chillerFactor(cfg);
     const facility = itPower + cooling + itPower * cfg.loss_ratio;
     this.energyKwh += (facility * cfg.interval_s) / 3600;
     for (const [name, value] of [

@@ -26,7 +26,18 @@ export const DEFAULT_CONFIG = {
   fan_power_kw: 3.0,
   cooling_base_kw: 1.0,
   loss_ratio: 0.06,
+  // ---- 브라우저 쪽에서만 더한 가정값(파이썬 생성기에는 없다). 공급 온도가 기준(18도)이면 계산이 달라지지 않는다 ----
+  t_supply_ref: 18.0, // 냉각 효율의 기준 공급 온도
+  cooling_gain_per_c: 0.03, // 공급 온도를 1도 올릴 때 냉각 전력이 줄어드는 비율(가정값, 실측 아님). 줄어드는 방향을 보이기 위한 값이다
 };
+
+export const SUPPLY_MIN = 14;
+export const SUPPLY_MAX = 27;
+
+// 공급 온도에 따른 냉각 전력 배수(간이 가정). 기준에서 1, 올리면 줄고 내리면 늘며 0.6~1.3으로 제한한다.
+export function chillerFactor(cfg, tSupply = cfg.t_supply) {
+  return Math.min(Math.max(1 - cfg.cooling_gain_per_c * (tSupply - cfg.t_supply_ref), 0.6), 1.3);
+}
 
 // ---- 난수(시드를 주면 같은 값이 나온다) ----
 export function mulberry32(seed) {

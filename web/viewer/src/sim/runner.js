@@ -68,6 +68,12 @@ export class SimRunner {
     return !!m;
   }
 
+  setSupply(value) {
+    const m = this.engine.setSupply(value);
+    if (m) this._apply([m]);
+    return !!m;
+  }
+
   setPowerScale(target, scale) {
     const m = this.engine.setPowerScale(target, scale);
     if (m) this._apply([m]);
@@ -77,6 +83,7 @@ export class SimRunner {
 
 // 기록을 사람이 읽는 문장으로
 export function describeControl(info, prettyName) {
+  if (info.kind === 'supply_temp') return `공급 온도 → ${info.value.toFixed(1)} °C`;
   const pct = `${Math.round(info.value * 100)}%`;
   if (info.kind === 'crac_fan') return `${prettyName(info.target)} 팬 → ${pct}`;
   const target = info.target.startsWith('row:') ? `${Number(info.target.slice(4))}번 줄` : prettyName(info.target);

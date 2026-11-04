@@ -379,3 +379,26 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   #mode-badge { top: auto; bottom: 76px; right: 10px; }
 }
 @media (max-width: 700px) { #cctv { bottom: 72px; } }
+
+/* ---- 에너지·용량, 이상 대비 탭 ---- */
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 var(--p-2); }
+.kv dt { color: var(--text-tertiary); }
+.kv dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: var(--weight-medium); }
+.btn-row { display: flex; gap: var(--p-1-5); margin: var(--p-1) 0 var(--p-2); }
+.btn-row.wrap { flex-wrap: wrap; }
+.small { font-size: var(--text-xs); line-height: var(--leading-xs); }
+.cmp-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.5fr; gap: var(--p-1-5); padding: 3px 0; font-size: var(--text-xs); border-bottom: 1px solid var(--border-disabled); }
+.cmp-head { color: var(--text-tertiary); font-weight: var(--weight-semibold); }
+.cmp .num, .caplist .num, .rowlist .num { text-align: right; font-variant-numeric: tabular-nums; }
+.delta.good { color: var(--tag-normal-text); font-weight: var(--weight-semibold); }
+.delta.bad { color: var(--tag-danger-text); font-weight: var(--weight-semibold); }
+.caplist, .rowlist, .steps { margin: 0; padding: 0; list-style: none; font-size: var(--text-xs); }
+.caplist li, .rowlist li { display: grid; grid-template-columns: 1fr auto auto; gap: var(--p-2); padding: 3px 0; border-bottom: 1px solid var(--border-disabled); }
+.rowlist li { grid-template-columns: 1fr auto auto auto; }
+.caplist li.warn span:first-child { color: var(--tag-caution-text); font-weight: var(--weight-semibold); }
+.caplist li.bad span:first-child { color: var(--tag-danger-text); font-weight: var(--weight-semibold); }
+.chip-over { padding: 0 var(--p-1-5); border-radius: var(--radius-max); background: var(--scheduled-subtle); color: var(--tag-scheduled-text); }
+.steps { counter-reset: s; }
+.steps li { counter-increment: s; position: relative; padding: 4px 0 4px 26px; border-bottom: 1px solid var(--border-disabled); }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--brand-20); color: var(--text-brand); text-align: center; font-weight: var(--weight-semibold); line-height: 18px; }
+.sim-supply { grid-template-columns: 64px 1fr 64px; }
