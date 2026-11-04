@@ -100,6 +100,7 @@ export function summarize(store, rackKeys) {
     maxTempIn: maxIn,
     maxRack,
     itPower: Number.isFinite(a.it_power) ? a.it_power : null,
+    totalPower: Number.isFinite(a.it_power) && Number.isFinite(a.cooling_power) ? a.it_power + a.cooling_power : null,
     pue: Number.isFinite(a.pue) ? a.pue : null,
   };
 }

@@ -28,8 +28,9 @@ const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '–');
 export class UI {
   constructor(store, handlers) {
     this.store = store;
-    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on), onFlow(on), onSky(name), onServer(url) }
+    this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on), onFlow(on), onHeat(on), onSky(name), onServer(url) }
     this.metricTab = null;
+    this.heatOn = false;
     this.selected = null;
     this._lastAlarmCount = -1;
     this._lastDetailKey = '';
@@ -53,11 +54,17 @@ export class UI {
       e.currentTarget.setAttribute('aria-pressed', String(on));
       this.h.onModels(on);
     });
+    $('heat-btn').addEventListener('click', (e) => {
+      const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+      this.setHeat(on);
+      this.h.onHeat(on);
+    });
     $('flow-btn').addEventListener('click', (e) => {
       const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
       e.currentTarget.setAttribute('aria-pressed', String(on));
       this.h.onFlow(on);
     });
+    this.setHeat(false);
     $('sky-btn').addEventListener('click', (e) => {
       const dusk = e.currentTarget.getAttribute('aria-pressed') !== 'true';
       e.currentTarget.setAttribute('aria-pressed', String(dusk));
@@ -176,12 +183,20 @@ export class UI {
     $('live-text').textContent = t;
   }
 
+  // 온도 색칠 단추와 그에 딸린 조각(보기 값, 범례)을 맞춘다
+  setHeat(on) {
+    this.heatOn = on;
+    $('heat-btn').setAttribute('aria-pressed', String(on));
+    $('view-group').hidden = !on;
+    $('legend').hidden = !on || $('stage').dataset.stage === 'exterior';
+  }
+
   // 외관과 홀에 따라 보일 조각을 바꾼다
   setStage(stage) {
     const ext = stage === 'exterior';
     $('exterior-card').hidden = !ext;
     $('stage-tools').hidden = ext;
-    $('legend').hidden = ext;
+    $('legend').hidden = ext || !this.heatOn;
     $('back-btn').hidden = ext;
     $('stage').dataset.stage = stage;
     $('canvas').setAttribute('aria-label', ext ? '데이터센터 건물 외관. 건물을 누르거나 Enter를 누르면 안으로 들어간다' : '데이터센터 3D 장면. 방향키로 랙을 선택할 수 있다');
@@ -190,9 +205,9 @@ export class UI {
 
   renderExterior(s) {
     const none = '데이터 없음';
-    $('ext-alarms').textContent = s.hasData ? `${s.alarms}건` : none;
-    $('ext-temp').textContent = s.maxTempIn === null ? none : `${fmt(s.maxTempIn, 1)} °C`;
-    $('ext-it').textContent = s.itPower === null ? none : `${fmt(s.itPower, 1)} kW`;
+    $('ext-total').textContent = s.totalPower === null ? none : `${fmt(s.totalPower, 1)} kW`;
+    $('ext-status').textContent = !s.hasData ? none : s.alarms > 0 ? '주의 필요' : '정상';
+    $('ext-status').dataset.state = !s.hasData ? 'none' : s.alarms > 0 ? 'alarm' : 'ok';
     $('ext-pue').textContent = s.pue === null ? none : fmt(s.pue, 2);
   }
 

@@ -289,3 +289,8 @@ dialog input[type="text"]:focus { border-color: var(--border-dark); }
 .boot-note { margin: 0; font-size: var(--text-xs, 12px); color: var(--text-tertiary); }
 #boot.failed .boot-bar i { background: var(--emergency, #d92d20); }
 @media (prefers-reduced-motion: reduce) { #boot, .boot-bar i { transition: none; } }
+
+/* 외관 카드 상태 표시 */
+#ext-status[data-state="ok"]::before, #ext-status[data-state="alarm"]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--success, #2e9f5b); }
+#ext-status[data-state="alarm"]::before { background: var(--emergency); }
+#ext-status[data-state="alarm"] { color: var(--tag-danger-text); font-weight: var(--weight-semibold); }

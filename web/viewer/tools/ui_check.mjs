@@ -113,6 +113,7 @@ await page.select('#scenario-select', 'power_spike');
 await sleep(500);
 const sc = await page.evaluate(() => ({ id: window.__viewer.state.scenarioId, t: window.__viewer.state.player.time, sel: window.__viewer.state.selected }));
 ok('FR-53 시나리오 전환: 시각 0, 선택 유지', sc.id === 'power_spike' && sc.t < 1 && sc.sel === 'crac_01', JSON.stringify(sc));
+await page.click('#heat-btn'); // 서버실 기본 보기에서는 색칠이 꺼져 있어 먼저 켠다
 await page.click('input[name="view"][value="power"]');
 await sleep(200);
 ok('FR-21 보기 값 전환: 범례가 바뀜', (await page.$eval('#legend-title', (e) => e.textContent)) === '전력' && (await page.$eval('#legend-max', (e) => e.textContent)).startsWith('15'));
@@ -148,8 +149,8 @@ await p3.goto(`${base}?scenario=fan_fault&t=240`, { waitUntil: 'networkidle0' })
 await p3.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 const vis = (sel) => p3.$eval(sel, (e) => !e.hidden);
 ok('FR-80 처음은 외관: 요약 카드가 보이고 보기 도구와 뒤로 단추는 숨김', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior' && (await vis('#exterior-card')) && !(await vis('#stage-tools')) && !(await vis('#back-btn')));
-const ext = await p3.evaluate(() => ({ alarms: document.getElementById('ext-alarms').textContent, temp: document.getElementById('ext-temp').textContent }));
-ok('FR-82 외관 요약에 알람 수와 최고 입구 온도', /건$/.test(ext.alarms) && ext.temp.includes('°C'), JSON.stringify(ext));
+const ext = await p3.evaluate(() => ({ total: document.getElementById('ext-total').textContent, pue: document.getElementById('ext-pue').textContent, status: document.getElementById('ext-status').textContent, hasOld: !!document.getElementById('ext-temp') }));
+ok('FR-82 외관 요약은 건물 전체 전력, PUE, 상태 표시만(최고 입구 온도와 알람 표 없음)', /kW$/.test(ext.total) && /^\d/.test(ext.pue) && ext.status.length > 1 && !ext.hasOld, JSON.stringify(ext));
 await p3.mouse.click(5, 5); // 하늘이나 빈 곳을 눌러도 들어가지 않는다
 await sleep(200);
 ok('빈 곳을 누르면 외관 유지', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior');
@@ -387,10 +388,18 @@ const f1 = await p7.evaluate(() => {
   const s = window.__viewer.scene;
   return { has: !!s.airflow, btn: !document.getElementById('flow-btn').hidden, vis: s.airflow?.points.visible, fog: s.scene.fog, lights: s.hallLights.visible };
 });
-ok('FLOW 홀에서 공기 흐름 입자가 보이고 단추가 있음, 안개는 꺼짐', f1.has && f1.btn && f1.vis && !f1.fog && f1.lights, JSON.stringify(f1));
+ok('FLOW 서버실 기본 보기에서는 공기 흐름이 꺼져 있고 단추는 있음, 안개는 꺼짐', f1.has && f1.btn && f1.vis === false && !f1.fog && f1.lights, JSON.stringify(f1));
 await p7.evaluate(() => document.getElementById('flow-btn').click());
-ok('FLOW 단추로 끔', (await p7.evaluate(() => window.__viewer.scene.airflow.points.visible)) === false);
+ok('FLOW 단추로 켬', (await p7.evaluate(() => window.__viewer.scene.airflow.points.visible)) === true);
 await p7.evaluate(() => document.getElementById('flow-btn').click());
+ok('FLOW 단추로 다시 끔', (await p7.evaluate(() => window.__viewer.scene.airflow.points.visible)) === false);
+await p7.evaluate(() => document.getElementById('flow-btn').click());
+// 서버실 기본 보기: 온도 색칠과 범례도 꺼져 있고 단추로 켠다
+const h0 = await p7.evaluate(() => ({ heat: window.__viewer.scene.heat, front: window.__viewer.scene.rackFront.visible, legend: !document.getElementById('legend').hidden, views: !document.getElementById('view-group').hidden }));
+ok('HEAT 서버실 기본 보기는 온도 색칠, 범례, 보기 값이 꺼짐', !h0.heat && !h0.front && !h0.legend && !h0.views, JSON.stringify(h0));
+await p7.evaluate(() => document.getElementById('heat-btn').click());
+const h1 = await p7.evaluate(() => ({ heat: window.__viewer.scene.heat, front: window.__viewer.scene.rackFront.visible, legend: !document.getElementById('legend').hidden, views: !document.getElementById('view-group').hidden }));
+ok('HEAT 단추로 켜면 색칠, 범례, 보기 값이 나타남', h1.heat && h1.front && h1.legend && h1.views, JSON.stringify(h1));
 await p7.evaluate(() => window.__viewer.state.player.seek(200)); // 60초에 CRAC_02 정지
 await sleep(1200);
 const fan = await p7.evaluate(() => window.__viewer.scene.airflow.fan.map((v) => +v.toFixed(2)));
