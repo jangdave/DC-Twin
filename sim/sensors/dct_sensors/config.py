@@ -41,6 +41,11 @@ class Config:
     # 급기 온도와 냉각 효율(가정, 실측 아님): 기준보다 1도 올리면 냉각 전력이 약 3% 줄고 내리면 늘며 0.6~1.3배로 제한한다. 웹 간이 시뮬레이션과 같은 값.
     t_supply_ref: float = 18.0       # 기준 급기 온도(degC). 보정 모델(L2)도 이 온도에서 배웠다
     cooling_gain_per_c: float = 0.03
+    # 냉각 전력과 IT 부하(가정, 실측 아님): 냉각 전력의 일부(cooling_load_share)가 IT 전력(열량)에 비례한다. 기준은 랙 수 x 랙 1기당 기준 전력(정상 가동의 평균)이고 그때 1배.
+    # 예) 부하가 30% 줄면 냉각 전력이 18% 줄고(1 - 0.6 + 0.6 x 0.7 = 0.82배), 30% 늘면 18% 는다. 나머지(1 - share)는 부하와 무관한 고정분(팬 등)이다.
+    # 랙 수에 비례하는 기준이라 랙을 옮기거나 빼도(랙 수가 달라져도) 같은 규칙이 맞는다.
+    it_ref_per_rack_kw: float = 440.0 / 60.0
+    cooling_load_share: float = 0.6
 
     @classmethod
     def load(cls, path: str | Path | None) -> "Config":

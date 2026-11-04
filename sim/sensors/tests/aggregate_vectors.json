@@ -1,0 +1,200 @@
+{
+ "_comment": "집계 공유 시험 자료. 파이썬 dct_sensors/aggregates.py가 기준이다. tests/make_aggregate_vectors.py로 만든다. 허용 오차 1e-5.",
+ "defaults": {
+  "fan_power_kw": 3.0,
+  "cooling_base_kw": 1.0,
+  "loss_ratio": 0.06,
+  "t_supply": 18.0,
+  "t_supply_ref": 18.0,
+  "cooling_gain_per_c": 0.03,
+  "it_ref_per_rack_kw": 7.333333333333333,
+  "cooling_load_share": 0.6,
+  "crac_supply_rise": 6.0
+ },
+ "cases": [
+  {
+   "name": "기준(60기, 팬 전부, 기준 IT 전력, 18도)",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 440.0,
+   "t_supply": null,
+   "cooling": 32.0,
+   "facility": 498.4,
+   "pue": 1.132727
+  },
+  {
+   "name": "부하 70%",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 308.0,
+   "t_supply": null,
+   "cooling": 26.24,
+   "facility": 352.72,
+   "pue": 1.145195
+  },
+  {
+   "name": "부하 130%",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 572.0,
+   "t_supply": null,
+   "cooling": 37.76,
+   "facility": 644.08,
+   "pue": 1.126014
+  },
+  {
+   "name": "급기 24도",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 440.0,
+   "t_supply": 24.0,
+   "cooling": 26.24,
+   "facility": 492.64,
+   "pue": 1.119636
+  },
+  {
+   "name": "급기 14도(최저)",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 440.0,
+   "t_supply": 14.0,
+   "cooling": 35.84,
+   "facility": 502.24,
+   "pue": 1.141455
+  },
+  {
+   "name": "급기 100도(효율 한계 0.6배에서 멈춤)",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 440.0,
+   "t_supply": 100.0,
+   "cooling": 19.2,
+   "facility": 485.6,
+   "pue": 1.103636
+  },
+  {
+   "name": "급기 -50도(효율 한계 1.3배에서 멈춤)",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 440.0,
+   "t_supply": -50.0,
+   "cooling": 41.6,
+   "facility": 508.0,
+   "pue": 1.154545
+  },
+  {
+   "name": "CRAC 한 대 정지(팬 합 7)",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 7.0,
+   "it_power": 440.0,
+   "t_supply": null,
+   "cooling": 29.0,
+   "facility": 495.4,
+   "pue": 1.125909
+  },
+  {
+   "name": "팬 15%로 저하(팬 합 7.15)",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 7.15,
+   "it_power": 440.0,
+   "t_supply": null,
+   "cooling": 29.45,
+   "facility": 495.85,
+   "pue": 1.126932
+  },
+  {
+   "name": "부하 130%에 급기 22도(두 효과가 곱해짐)",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 572.0,
+   "t_supply": 22.0,
+   "cooling": 33.2288,
+   "facility": 639.5488,
+   "pue": 1.118092
+  },
+  {
+   "name": "랙 30기(홀의 절반)는 기준도 절반",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 30,
+   "fan_sum": 8.0,
+   "it_power": 220.0,
+   "t_supply": null,
+   "cooling": 32.0,
+   "facility": 265.2,
+   "pue": 1.205455
+  },
+  {
+   "name": "랙 30기에 같은 IT 440 kW(과부하)",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 30,
+   "fan_sum": 8.0,
+   "it_power": 440.0,
+   "t_supply": null,
+   "cooling": 51.2,
+   "facility": 517.6,
+   "pue": 1.176364
+  },
+  {
+   "name": "부하 연동 끔(share 0)",
+   "cfg": {
+    "cooling_load_share": 0.0
+   },
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 572.0,
+   "t_supply": null,
+   "cooling": 32.0,
+   "facility": 638.32,
+   "pue": 1.115944
+  },
+  {
+   "name": "효율 계수 끔(gain 0)",
+   "cfg": {
+    "cooling_gain_per_c": 0.0
+   },
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 440.0,
+   "t_supply": 24.0,
+   "cooling": 32.0,
+   "facility": 498.4,
+   "pue": 1.132727
+  },
+  {
+   "name": "IT 전력 0",
+   "cfg": {},
+   "n_crac": 8,
+   "n_racks": 60,
+   "fan_sum": 8.0,
+   "it_power": 0.0,
+   "t_supply": null,
+   "cooling": 12.8,
+   "facility": 12.8,
+   "pue": 0.0
+  }
+ ]
+}

@@ -155,3 +155,72 @@ def test_cooling_power_follows_supply_temperature_assumption(manifest):
     assert abs(extreme["cooling_power"] / base["cooling_power"] - 0.6) < 0.005   # 0.6배에서 멈춘다
     assert abs(hot["it_power"] - base["it_power"]) < 1e-9
     assert hot["pue"] < base["pue"]
+
+
+def test_cooling_power_follows_it_load_assumption(manifest):
+    """부하가 늘면 냉각 전력이 는다(가정: 냉각 전력의 60%가 IT 전력에 비례, 기준은 랙 수 x 7.33 kW에서 1배). 예전에는 부하와 무관하게 고정이었다."""
+    def agg(scale):
+        cfg = Config(power_base_min=6.0 * scale, power_base_max=8.5 * scale)
+        gen = Generator(manifest, get("normal"), L0Solver(manifest, cfg), cfg, seed=1)
+        last = {}
+        for m in gen.run(3):
+            if m["type"] == "aggregate":
+                last[m["name"]] = m["value"]
+        return last
+
+    lo, base, hi = agg(0.7), agg(1.0), agg(1.3)
+    assert lo["it_power"] < base["it_power"] < hi["it_power"]
+    assert lo["cooling_power"] < base["cooling_power"] < hi["cooling_power"]
+    cfg = Config()
+    n_rack, n_crac = len(manifest.rack_names), len(manifest.cracs)
+    fixed = n_crac * cfg.cooling_base_kw + cfg.fan_power_kw * n_crac  # 팬 전부 1.0일 때 부하와 무관한 기준값
+    ref = cfg.it_ref_per_rack_kw * n_rack
+    for a in (lo, base, hi):  # 식 그대로: (1 - 0.6 + 0.6 x IT / 기준)배
+        assert abs(a["cooling_power"] - fixed * (0.4 + 0.6 * a["it_power"] / ref)) < 0.01
+
+
+def test_cooling_load_share_zero_restores_the_old_load_independent_model(manifest):
+    cfg = Config(cooling_load_share=0.0, power_base_min=9.0, power_base_max=12.0)
+    gen = Generator(manifest, get("normal"), L0Solver(manifest, cfg), cfg, seed=1)
+    cool = [m["value"] for m in gen.run(3) if m["type"] == "aggregate" and m["name"] == "cooling_power"]
+    fixed = len(manifest.cracs) * (cfg.cooling_base_kw + cfg.fan_power_kw)
+    assert all(abs(v - fixed) < 1e-9 for v in cool)
+
+
+def test_start_message_carries_the_model_provenance_for_l2_only(manifest):
+    """L2 녹화의 시작 메시지에 모델 출처가 실린다(어떤 모델로 만든 녹화인지 알 수 있다). 모델이 없는 L0에는 없다."""
+    cfg = Config()
+    pred = FakePredictor()
+    pred.provenance = {"source": "model.pkl", "model_sha256": "abc", "samples_json_sha256": "def", "n_samples": 64, "stale": False}
+    l2 = L2Solver(manifest, cfg, base=FakeBase(manifest, cfg), predictor=pred)
+    start = next(iter(Generator(manifest, get("normal"), l2, cfg, seed=1).run(1)))
+    assert start["event"] == "start" and start["model"] == pred.provenance
+    start0 = next(iter(Generator(manifest, get("normal"), L0Solver(manifest, cfg), cfg, seed=1).run(1)))
+    assert "model" not in start0
+    assert L2Solver(manifest, cfg, base=FakeBase(manifest, cfg), predictor=FakePredictor()).provenance is None  # 출처가 없는 가짜 예측기
+
+
+def test_shifted_supply_temperature_never_gets_the_top_confidence(manifest):
+    """급기 온도가 학습 기준(18도)과 다르면 선형 이동 가정을 쓰므로 ok 등급을 주지 않는다(caution으로 제한). 기준에서는 그대로."""
+    class OkPredictor(FakePredictor):
+        def predict(self, sample, ours, info):
+            names = list(ours)
+            return SimpleNamespace(fallback=False, reason="", corrected={n: ours[n] + 1.0 for n in names}, lower90={n: ours[n] + 0.5 for n in names},
+                                   upper90={n: ours[n] + 1.5 for n in names}, level={n: "ok" for n in names})
+
+    def levels(t_supply):
+        cfg = Config(t_supply=t_supply)
+        l2 = L2Solver(manifest, cfg, base=FakeBase(manifest, cfg), predictor=OkPredictor())
+        l2.step(1.0, Controls({c: 1.0 for c in manifest.cracs}, {n: 7.0 for n in manifest.rack_names}))
+        return {e["confidence"] for e in l2.estimates.values()}
+
+    assert levels(18.0) == {"ok"}
+    assert levels(22.0) == {"caution"} and levels(14.0) == {"caution"}
+
+
+def test_shifted_supply_keeps_lower_levels_as_they_are(manifest):
+    cfg = Config(t_supply=22.0)
+    pred = FakePredictor()  # 등급 caution을 낸다
+    l2 = L2Solver(manifest, cfg, base=FakeBase(manifest, cfg), predictor=pred)
+    l2.step(1.0, Controls({c: 1.0 for c in manifest.cracs}, {n: 7.0 for n in manifest.rack_names}))
+    assert {e["confidence"] for e in l2.estimates.values()} == {"caution"}

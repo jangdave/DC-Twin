@@ -19,10 +19,24 @@ export const DEFAULT_CONFIG = {
   restartThresholdMs: 60000, // 같은 센서에서 이만큼보다 과거로 돌아가면 생성기 재시작으로 본다
   defaultIntervalMs: 1000,   // 첫 집계의 누적 전력량에 쓰는 간격
   // 집계 추정식(docs/11 9장). 합성 추정이며 실제 시설의 효율 계산이 아니다.
+  // 파이썬 `dct_sensors/aggregates.py`, 웹 `web/viewer/src/sim/core.js`와 같은 식이며 공유 시험 자료(`sim/sensors/tests/aggregate_vectors.json`)로 함께 시험한다.
   fanPowerKw: 3.0,
   coolingBaseKw: 1.0,
   lossRatio: 0.06,
+  tSupply: 18.0,            // 급기 온도(CRAC 공급 온도 센서가 없을 때만 쓴다. 있으면 센서에서 추정한다)
+  tSupplyRef: 18.0,         // 냉각 효율의 기준 급기 온도
+  coolingGainPerC: 0.03,    // 급기 온도 1도당 냉각 전력 변화율(가정, 실측 아님)
+  itRefPerRackKw: 440 / 60, // 랙 1기당 기준 IT 전력. 기준 IT 전력 = 이 값 x 랙 수
+  coolingLoadShare: 0.6,    // 냉각 전력 중 IT 부하에 비례하는 몫(가정, 실측 아님)
+  cracSupplyRise: 6.0,      // CRAC 팬이 줄면 공급 온도가 오르는 정도(급기 온도 추정에 쓴다)
 };
+
+// 냉각 전력(kW). 급기 온도와 IT 부하의 영향은 가정이다.
+export function coolingPower(cfg, { nCrac, nRacks, fanSum, it, tSupply = cfg.tSupply }) {
+  const chiller = Math.min(Math.max(1 - cfg.coolingGainPerC * (tSupply - cfg.tSupplyRef), 0.6), 1.3);
+  const load = 1 - cfg.coolingLoadShare + cfg.coolingLoadShare * (it / (cfg.itRefPerRackKw * nRacks));
+  return (nCrac * cfg.coolingBaseKw + cfg.fanPowerKw * fanSum) * chiller * load;
+}
 
 const TS_RE = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d{1,3})?Z$/;
 const parseTs = (ts) => {
@@ -54,6 +68,8 @@ export class Gateway extends EventEmitter {
     this.dropped = { format: 0, unit: 0, unknown: 0, late: 0, jump: 0, stale: 0 };
     this.racks = manifest.sensors.filter((s) => s.equipmentType === 'rack' && s.metric === 'power');
     this.fans = manifest.sensors.filter((s) => s.metric === 'fan_speed');
+    this.supplies = manifest.sensors.filter((s) => s.equipmentType === 'crac' && s.metric === 'supply_temp');
+    this.fanByPath = new Map(this.fans.map((s) => [s.equipmentPath, s]));
     this.scenario = null;
     this.reset();
   }
@@ -194,7 +210,19 @@ export class Gateway extends EventEmitter {
     let fanSum = 0;
     for (const s of this.fans) fanSum += (this.latest.get(s.sensorId)?.value ?? 100) / 100;
     const nCrac = new Set(this.fans.map((s) => s.equipmentPath)).size;
-    const cooling = nCrac * cfg.coolingBaseKw + cfg.fanPowerKw * fanSum;
+    // 급기 온도: 게이트웨이는 명령값을 모르므로 CRAC 공급 온도 센서에서 거꾸로 추정한다(공급 온도 = 급기 + 6 x (1 - 팬 비율)). 센서가 없으면 기본값.
+    let tSupply = cfg.tSupply;
+    let n = 0;
+    let sum = 0;
+    for (const s of this.supplies) {
+      const v = this.latest.get(s.sensorId)?.value;
+      if (!Number.isFinite(v)) continue;
+      const fan = (this.latest.get(this.fanByPath.get(s.equipmentPath)?.sensorId)?.value ?? 100) / 100;
+      sum += v - cfg.cracSupplyRise * (1 - fan);
+      n++;
+    }
+    if (n) tSupply = sum / n;
+    const cooling = coolingPower(cfg, { nCrac, nRacks: this.racks.length, fanSum, it, tSupply });
     const facility = it + cooling + it * cfg.lossRatio;
     const dtMs = this._lastAggMs == null ? cfg.defaultIntervalMs : this.tickMs - this._lastAggMs;
     this.energyKwh += (facility * dtMs) / 3600000;

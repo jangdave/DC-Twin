@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { RESPONSE, capacity, compare, responseFor, rowInlets, snapshot, supplyRoom } from '../src/sim/insight.js';
-import { DEFAULT_CONFIG, SCENARIOS, chillerFactor } from '../src/sim/core.js';
+import { DEFAULT_CONFIG, SCENARIOS, chillerFactor, loadFactor } from '../src/sim/core.js';
 import { SimEngine } from '../src/sim/engine.js';
 
 const stub = (metrics, aggregates = {}, alarms = []) => ({
@@ -130,5 +130,37 @@ describe('공급 온도와 냉각 효율 모델(가정)', () => {
     expect(e.cfg.t_supply).toBe(14);
     e.startScenario('normal');
     expect(e.cfg.t_supply).toBe(18);
+  });
+});
+
+describe('냉각 전력과 IT 부하 연관(가정)', () => {
+  it('기준 IT 전력에서 1배, 부하가 늘면 늘고 줄면 준다', () => {
+    expect(loadFactor(DEFAULT_CONFIG, 440, 60)).toBeCloseTo(1, 12);
+    expect(loadFactor(DEFAULT_CONFIG, 308, 60)).toBeCloseTo(0.82, 6); // 30% 감소 -> 0.4 + 0.6 x 0.7
+    expect(loadFactor(DEFAULT_CONFIG, 572, 60)).toBeCloseTo(1.18, 6);
+    expect(loadFactor(DEFAULT_CONFIG, 220, 30)).toBeCloseTo(1, 12); // 랙이 절반이면 기준도 절반
+    expect(loadFactor({ ...DEFAULT_CONFIG, cooling_load_share: 0 }, 1000, 60)).toBe(1); // 몫이 0이면 부하와 무관(예전 모델)
+  });
+
+  it('엔진: 줄 전력을 올리면 IT 전력과 함께 냉각 전력도 오르고 IT 전력은 그대로인 공급 온도 조작과 곱해진다', () => {
+    const sensors = JSON.parse(readFileSync(new URL('../public/data/sensors.json', import.meta.url)));
+    const scene = JSON.parse(readFileSync(new URL('../public/data/scene.json', import.meta.url)));
+    const racks = scene.racks.map((r) => ({ name: r.name.toLowerCase(), row: r.row, no: Number(r.name.split('_')[1]) }));
+    const cracs = [...new Set(sensors.filter((s) => s.equipmentType === 'crac').map((s) => s.equipment))].sort();
+    const make = () => new SimEngine({ sensors, racks, cracs, seed: 3 });
+    const aggOf = (msgs, name) => msgs.find((m) => m.kind === 'aggregate' && m.name === name).value;
+    const a = make();
+    const b = make();
+    for (const r of [1, 2, 3, 4, 5, 6]) b.setPowerScale(`row:0${r}`, 1.5);
+    const ma = a.step();
+    const mb = b.step();
+    expect(aggOf(mb, 'it_power') / aggOf(ma, 'it_power')).toBeCloseTo(1.5, 2);
+    const expected = loadFactor(DEFAULT_CONFIG, aggOf(mb, 'it_power'), 60) / loadFactor(DEFAULT_CONFIG, aggOf(ma, 'it_power'), 60);
+    expect(aggOf(mb, 'cooling_power') / aggOf(ma, 'cooling_power')).toBeCloseTo(expected, 4);
+    expect(aggOf(mb, 'cooling_power')).toBeGreaterThan(aggOf(ma, 'cooling_power') * 1.2);
+    // 공급 온도 효과와 곱해진다
+    b.setSupply(22);
+    const mc = b.step();
+    expect(aggOf(mc, 'cooling_power') / aggOf(mb, 'cooling_power')).toBeCloseTo(0.88, 2);
   });
 });

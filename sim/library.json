@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "_comment": "미리 계산해 두는 상태와 시나리오 모음. 생성: scripts/make_sim_library.py, 웹 자료 변환: web/viewer/tools/build_data.mjs. 모두 Warp 열 시뮬레이션(L1) + 보정 모델(L2). 시각화 목적이며 공학적 정확성을 주장하지 않는다.",
+  "_comment": "미리 계산해 두는 상태와 시나리오 모음. 생성: scripts/make_sim_library.py, 웹 자료 변환: web/viewer/tools/build_data.mjs. 모두 Warp 열 시뮬레이션(L1) + 보정 모델(L2)로 계산한다. 급기 온도가 18도가 아닌 항목은 보정 모델이 18도에서만 배웠으므로 선형 이동 가정을 쓰고 신뢰 등급을 caution으로 제한한다. 냉각 전력의 급기 효율(1도당 3%)과 부하 연동(냉각의 60%가 IT에 비례)은 실측이 아닌 가정이다. 시각화 목적이며 공학적 정확성을 주장하지 않는다.",
   "groups": [
     { "id": "event", "title": "이상 상황", "note": "시나리오 4종. 시간에 따라 상황이 바뀐다." },
     { "id": "supply", "title": "급기 온도", "note": "급기 온도를 고정하고 300초 동안 본다. 냉각 효율 가정(1도당 3%)을 쓴다." },
