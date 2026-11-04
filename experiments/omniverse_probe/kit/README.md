@@ -31,3 +31,12 @@ kit\kit.exe apps\dctwin.base_editor.kit --/app/file/ignoreUnsavedOnExit=true --e
 | `kit_list_exts.py` | Kit 확장 레지스트리 전체 조회(685개 이름), 시뮬레이션 관련 키워드 검색 | `out/kit/kit_list_exts.json` |
 | `kit_npy_to_vdb.py` | numpy 온도 프레임을 OpenVDB(`.vdb`)로 변환(`omni.volume`의 `openvdb` 모듈 사용) | `out/frames/vdb/*.vdb`, `out/kit/kit_npy_to_vdb_result.json` |
 | `kit_vdb_roundtrip.py` | 변환한 `.vdb`를 다시 읽어 원본과 비교(float, half) | `out/kit/kit_vdb_roundtrip_result.json` |
+| `kit_hall60.py` | Kit이 USD 장면을 열고, Kit의 Warp로 `hall60_sim.py`를 그대로 실행 | `out/kit/hall60_kit/` (센서 CSV, 요약, 온도 프레임) |
+| `kit_sensors.py` | Kit 안에서 센서 값 생성기(`dct_sensors`, 기본 L1)를 실행해 녹화(.jsonl) 생성 | `out/kit/sensors_kit.jsonl` |
+| `compare_kit_run.py` | 두 녹화(.jsonl)를 줄 단위로 비교(독립 실행과 Kit 실행이 같은지) | 표준 출력 |
+
+**Kit에는 scipy가 없다**(numpy, PIL, Warp는 있음). 위 두 스크립트를 쓰려면 저장소 밖에 Kit 파이썬(3.12)용 scipy를 한 번 받는다:
+```
+uv pip install --target D:/omniverse-kit/pydeps --python-version 3.12 --python-platform windows --no-deps scipy
+```
+`kit_sensors.py`는 환경 변수 `DCT_ARGS`(생성기 인자), `DCT_JSONL`(출력)로 시나리오와 솔버(l0, l1, l2)를 바꾼다. 스크립트 경로가 없으면 Kit이 끝나지 않고 남으니 경로를 먼저 확인한다.
