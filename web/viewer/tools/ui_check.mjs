@@ -27,6 +27,7 @@ const web = createServer(async (req, res) => {
 await new Promise((r) => web.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${web.address().port}/`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const SENSORS_JSON = await readFile(path.join(DIST, 'data/sensors.json'), 'utf8');
 const results = [];
 const ok = (name, cond, extra = '') => {
   results.push(!!cond);
@@ -702,6 +703,39 @@ await pc.close();
   });
   ok('값 시뮬레이션 시작 IT 전력이 정상 녹화와 1% 안에서 이어짐', Math.abs(z.sim - z.rec) / z.rec < 0.01, JSON.stringify(z));
   await cp.close();
+}
+
+// 출처 전환: 라이브와 로컬 서버가 어댑터를 거쳐 화면까지 이어지는가 (모의 게이트웨이를 띄워 확인)
+{
+  const { createRequire } = await import('node:module');
+  const { WebSocketServer } = createRequire(import.meta.url)(path.join(HERE, '../../../gateway/node_modules/ws'));
+  const wss = new WebSocketServer({ port: 0, host: '127.0.0.1' });
+  await new Promise((r) => wss.on('listening', r));
+  const received = [];
+  wss.on('connection', (ws) => {
+    ws.on('message', (d) => received.push(JSON.parse(String(d))));
+    const sensors = JSON.parse(SENSORS_JSON).map((x) => ({ type: 'sample', sensorId: x.sensorId, value: x.range[0] + (x.range[1] - x.range[0]) * 0.3, quality: 'good', ts: '2026-10-15T09:00:00.000Z', alarm: 'normal' }));
+    ws.send(JSON.stringify({ type: 'snapshot', ts: '2026-10-15T09:00:00.000Z', scenario: 'normal', sensors, aggregates: [{ name: 'it_power', value: 400 }, { name: 'cooling_power', value: 30 }, { name: 'facility_power', value: 454 }, { name: 'pue', value: 1.135 }], controls: { fan: {}, powerScale: {} } }));
+  });
+  const url = `ws://127.0.0.1:${wss.address().port}/ws`;
+  const lp = await browser.newPage();
+  await lp.setViewport({ width: 1440, height: 860 });
+  await lp.goto(`${base}?stage=hall&server=${encodeURIComponent(url)}`, { waitUntil: 'networkidle0' });
+  await lp.waitForFunction(() => window.__viewer?.state.live, { timeout: 15000 });
+  await sleep(1200);
+  const L = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, server: window.__viewer.state.server, badge: document.getElementById('mode-badge').textContent, player: window.__viewer.state.player, panel: !document.getElementById('sim-panel').hidden, it: document.getElementById('agg-it').textContent, serverOn: document.querySelector('[data-mode="server"]').classList.contains('on'), rail: [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').length, liveInfo: !document.getElementById('live-info').hidden }));
+  ok('LIVE 로컬 서버: 연결되고 스냅샷 값이 화면에 보이며 조작 패널이 열리고 "로컬 서버"만 눌림', L.mode === 'live' && L.server && /연결됨/.test(L.badge) && L.player === null && L.panel && L.it === '400.0 kW' && L.serverOn && L.rail === 0 && L.liveInfo, JSON.stringify(L));
+  await lp.evaluate(() => window.__viewer.panel.h.onFan('crac_01', 0.5));
+  await sleep(300);
+  ok('LIVE 슬라이더 조작이 서버로 전달됨', received.some((m) => m.type === 'control' && m.target === 'crac_01'), JSON.stringify(received.slice(-2)));
+  await lp.$eval('#rail [data-mode="rec"]', (e) => e.click());
+  await sleep(800);
+  const R = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, live: window.__viewer.state.live, server: window.__viewer.state.server, panel: !document.getElementById('sim-panel').hidden, serverOn: document.querySelector('[data-mode="server"]').classList.contains('on'), badge: document.getElementById('mode-badge').textContent }));
+  ok('LIVE 서버에서 모니터링으로 돌아가면 연결이 끊기고 녹화로 바뀜', R.mode === 'rec' && R.live === null && !R.server && !R.panel && !R.serverOn, JSON.stringify(R));
+  await sleep(500);
+  ok('LIVE 돌아간 뒤에도 서버로 다시 연결하지 않음', wss.clients.size === 0, `${wss.clients.size}개 연결`);
+  await lp.close();
+  wss.close();
 }
 
 await browser.close();

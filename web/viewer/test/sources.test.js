@@ -1,0 +1,168 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { LiveSource, RecSource, SimSource } from '../src/sources.js';
+import { SCENARIOS } from '../src/sim/core.js';
+import { layoutFrom, SimEngine } from '../src/sim/engine.js';
+import { SensorStore } from '../src/store.js';
+
+const read = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url)));
+const sensors = read('../public/data/sensors.json');
+const scene = read('../public/data/scene.json');
+const index = read('../public/data/index.json');
+const layout = layoutFrom(scene.racks, sensors);
+const ids = sensors.map((s) => s.sensorId);
+
+const mkRec = (store = new SensorStore(sensors)) => new RecSource({ store, sensorIds: ids, index, loadJson: async (id) => read(`../public/data/rec/${id}.json`) });
+const mkSim = (store = new SensorStore(sensors), extra = {}) => {
+  let made = 0;
+  const src = new SimSource({ store, makeEngine: () => (made++, new SimEngine({ sensors, ...layout, seed: 7 })), scenarios: SCENARIOS, ...extra });
+  return { src, made: () => made, store };
+};
+
+describe('RecSource', () => {
+  it('열면 재생기가 생기고 설명이 시나리오와 시간 막대를 담는다', async () => {
+    const s = mkRec();
+    await s.open({ scenarioId: 'fan_fault', t: 100 });
+    expect(s.kind).toBe('rec');
+    expect(s.player.time).toBe(100);
+    const d = s.describe();
+    expect(d.badge.mode).toBe('rec');
+    expect(d.panel).toBe('none');
+    expect(d.scenarios.current).toBe('fan_fault');
+    expect(d.card.seekable).toBe(true);
+    expect(d.timebar.n).toBe(300);
+  });
+  it('advance는 처음과 정수 초가 바뀔 때만 true', async () => {
+    const s = mkRec();
+    await s.open({ scenarioId: 'normal' });
+    expect(s.advance(0.1)).toBe(true); // 처음 한 번
+    expect(s.advance(0.1)).toBe(false);
+    expect(s.advance(0.5)).toBe(false);
+    expect(s.advance(0.5)).toBe(true); // 1초를 넘음
+  });
+  it('같은 출처 안에서 시나리오를 바꾸면 반복, 속도, 일시정지를 이어 가고 다른 출처를 거치면 새로 시작', async () => {
+    const s = mkRec();
+    await s.open({ scenarioId: 'normal' });
+    s.player.loop = false;
+    s.player.speed = 5;
+    s.player.playing = false;
+    await s.open({ scenarioId: 'power_spike' });
+    expect(s.player).toMatchObject({ loop: false, speed: 5, playing: false });
+    s.close();
+    await s.open({ scenarioId: 'normal' });
+    expect(s.player).toMatchObject({ loop: true, speed: 1, playing: true });
+  });
+  it('녹화가 깨져 있으면 열기가 오류를 던지고 이전 재생기는 그대로', async () => {
+    const s = new RecSource({ store: new SensorStore(sensors), sensorIds: ids, index, loadJson: async () => ({ version: 9 }) });
+    await expect(s.open({ scenarioId: 'normal' })).rejects.toThrow('지원하지 않는 녹화 버전');
+    expect(s.player).toBeNull();
+  });
+});
+
+describe('SimSource', () => {
+  it('열면 시나리오가 시작되고 첫 값이 저장소에 있다', () => {
+    const { src, store } = mkSim();
+    src.open({ scenarioId: 'fan_fault' });
+    expect(src.kind).toBe('sim');
+    expect(src.player).toBe(src.runner);
+    expect(store.aggregates.it_power).toBeGreaterThan(0);
+    const d = src.describe();
+    expect(d).toMatchObject({ panel: 'sim', badge: { mode: 'sim' } });
+    expect(d.scenarios.list.map((x) => x.id).sort()).toEqual(Object.keys(SCENARIOS).sort());
+    expect(d.card.seekable).toBe(false);
+  });
+  it('엔진은 한 번만 만들고 다시 열면 같은 엔진으로 처음부터 시작', () => {
+    const { src, made } = mkSim();
+    src.open({ scenarioId: 'normal' });
+    const engine = src.engine;
+    for (let i = 0; i < 5; i++) src.advance(1);
+    src.open({ scenarioId: 'cooling_failure' });
+    expect(made()).toBe(1);
+    expect(src.engine).toBe(engine);
+    expect(src.engine.t).toBeLessThan(3); // 시간이 처음으로 돌아감
+  });
+  it('모르는 시나리오 이름은 normal로', () => {
+    const { src } = mkSim();
+    src.open({ scenarioId: '없는것' });
+    expect(src.scenarioId).toBe('normal');
+  });
+  it('advance는 1초가 지날 때 true', () => {
+    const { src } = mkSim();
+    src.open({ scenarioId: 'normal' });
+    expect(src.advance(0.2)).toBe(true); // 열자마자 한 번
+    expect(src.advance(0.2)).toBe(false);
+    expect(src.advance(1)).toBe(true);
+  });
+});
+
+const fakeClient = (over = {}) => {
+  const c = { state: 'connecting', lastMessageAt: null, lastError: null, dropped: 0, retryInMs: 0, started: false, stopped: false, sent: [], flushed: false, ...over };
+  c.start = () => (c.started = true);
+  c.stop = () => (c.stopped = true);
+  c.flush = () => c.flushed;
+  c.send = (o) => (c.state === 'open' ? (c.sent.push(o), true) : false);
+  return c;
+};
+
+describe('LiveSource', () => {
+  it('열면 클라이언트를 시작하고 닫으면 멈춘다', () => {
+    let client;
+    const s = new LiveSource({ store: new SensorStore(sensors), url: 'ws://x/ws', makeClient: () => (client = fakeClient()) });
+    s.open();
+    expect(client.started).toBe(true);
+    s.close();
+    expect(client.stopped).toBe(true);
+    expect(s.client).toBeNull();
+  });
+  it('연결 상태에 따라 모드 표시와 문구가 바뀐다', () => {
+    let client;
+    const s = new LiveSource({ store: new SensorStore(sensors), url: 'u', control: true, makeClient: () => (client = fakeClient()) });
+    s.open();
+    expect(s.describe().badge).toEqual({ mode: 'connecting', text: '로컬 서버 연결 중' });
+    client.state = 'open';
+    expect(s.describe().badge).toEqual({ mode: 'open', text: '로컬 서버 연결됨' });
+    client.state = 'closed';
+    client.retryInMs = 4000;
+    expect(s.describe().badge).toEqual({ mode: 'closed', text: '연결 끊김, 4초 뒤 다시 시도' });
+  });
+  it('로컬 서버는 조작 패널과 시나리오 목록을 갖고 일반 라이브는 갖지 않는다', () => {
+    const list = [{ id: 'normal', title: '정상', note: '' }];
+    const a = new LiveSource({ store: new SensorStore(sensors), url: 'u', control: true, simList: list, current: 'normal', makeClient: () => fakeClient() });
+    const b = new LiveSource({ store: new SensorStore(sensors), url: 'u', makeClient: () => fakeClient() });
+    expect(a.describe()).toMatchObject({ panel: 'server', scenarios: { list, current: 'normal' } });
+    expect(b.describe()).toMatchObject({ panel: 'none', scenarios: null });
+    expect(b.player).toBeNull();
+  });
+  it('조작은 연결되어 있을 때만 보내진다', () => {
+    let client;
+    const s = new LiveSource({ store: new SensorStore(sensors), url: 'u', control: true, makeClient: () => (client = fakeClient()) });
+    expect(s.send({ kind: 'scenario', name: 'normal' })).toBe(false); // 열기 전
+    s.open();
+    expect(s.send({ kind: 'scenario', name: 'normal' })).toBe(false); // 연결 중
+    client.state = 'open';
+    expect(s.send({ kind: 'crac_fan', target: 'crac_01', value: 0.5 })).toBe(true);
+    expect(client.sent[0]).toEqual({ type: 'control', kind: 'crac_fan', target: 'crac_01', value: 0.5 });
+  });
+  it('상태 줄은 열렸을 때만 나오고 거절 이유를 6초 동안 붙인다', () => {
+    let client;
+    const s = new LiveSource({ store: new SensorStore(sensors), url: 'ws://h/ws', makeClient: () => (client = fakeClient()) });
+    s.open();
+    expect(s.statusText(10000)).toBeNull();
+    client.state = 'open';
+    client.lastMessageAt = 7000;
+    client.dropped = 2;
+    expect(s.statusText(10000)).toBe('ws://h/ws  마지막 수신 3초 전, 버린 메시지 2건');
+    client.lastError = { at: 9000, message: '범위 밖' };
+    expect(s.statusText(10000)).toContain('서버가 거절함: 범위 밖');
+    expect(s.statusText(20000)).not.toContain('거절');
+  });
+  it('advance는 클라이언트가 넘겨준 값이 있을 때 true', () => {
+    let client;
+    const s = new LiveSource({ store: new SensorStore(sensors), url: 'u', makeClient: () => (client = fakeClient()) });
+    expect(s.advance()).toBe(false);
+    s.open();
+    expect(s.advance()).toBe(false);
+    client.flushed = true;
+    expect(s.advance()).toBe(true);
+  });
+});
