@@ -361,3 +361,21 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 }
 #rail button[aria-pressed="true"] { background: var(--brand-20); color: var(--text-brand); font-weight: var(--weight-semibold); }
 @media (max-width: 700px) { .cctv-note { display: none; } #cctv-grid, #cctv-grid[data-n="2"], #cctv-grid[data-n="3"], #cctv-grid[data-n="4"] { grid-template-columns: 1fr; grid-template-rows: repeat(2, 1fr); } #cctv-grid[data-n="1"] { grid-template-rows: 1fr; } }
+
+/* ---- 휴대폰과 좁은 화면: 3D가 화면을 채우고 정보 패널은 아래에서 올라오는 시트 ---- */
+#sheet-handle { display: none; }
+@media (max-width: 900px) {
+  html, body { height: 100%; overflow: hidden; }
+  body { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+  #main { position: relative; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); min-height: 0; }
+  #stage { height: 100%; min-height: 0; }
+  #side { position: absolute; z-index: 4; left: 0; right: 0; bottom: 0; height: 46%; border: 1px solid var(--border-disabled); border-bottom: 0; border-radius: 16px 16px 0 0; background: var(--surface-page); backdrop-filter: blur(10px); box-shadow: var(--shadow-md); overflow: hidden; transition: height 0.25s ease; }
+  #side[data-sheet="peek"] { height: 66px; }
+  #side[data-sheet="full"] { height: 88%; }
+  .pane { overflow-y: auto; }
+  #sheet-handle { display: flex; justify-content: center; align-items: center; flex: none; height: 24px; cursor: grab; touch-action: none; }
+  #sheet-handle span { width: 40px; height: 4px; border-radius: 2px; background: var(--gray-40); }
+  #legend { bottom: 76px; }
+  #mode-badge { top: auto; bottom: 76px; right: 10px; }
+}
+@media (max-width: 700px) { #cctv { bottom: 72px; } }
