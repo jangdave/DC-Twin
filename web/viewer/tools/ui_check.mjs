@@ -510,6 +510,50 @@ await pc.close();
   await rp.close();
 }
 
+// 가상 CCTV: 메뉴로 열면 칸이 보이고 모든 칸에 "가상 CCTV" 표시, 칸마다 실제로 그려지고, 알람 구역은 빨간 테두리, Esc로 닫음
+{
+  const cp = await browser.newPage();
+  await cp.setViewport({ width: 1440, height: 860 });
+  await cp.goto(`${base}?scenario=fan_fault&t=240&stage=hall&q=high`, { waitUntil: 'networkidle0' });
+  await cp.waitForFunction(() => window.__viewer?.scene?.shell, { timeout: 40000 }).catch(() => {});
+  await cp.click('#cctv-btn');
+  await sleep(1500);
+  const c1 = await cp.evaluate(() => ({
+    open: !document.getElementById('cctv').hidden,
+    tiles: [...document.querySelectorAll('.cctv-tile')].map((t) => ({ tag: t.querySelector('.cctv-tag').textContent, alarm: t.classList.contains('alarm'), name: t.querySelector('.cctv-name').textContent, w: Math.round(t.getBoundingClientRect().width) })),
+    pressed: document.getElementById('cctv-btn').getAttribute('aria-pressed'),
+    note: document.getElementById('cctv-bar').textContent.includes('실제 영상이 아니라'),
+  }));
+  ok('CCTV 메뉴를 열면 칸이 보이고 모든 칸에 "가상 CCTV" 표시와 안내 문구가 있음', c1.open && c1.tiles.length >= 2 && c1.tiles.every((t) => t.tag.includes('가상 CCTV') && t.w > 100) && c1.note && c1.pressed === 'true', JSON.stringify(c1));
+  ok('CCTV 알람이 있는 구역(CRAC_02 정지)은 앞쪽 칸에서 빨간 테두리', c1.tiles[0].alarm && c1.tiles[0].name.includes('냉각'), JSON.stringify(c1.tiles));
+  // 칸마다 실제로 그려졌는지: 화면 캡처에서 각 칸 영역에 색이 여러 가지 있는지
+  const shot = await cp.screenshot({ encoding: 'base64' });
+  const painted = await cp.evaluate(async (b64) => {
+    const im = await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = `data:image/png;base64,${b64}`; });
+    const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
+    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+    return [...document.querySelectorAll('.cctv-tile')].map((t) => {
+      const r = t.getBoundingClientRect();
+      const d = g.getImageData(Math.floor(r.left + 10), Math.floor(r.top + r.height * 0.3), Math.floor(r.width - 20), Math.floor(r.height * 0.4)).data;
+      const set = new Set();
+      for (let k = 0; k < d.length; k += 4 * 37) set.add(`${d[k] >> 4},${d[k + 1] >> 4},${d[k + 2] >> 4}`);
+      return set.size;
+    });
+  }, shot);
+  ok('CCTV 모든 칸에 장면이 실제로 그려짐(단색이 아님)', painted.length >= 2 && painted.every((n) => n >= 8), JSON.stringify(painted));
+  await cp.click('#cctv-next');
+  const c2 = await cp.evaluate(() => [...document.querySelectorAll('.cctv-name')].map((e) => e.textContent));
+  ok('CCTV 다음 묶음으로 넘기면 다른 카메라가 보임', c2.length >= 1 && c2.every((n) => !c1.tiles.some((t) => t.name === n)), JSON.stringify({ c1: c1.tiles.map((t) => t.name), c2 }));
+  await cp.click('.cctv-tile');
+  const z = await cp.evaluate(() => document.querySelectorAll('.cctv-tile').length);
+  ok('CCTV 칸을 누르면 크게(1칸) 보임', z === 1);
+  await cp.keyboard.press('Escape');
+  await sleep(200);
+  const c3 = await cp.evaluate(() => ({ hidden: document.getElementById('cctv').hidden, stage: window.__viewer.state.stage, scene: window.__viewer.scene.cctv }));
+  ok('CCTV Esc로 닫으면 서버실 화면에 남고 그리기도 원래대로', c3.hidden && c3.stage === 'hall' && !c3.scene, JSON.stringify(c3));
+  await cp.close();
+}
+
 // 서버실 껍데기: 서버실로 들어가면 받고, 벽 밖에서는 그 벽을 숨기고, 위에서는 천장을 숨긴다
 {
   const sp = await browser.newPage();

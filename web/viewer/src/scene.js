@@ -8,6 +8,7 @@ import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './e
 import { Airflow, loadFlow } from './airflow.js';
 import { buildCity } from './city.js';
 import { prepareShell, shellVisibility } from './hall_shell.js';
+import { CCTV_LIMITS } from './cctv.js';
 import { SETTINGS } from './quality.js';
 import { ALARM_COLOR, barFraction, confidenceColor, sampleColor } from './colors.js';
 
@@ -268,6 +269,70 @@ export class HallScene {
       }));
     }
     a.step(dtSec, timeSec);
+  }
+
+  // ---- 가상 CCTV: 한 화면(캔버스)을 칸으로 나눠 같은 장면을 여러 카메라로 그린다 ----
+  // tiles: [{ el, def }]  el은 칸의 DOM 요소(위치와 크기를 매 프레임 읽어 그릴 영역으로 쓴다), def는 buildCameras 항목.
+  setCctv(tiles) {
+    if (!tiles) {
+      this.cctv = null;
+      for (const l of this.labels) l.el.hidden = !this.showLabels;
+      this._dirty = true;
+      return;
+    }
+    const lim = CCTV_LIMITS[this.tier] ?? CCTV_LIMITS.mid;
+    this.cctv = {
+      fps: lim.fps,
+      last: -1,
+      tiles: tiles.map(({ el, def }) => {
+        const cam = new THREE.PerspectiveCamera(def.fov, 16 / 9, 0.1, 120);
+        cam.position.copy(toThree(...def.pos));
+        cam.lookAt(toThree(...def.target));
+        return { el, cam, def };
+      }),
+    };
+    for (const l of this.labels) l.el.hidden = true;
+  }
+
+  _renderCctv(timeSec) {
+    const c = this.cctv;
+    if (c.last >= 0 && timeSec - c.last < 1 / c.fps) return;
+    c.last = timeSec;
+    const r = this.renderer;
+    const cv = r.domElement;
+    const cr = cv.getBoundingClientRect();
+    const hiddenHelpers = [this.selBox, this.hoverBox].map((o) => [o, o.visible]);
+    for (const [o] of hiddenHelpers) o.visible = false;
+    r.setScissorTest(false);
+    r.setViewport(0, 0, cr.width, cr.height);
+    r.setClearColor(0x0a0d12, 1);
+    r.clear();
+    r.setScissorTest(true);
+    for (const t of c.tiles) {
+      const b = t.el.getBoundingClientRect();
+      const w = Math.floor(b.width);
+      const h = Math.floor(b.height);
+      if (w < 8 || h < 8) continue;
+      const x = Math.floor(b.left - cr.left);
+      const y = Math.floor(cr.height - (b.bottom - cr.top));
+      r.setViewport(x, y, w, h);
+      r.setScissor(x, y, w, h);
+      if (Math.abs(t.cam.aspect - w / h) > 0.01) {
+        t.cam.aspect = w / h;
+        t.cam.updateProjectionMatrix();
+      }
+      if (this.shell) {
+        const v = shellVisibility(t.cam.position, this._shellBounds);
+        for (const [name, vis] of Object.entries(v)) {
+          const o = this.shellParts.get(name);
+          if (o) o.visible = vis;
+        }
+      }
+      r.render(this.scene, t.cam);
+    }
+    r.setScissorTest(false);
+    r.setViewport(0, 0, cr.width, cr.height);
+    for (const [o, vis] of hiddenHelpers) o.visible = vis;
   }
 
   // ---- 서버실 껍데기(바닥, 벽, 천장, 조명) ----
@@ -835,7 +900,7 @@ export class HallScene {
     }
     this.controls.update();
     this._updateDepthRange();
-    this._updateShell();
+    if (!this.cctv) this._updateShell();
     this._stepAirflow(dtSec, timeSec);
     if (this.stage === 'exterior') {
       this.city?.update(this.reducedMotion ? 0 : dtSec);
@@ -846,7 +911,7 @@ export class HallScene {
       this._lastVersion = this.store.version;
       this._dirty = false;
     }
-    if (this.showLabels && this.stage === 'hall') {
+    if (this.showLabels && this.stage === 'hall' && !this.cctv) {
       const r = this.renderer.domElement.getBoundingClientRect();
       for (const l of this.labels) {
         const v = l.pos.clone().project(this.camera);
@@ -855,7 +920,8 @@ export class HallScene {
         l.el.style.visibility = hide ? 'hidden' : 'visible';
       }
     }
-    this.renderer.render(this.scene, this.camera);
+    if (this.cctv && this.stage === 'hall') this._renderCctv(timeSec);
+    else this.renderer.render(this.scene, this.camera);
   }
 
   // 시험과 점검용: 지금 랙 앞면 색(선형 RGB)
