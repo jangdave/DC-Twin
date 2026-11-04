@@ -772,9 +772,15 @@ await pc.close();
       const send = (obj) => res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }).end(typeof obj === 'string' ? obj : JSON.stringify(obj));
       try {
         if (p === '/api/meta') return send({ name: 'mock', solver: 'l0', library: true, controls: ['supply_temp'] });
-        if (p === '/api/library') return send({ version: 1, groups: JSON.parse(await readFile(path.join(DIST, 'data/library.json'), 'utf8')).groups, index: JSON.parse(await readFile(path.join(DIST, 'data/index.json'), 'utf8')) });
+        // 이 컴퓨터의 서버만 주는 "외부 솔버 결과" 항목(합성 모의). 공개 사이트의 목록에는 없다.
+        const extEntry = { id: 'ext_mock', title: '외부 모의 결과', note: '시험용 합성 항목', group: 'external', source: 'external', tool: '모의', n: 300 };
+        if (p === '/api/library') {
+          const groups = JSON.parse(await readFile(path.join(DIST, 'data/library.json'), 'utf8')).groups;
+          const index = JSON.parse(await readFile(path.join(DIST, 'data/index.json'), 'utf8'));
+          return send({ version: 1, groups: [...groups, { id: 'external', title: '외부 솔버 결과 (로컬 전용)' }], index: [...index, extEntry] });
+        }
         const m = /^\/api\/library\/([a-z0-9_]+)$/.exec(p);
-        if (m) return send(await readFile(path.join(DIST, `data/rec/${m[1]}.json`), 'utf8'));
+        if (m) return send(await readFile(path.join(DIST, `data/rec/${m[1] === 'ext_mock' ? 'load_130' : m[1]}.json`), 'utf8'));
       } catch { /* 아래 404 */ }
       res.writeHead(404).end();
     });
@@ -813,6 +819,12 @@ await pc.close();
   await sleep(800);
   const D1 = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, src: document.getElementById('data-source').textContent, hidden: document.getElementById('data-source').hidden, cool: window.__viewer.store.aggregates.cooling_power }));
   ok('DATA 서버에 연결한 뒤의 시뮬레이션 값은 서버에서 받고 화면에 출처가 보임', apiLog.includes('/api/library/supply_22') && /서버\(http:\/\/127\.0\.0\.1:\d+\)에서 받음/.test(D1.src) && !D1.hidden && D1.cool < 30, JSON.stringify({ apiLog, D1 }));
+  // 서버가 준 외부 솔버 결과: 그룹으로 묶여 보이고, 고르면 서버에서 받아 동작하며, 화면에 "로컬 전용"이 보인다
+  const E0 = await lp.evaluate(() => ({ groups: [...document.querySelectorAll('#scenario-select optgroup')].map((g) => g.label), src: document.getElementById('data-source').textContent, opts: document.querySelectorAll('#scenario-select option').length }));
+  await lp.select('#scenario-select', 'ext_mock');
+  await sleep(800);
+  const E1 = await lp.evaluate(() => ({ it: window.__viewer.store.aggregates.it_power, sel: document.getElementById('scenario-select').value, badge: document.getElementById('mode-badge').textContent }));
+  ok('EXT 서버가 준 외부 솔버 결과가 "외부 솔버 결과 (로컬 전용)" 그룹으로 보이고 고르면 서버에서 받아 동작함', E0.groups.includes('외부 솔버 결과 (로컬 전용)') && E0.opts === 13 && /외부 솔버 결과 1개 포함, 서버가 줄 때만 보임/.test(E0.src) && apiLog.includes('/api/library/ext_mock') && E1.sel === 'ext_mock' && E1.it > 550 && /외부 솔버 결과 \(모의\)/.test(E1.badge) && !/Warp/.test(E1.badge), JSON.stringify({ E0, E1 }));
   await sleep(500);
   ok('LIVE 시뮬레이션으로 옮기면 서버 연결이 끊김', mock.wss.clients.size === 0, `${mock.wss.clients.size}개 연결`);
   await lp.$eval('#rail [data-mode="rec"]', (e) => e.click());
@@ -836,7 +848,7 @@ await pc.close();
   await fp.select('#scenario-select', 'supply_24');
   await sleep(800);
   const F = await fp.evaluate(() => ({ src: document.getElementById('data-source').textContent, cool: window.__viewer.store.aggregates.cooling_power, opts: document.querySelectorAll('#scenario-select option').length }));
-  ok('DATA 서버에 데이터 API가 없어도 사이트의 파일로 미리 계산한 값이 동작하고 출처를 알림', /서버에 데이터 API 없음/.test(F.src) && F.cool < 28 && F.opts === 12, JSON.stringify(F));
+  ok('DATA 서버에 데이터 API가 없어도 사이트의 파일로 미리 계산한 값이 동작하고 출처를 알림(외부 솔버 결과는 없음)', /서버에 데이터 API 없음/.test(F.src) && F.cool < 28 && F.opts === 12, JSON.stringify(F));
   await fp.close();
   bare.wss.close();
   bare.http.close();

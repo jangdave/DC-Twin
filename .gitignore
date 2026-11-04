@@ -77,3 +77,9 @@ blender/textures/hall/
 
 # 감독 프로그램 등이 만드는 실행 중 임시 파일
 experiments/openfoam_baseline/hb.txt
+
+# 외부 CFD 도구(상용 포함)의 결과와 모델 파일은 저장소에 올리지 않는다(docs/04, CLAUDE.md). 변환 결과도 sim/out/local_only/ 아래에만 둔다.
+*.vtk
+*.vtu
+*.vti
+*.room

@@ -62,10 +62,58 @@ docker run --rm -p 127.0.0.1:8765:8765 dct-sim-server
 ### 밖에 열기(공개 사이트에서 쓰려면)
 GitHub Pages 같은 `https://` 페이지는 암호화되지 않은 서버(`ws://`, `http://`)에 `127.0.0.1` 밖으로는 접속하지 못하고, 웹 화면도 `wss://`만 받는다(`src/url.js`). 밖에 열려면 **TLS를 끝내 주는 앞단**(Caddy, nginx, Cloudflare Tunnel 등)을 두고 서버는 그 뒤에서 `127.0.0.1`로 연다. 인증과 요청 제한도 앞단에서 건다. 이 저장소는 그 구성을 제공하지 않는다. 열기 전에 [ADR-004](../docs/decisions/ADR-004-streaming-hosting.md)의 호스팅 결정을 먼저 본다.
 
+## 외부 솔버 결과 (상용 도구 포함)
+
+상용 CFD 도구(예: Cadence Reality DC)나 다른 솔버의 계산 결과를 이 서버를 거쳐 **이 컴퓨터의 화면에서만** 볼 수 있게 하는 파이프라인이다. **구성만 해 둔 것**이며, 실제 외부 도구의 파일로는 시험하지 못했다(합성 파일로만 확인).
+
+### 지켜야 하는 규칙 ([docs/04](../docs/04_clean_room_policy.md), [CLAUDE.md](../CLAUDE.md))
+- 상용 도구로 계산한 결과나 화면을 **저장소, PR, 영상, 문서에 올리지 않는다.** 회사 프로젝트의 파일(`.room` 등)과 데이터를 쓰지 않는다. 우리 가상 홀의 형상으로 계산한 결과만 다룬다.
+- 상용 도구의 결과를 개인 포트폴리오 용도로 계산해도 되는지는 **라이선스와 회사 규정에 달려 있다.** 이 도구는 그것을 판단하지 않는다. 사용자가 확인한 뒤에 쓴다.
+- 그래서 파이프라인은 결과가 새어 나가지 않게 만들었다.
+  - 출력은 git이 무시하는 위치에만 쓴다(기본 `sim/out/local_only/external_pack/`). 저장소에 올라갈 수 있는 위치는 거절한다(`ensure_ignored`).
+  - `.gitignore`가 `*.vtk`, `*.vtu`, `*.vti`, `*.room`을 막는다.
+  - CI가 저장소에 그런 파일이 없는지, 공개 사이트의 목록과 녹화에 외부 항목이 없는지 시험한다(`web/viewer/test/external_guard.test.js`).
+  - 화면은 **서버가 줄 때만** 외부 항목을 본다(서버에 연결해야 한다). 항목을 고르면 모드 표시가 "외부 솔버 결과 (도구 이름) · 이 컴퓨터의 서버만 줌"으로 바뀌어 우리 모델의 값과 구분된다.
+
+### 흐름
+```
+외부 도구의 .vtk ──(inspect로 구조 확인)──▶ mapping.json(단위, 축, 원점, 값 이름, 조건)
+      │
+      ▼  python -m dct_sensors.external build
+앵커 위치(server/data/anchors.json)에서 온도를 읽음 ──▶ 녹화 JSON(정상 상태 300초) ──▶ sim/out/local_only/external_pack/
+                                                                                              │
+                                  서버: --extra-data-dir sim/out/local_only/external_pack ◀──┘
+                                                │
+                                웹: 시뮬레이션 메뉴 "외부 솔버 결과 (로컬 전용)" 그룹
+```
+
+### 쓰는 방법
+```powershell
+cd sim\sensors
+# 1) 파일의 구조를 본다(좌표 범위, 값 이름과 범위). 단위는 파일에 없어서 mapping의 unit으로 알려 준다
+uv run --python 3.13 python -m dct_sensors.external inspect <결과.vtk>
+# 2) mapping.json을 쓴다(항목 설명은 sim/sensors/dct_sensors/external/mapping.py 머리말)
+# 3) 변환한다
+uv run --python 3.13 python -m dct_sensors.external build --vtk <결과.vtk> --mapping mapping.json --id ext_case1 --title "사례 1" --note "설명"
+# 4) 서버를 묶음과 함께 띄운다
+.\server\run_local.ps1 -Solver l0   # 묶음을 쓰려면 --extra-data-dir 인자를 직접 준다(아래)
+uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ..\..\server\data\sensor_manifest.json --solver l0 --data-dir ..\..\web\viewer\public\data --extra-data-dir ..\out\local_only\external_pack
+```
+파일 없이 전체 흐름만 확인하려면 `python -m dct_sensors.external demo`(합성 시험 데이터로 `ext_demo`를 만든다. **실제 계산 결과가 아니다**).
+
+### 무엇을 읽고 무엇을 채우나 (정직하게)
+- **읽는 것:** 랙 입구·출구 온도와 CRAC 회수 온도를, 센서 앵커(가상 홀 USD에서 뽑은 위치) 가장 가까운 점의 값으로. 앵커가 `max_distance_cm` 안에 값이 없으면 **실패하고** 좌표 범위와 확인할 항목(unit, axes, origin_cm)을 알려 준다.
+- **채우는 것:** 전력, 팬 속도, 급기 온도는 mapping의 `case`에 있으면 그 값, 없으면 정상 가동 녹화의 평균. 어느 센서가 CFD 값이고 어느 것이 채운 값인지 녹화의 `meta.filled`에 남는다.
+- 외부 계산은 **정상 상태 한 장면**이라 300초 동안 같은 값이다(시간 변화 없음). 집계(IT, 냉각, 설비 전력, PUE)는 우리 식으로 합성한다.
+- 알람은 서버, 생성기와 같은 판정 규칙(연속 2회, 히스테리시스)으로 계산한다.
+- 지원하는 입력: 레거시 `.vtk`(ASCII, BINARY)의 STRUCTURED_POINTS, RECTILINEAR_GRID, STRUCTURED_GRID, UNSTRUCTURED_GRID(점 값 또는 셀 값). 지원하지 않는 것: XML(`.vtu`, `.vti`), POLYDATA, 압축, 비정렬 값의 보간(가장 가까운 점 값을 쓴다).
+- **한계:** 실제 외부 도구의 `.vtk`로 시험하지 못했다. 시험은 이 저장소가 만든 합성 파일과 OpenFOAM `foamToVTK` 모양(UNSTRUCTURED_GRID, CELL_DATA)을 흉내 낸 파일로 한다. 실제 파일이 이 모양과 다르면 `inspect` 단계에서 이유와 함께 거절한다. 그때 읽기 코드를 고쳐야 한다.
+
 ## 파일
 | 파일 | 내용 |
 |---|---|
 | `data/sensor_manifest.json` | 센서 매니페스트 사본(`scripts/usd_tools/build_manifest.py`가 USD에서 만든 것). 원본(`sim/out/`)은 gitignore라서 서버가 쓰도록 사본을 둔다. 같은지 시험이 확인한다 |
+| `data/anchors.json` | 센서 앵커 위치 사본(가상 홀 USD에서 `scripts/export_anchors.py`로 뽑음). 외부 결과 변환이 쓴다 |
 | `Dockerfile`, `Dockerfile.dockerignore`, `docker-compose.yml` | CPU 이미지(L0 + 데이터 API) |
 | `run_local.ps1` | A 방법을 한 줄로 |
 

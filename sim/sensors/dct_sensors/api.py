@@ -54,13 +54,13 @@ def origin_allowed(origin: str | None, allowed) -> bool:
 
 
 class DataApi:
-    def __init__(self, data_dir: Path | None, origins, meta: dict, clock=time.monotonic):
+    def __init__(self, data_dir: Path | None, origins, meta: dict, clock=time.monotonic, extra_dirs=()):
         self.meta = meta
         self.origins = origins
         self.clock = clock
         self.index: list[dict] = []
         self.groups: list[dict] = []
-        self.files: dict[str, str] = {}  # 항목 id -> 녹화 파일 이름(확장자 없음)
+        self.files: dict[str, tuple[Path, str]] = {}  # 항목 id -> (자료 폴더, 녹화 파일 이름(확장자 없음))
         self.dir = Path(data_dir) if data_dir else None
         self._cache: dict[str, tuple[bytes, bytes]] = {}  # 키 -> (원본, gzip)
         self._window = (clock(), 0)
@@ -70,8 +70,22 @@ class DataApi:
             self.groups = json.loads(lib.read_text(encoding="utf-8")).get("groups", []) if lib.exists() else []
             for it in self.index:
                 if ID_RE.match(it["id"]):
-                    self.files[it["id"]] = it.get("file") or it["id"]
-        self.meta = {**meta, "library": bool(self.files), "libraryEntries": len(self.files)}
+                    self.files[it["id"]] = (self.dir, it.get("file") or it["id"])
+        # 추가 자료 폴더(예: 외부 솔버 결과 묶음, 이 컴퓨터에만 있는 것). 같은 id는 기본 자료가 우선한다.
+        self.external = 0
+        for d in (Path(x) for x in extra_dirs):
+            if not (d / "index.json").exists():
+                continue
+            lib = d / "library.json"
+            for g in (json.loads(lib.read_text(encoding="utf-8")).get("groups", []) if lib.exists() else []):
+                if all(g["id"] != x["id"] for x in self.groups):
+                    self.groups.append(g)
+            for it in json.loads((d / "index.json").read_text(encoding="utf-8")):
+                if ID_RE.match(it["id"]) and it["id"] not in self.files and (d / "rec" / f"{it.get('file') or it['id']}.json").is_file():
+                    self.index.append(it)
+                    self.files[it["id"]] = (d, it.get("file") or it["id"])
+                    self.external += it.get("source") == "external"
+        self.meta = {**meta, "library": bool(self.files), "libraryEntries": len(self.files), "externalEntries": self.external}
 
     # ---- 응답 만들기 ----
     def _base_headers(self, origin: str | None, cache: str) -> dict[str, str]:
@@ -139,10 +153,10 @@ class DataApi:
             return self._json(obj, origin, f"public, max-age={CACHE_SECONDS}", gz, key="library")
         m = re.fullmatch(r"/api/library/([a-z0-9_]{1,40})", path)
         if m and m.group(1) in self.files:
-            file = self.files[m.group(1)]
-            key = f"rec:{file}"
+            folder, file = self.files[m.group(1)]
+            key = f"rec:{folder}:{file}"
             if key not in self._cache:
-                p = self.dir / "rec" / f"{file}.json"
+                p = folder / "rec" / f"{file}.json"
                 if not p.is_file():
                     return Reply(404, {"Content-Length": "0"})
                 raw = p.read_bytes()

@@ -297,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", default=None)
     ap.add_argument("--scene", default=None, help="(l1, l2) 홀 장면 USD 경로")
     ap.add_argument("--data-dir", default=None, help="미리 계산한 값(index.json, library.json, rec/)이 있는 폴더. 기본은 저장소의 web/viewer/public/data 또는 환경 변수 DCT_DATA_DIR")
+    ap.add_argument("--extra-data-dir", action="append", default=[], help="추가로 줄 자료 폴더(예: 외부 솔버 결과 묶음 sim/out/local_only/external_pack). 이 컴퓨터의 서버가 줄 때만 화면에 보인다")
     ap.add_argument("--origin", action="append", default=[], help="허용할 웹 페이지 출처를 더한다(예: https://example.com)")
     ap.add_argument("--allow-remote", action="store_true", help="127.0.0.1이 아닌 주소로 여는 것을 허용한다(권장하지 않음)")
     args = ap.parse_args(argv)
@@ -312,7 +313,7 @@ def main(argv: list[str] | None = None) -> int:
     engine = Engine(m, cfg, args.solver, args.scenario, args.seed, kw)
     origins = DEFAULT_ORIGINS + args.origin
     data_dir = args.data_dir or os.environ.get("DCT_DATA_DIR") or (REPO / "web" / "viewer" / "public" / "data")
-    api = DataApi(data_dir if Path(data_dir).exists() else None, origins, {"name": "dct-sim-server", "version": 1, "solver": args.solver, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE)})
+    api = DataApi(data_dir if Path(data_dir).exists() else None, origins, extra_dirs=args.extra_data_dir, meta={"name": "dct-sim-server", "version": 1, "solver": args.solver, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE)})
     print(f"[서버] solver {args.solver}, 시나리오 {args.scenario}, ws://{args.host}:{args.port}/ws, 데이터 API http://{args.host}:{args.port}/api/meta (라이브러리 {api.meta['libraryEntries']}개)", file=sys.stderr)
     try:
         asyncio.run(serve(engine, args.host, args.port, args.speed, origins, api=api))

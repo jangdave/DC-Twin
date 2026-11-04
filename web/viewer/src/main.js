@@ -456,7 +456,8 @@ async function main() {
       serverData = sd;
       libSource.index = lib.index;
       if (lib.groups.length) libSource.groups = lib.groups;
-      ui.setDataSource(`서버(${base})에서 받음 · 항목 ${lib.index.length}개`);
+      const ext = lib.index.filter((i) => i.source === 'external').length;
+      ui.setDataSource(`서버(${base})에서 받음 · 항목 ${lib.index.length}개${ext ? ` (이 컴퓨터의 외부 솔버 결과 ${ext}개 포함, 서버가 줄 때만 보임)` : ''}`);
       if (state.mode === 'lib') ui.setScenarios(libSource.index, libSource.scenarioId, libSource.groups);
     } catch (e) {
       serverData = null;

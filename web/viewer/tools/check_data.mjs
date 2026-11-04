@@ -137,6 +137,9 @@ if (libDef) ok('라이브러리: 정의(sim/library.json)와 웹 목록의 항�
   void mean;
 }
 
+// 외부 CFD 도구(상용 포함)의 결과는 공개 자료에 들어가면 안 된다. 서버가 줄 때만 화면에 보인다(docs/04)
+ok('공개 자료에 외부 솔버 결과 항목이나 표시가 없음', !index.some((i) => i.source === 'external' || i.group === 'external' || /^ext_/.test(i.id)) && !lib.groups.some((g) => g.id === 'external') && [...recOf.values()].every((r) => r.meta?.source !== 'external'), '');
+
 // ---- 5-2. 시뮬레이션 시작값(sim_init)이 정상 녹화와 이어지는가 ----
 const simInit = await json(path.join(DATA, 'sim_init.json'));
 ok('시작값: 랙 60기 모두 기준 전력과 위상이 있음', racks.every((n) => Number.isFinite(simInit.basePower[n.toLowerCase()]) && Number.isFinite(simInit.phase[n.toLowerCase()])), '');
