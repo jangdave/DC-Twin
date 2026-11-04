@@ -221,3 +221,18 @@ describe('LibSource(미리 계산한 값)', () => {
     expect(rec.describe().scenarios.list.every((i) => i.group === 'event')).toBe(true);
   });
 });
+
+describe('LiveSource 접근 토큰', () => {
+  it('토큰을 클라이언트에 넘기고, 인증이 거절되면 이유를 표시한다', () => {
+    let handlers;
+    const client = fakeClient();
+    const s = new LiveSource({ store: new SensorStore(sensors), url: 'wss://x/ws', control: true, token: 'tok-123456789012345', makeClient: (u, st, h) => ((handlers = h), client) });
+    s.open();
+    expect(handlers.token).toBe('tok-123456789012345');
+    client.state = 'denied';
+    client.denied = 'wrong';
+    expect(s.describe().badge).toEqual({ mode: 'closed', text: '접근 토큰이 맞지 않다. 서버 연결 창에서 토큰을 다시 넣는다' });
+    client.denied = 'missing';
+    expect(s.describe().badge.text).toMatch(/토큰을 요구한다/);
+  });
+});

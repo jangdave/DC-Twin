@@ -17,10 +17,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 import datetime as dt
+import hmac
 import ipaddress
 import json
 import os
 import re
+import secrets
 import sys
 import threading
 import time
@@ -40,7 +42,19 @@ CONTROLS_PER_SECOND = 20          # 접속 하나가 초당 보낼 수 있는 �
 SPEED_RANGE = (0.5, 20.0)
 POWER_RANGE = (0.0, 3.0)
 SUPPLY_RANGE = (14.0, 27.0)       # 급기 온도(도). 웹 간이 계산과 같은 범위
-REPO = Path(__file__).resolve().parents[3]
+MIN_TOKEN_LEN = 16                # 접근 토큰의 최소 길이
+AUTH_TIMEOUT_S = 5.0              # 접속한 뒤 이 시간 안에 첫 메시지로 토큰을 보내야 한다
+MAX_PENDING = 16                  # 아직 인증하지 않은 접속의 최대 수
+AUTH_FAILS_PER_MINUTE = 5         # 같은 주소에서 틀린 토큰을 보낼 수 있는 횟수(분당). 넘으면 잠시 막는다
+
+
+def repo_root_of(module_file: Path) -> Path | None:
+    """이 모듈이 저장소 안에 있으면 저장소 루트, 컨테이너처럼 저장소 밖에 복사되어 있으면 None."""
+    parents = Path(module_file).resolve().parents
+    return parents[3] if len(parents) > 3 and (parents[3] / "sim" / "sensors").exists() else None
+
+
+REPO = repo_root_of(Path(__file__))
 DEFAULT_ORIGINS = [
     None,  # 브라우저가 아닌 클라이언트(시험 도구)
     re.compile(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$"),
@@ -154,6 +168,8 @@ def validate_control(raw: str | bytes, manifest: Manifest) -> dict:
         d = json.loads(raw)
     except (ValueError, UnicodeDecodeError):
         raise ValueError("JSON 형식이 아니다") from None
+    if isinstance(d, dict) and d.get("type") == "auth":
+        return {"kind": "auth"}  # 인증이 꺼진 서버에 토큰을 보낸 화면: 무시한다(오류로 보이지 않게)
     if not isinstance(d, dict) or d.get("type") != "control":
         raise ValueError("control 메시지만 받는다")
     kind = d.get("kind")
@@ -190,14 +206,38 @@ def validate_control(raw: str | bytes, manifest: Manifest) -> dict:
     raise ValueError("알 수 없는 조작 종류")
 
 
+def check_token(token: str) -> str:
+    """접근 토큰이 쓸 만한지 본다. 너무 짧으면 ValueError."""
+    if not isinstance(token, str) or len(token) < MIN_TOKEN_LEN or token.strip() != token or any(c.isspace() for c in token):
+        raise ValueError(f"접근 토큰은 공백 없이 {MIN_TOKEN_LEN}자 이상이어야 한다(`--token auto`로 만들 수 있다)")
+    return token
+
+
+def parse_auth(raw) -> str | None:
+    """첫 메시지가 {"type":"auth","token":문자열}이면 토큰, 아니면 None."""
+    if not isinstance(raw, (str, bytes)) or len(raw) > MAX_MESSAGE_BYTES:
+        return None
+    try:
+        d = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if isinstance(d, dict) and d.get("type") == "auth" and isinstance(d.get("token"), str) and len(d["token"]) <= 256:
+        return d["token"]
+    return None
+
+
 def _num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf")
 
 
 class Server:
-    def __init__(self, engine: Engine, speed: float = 1.0, api: DataApi | None = None):
+    def __init__(self, engine: Engine, speed: float = 1.0, api: DataApi | None = None, token: str | None = None, clock=time.monotonic):
         self.engine = engine
         self.api = api
+        self.token = token
+        self.clock = clock
+        self.pending = 0  # 인증을 기다리는 접속 수
+        self.fails: dict[str, tuple[float, int]] = {}  # 주소 -> (창 시작, 틀린 횟수)
         self.speed = speed
         self.clients: set = set()
         self._stop = asyncio.Event()
@@ -231,9 +271,55 @@ class Server:
             return None
         return Response(reply.status, reply.reason, Headers(reply.headers), reply.body)
 
+    def _peer(self, ws) -> str:
+        addr = getattr(ws, "remote_address", None)
+        return str(addr[0]) if addr else "?"
+
+    def _blocked(self, peer: str) -> bool:
+        start, n = self.fails.get(peer, (0.0, 0))
+        return n >= AUTH_FAILS_PER_MINUTE and self.clock() - start < 60.0
+
+    def _record_fail(self, peer: str) -> None:
+        now = self.clock()
+        start, n = self.fails.get(peer, (now, 0))
+        self.fails[peer] = (now, 1) if now - start >= 60.0 else (start, n + 1)
+        if len(self.fails) > 1024:  # 오래된 기록을 버린다
+            self.fails = {k: v for k, v in self.fails.items() if now - v[0] < 60.0}
+
+    async def authenticate(self, ws) -> bool:
+        """토큰이 켜져 있으면 첫 메시지로 토큰을 받는다. 이 단계 전에는 어떤 값도 보내지 않는다. 실패하면 연결을 닫고 False."""
+        import websockets
+
+        peer = self._peer(ws)
+        if self._blocked(peer):
+            await ws.close(1013, "틀린 시도가 많아 잠시 막았다")
+            return False
+        if self.pending >= MAX_PENDING:
+            await ws.close(1013, "접속이 너무 많다")
+            return False
+        self.pending += 1
+        try:
+            try:
+                raw = await asyncio.wait_for(ws.recv(), AUTH_TIMEOUT_S)
+            except (asyncio.TimeoutError, websockets.ConnectionClosed):
+                await ws.close(1008, "인증 시간이 지났다")
+                return False
+            got = parse_auth(raw)
+            if got is None or not hmac.compare_digest(got.encode("utf-8"), self.token.encode("utf-8")):
+                self._record_fail(peer)
+                print(f"[서버] 인증 실패: {peer}", file=sys.stderr)
+                await ws.close(1008, "인증 실패")
+                return False
+            await ws.send(json.dumps({"type": "auth", "ok": True}))
+            return True
+        finally:
+            self.pending -= 1
+
     async def handler(self, ws) -> None:
         import websockets
 
+        if self.token and not await self.authenticate(ws):
+            return
         if len(self.clients) >= MAX_CLIENTS:
             await ws.close(1013, "접속이 너무 많다")
             return
@@ -252,6 +338,8 @@ class Server:
                     continue
                 try:
                     c = validate_control(raw if isinstance(raw, (bytes, str)) else "", self.engine.m)
+                    if c["kind"] == "auth":
+                        continue
                     if c["kind"] == "speed":
                         self.speed = c["value"]
                         continue
@@ -273,10 +361,10 @@ class Server:
         self._stop.set()
 
 
-async def serve(engine: Engine, host: str, port: int, speed: float = 1.0, origins=None, ready: asyncio.Event | None = None, server_box: list | None = None, api: DataApi | None = None) -> None:
+async def serve(engine: Engine, host: str, port: int, speed: float = 1.0, origins=None, ready: asyncio.Event | None = None, server_box: list | None = None, api: DataApi | None = None, token: str | None = None) -> None:
     import websockets
 
-    srv = Server(engine, speed, api)
+    srv = Server(engine, speed, api, token)
     if server_box is not None:
         server_box.append(srv)
     async with websockets.serve(srv.handler, host, port, origins=origins or DEFAULT_ORIGINS, max_size=MAX_MESSAGE_BYTES, max_queue=16, process_request=srv.process_request):
@@ -299,10 +387,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--data-dir", default=None, help="미리 계산한 값(index.json, library.json, rec/)이 있는 폴더. 기본은 저장소의 web/viewer/public/data 또는 환경 변수 DCT_DATA_DIR")
     ap.add_argument("--extra-data-dir", action="append", default=[], help="추가로 줄 자료 폴더(예: 외부 솔버 결과 묶음 sim/out/local_only/external_pack). 이 컴퓨터의 서버가 줄 때만 화면에 보인다")
     ap.add_argument("--origin", action="append", default=[], help="허용할 웹 페이지 출처를 더한다(예: https://example.com)")
-    ap.add_argument("--allow-remote", action="store_true", help="127.0.0.1이 아닌 주소로 여는 것을 허용한다(권장하지 않음)")
+    ap.add_argument("--allow-remote", action="store_true", help="127.0.0.1이 아닌 주소로 여는 것을 허용한다(접근 토큰이 필요하다)")
+    ap.add_argument("--token", default=None, help="접근 토큰(16자 이상). `auto`면 만들어서 한 번 보여 준다. 환경 변수 DCT_TOKEN도 된다. 켜면 WebSocket은 첫 메시지로 토큰을 보내야 하고 데이터 API는 Authorization: Bearer가 필요하다")
+    ap.add_argument("--private-data", action="store_true", help="토큰이 있을 때 데이터 API(/api/...)도 Authorization: Bearer를 요구한다. 기본은 공개(값이 공개 사이트에 이미 있다). 브라우저는 사전 확인을 못 해 이 모드에서 데이터를 받지 못하고 사이트의 파일을 쓴다")
+    ap.add_argument("--no-auth", action="store_true", help="127.0.0.1 밖으로 열면서 토큰을 쓰지 않는다(권장하지 않음, 누구나 조작할 수 있다)")
     args = ap.parse_args(argv)
     if not is_loopback(args.host) and not args.allow_remote:
         print(f"[서버] {args.host}는 이 컴퓨터 밖에서 접속할 수 있는 주소다. 조작을 받는 서버라 기본은 막아 둔다(--allow-remote로 허용).", file=sys.stderr)
+        return 2
+    token = args.token or os.environ.get("DCT_TOKEN") or None
+    if token == "auto":
+        token = secrets.token_urlsafe(24)
+        print(f"[서버] 접근 토큰(이 줄은 한 번만 보인다): {token}", file=sys.stderr)
+    if token:
+        try:
+            check_token(token)
+        except ValueError as e:
+            print(f"[서버] {e}", file=sys.stderr)
+            return 2
+    elif not is_loopback(args.host) and not args.no_auth:
+        print("[서버] 이 컴퓨터 밖에서 닿는 주소로 열려면 접근 토큰이 필요하다(--token auto 또는 환경 변수 DCT_TOKEN). 토큰 없이 열려면 --no-auth를 명시한다.", file=sys.stderr)
         return 2
     if not SPEED_RANGE[0] <= args.speed <= SPEED_RANGE[1]:
         print(f"[서버] --speed는 {SPEED_RANGE[0]}~{SPEED_RANGE[1]} 사이여야 한다", file=sys.stderr)
@@ -312,11 +416,12 @@ def main(argv: list[str] | None = None) -> int:
     kw = {"scene": args.scene} if args.solver in ("l1", "l2") and args.scene else {}
     engine = Engine(m, cfg, args.solver, args.scenario, args.seed, kw)
     origins = DEFAULT_ORIGINS + args.origin
-    data_dir = args.data_dir or os.environ.get("DCT_DATA_DIR") or (REPO / "web" / "viewer" / "public" / "data")
-    api = DataApi(data_dir if Path(data_dir).exists() else None, origins, extra_dirs=args.extra_data_dir, meta={"name": "dct-sim-server", "version": 1, "solver": args.solver, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE)})
+    data_dir = args.data_dir or os.environ.get("DCT_DATA_DIR") or (REPO / "web" / "viewer" / "public" / "data" if REPO else None)
+    api = DataApi(data_dir if data_dir and Path(data_dir).exists() else None, origins, extra_dirs=args.extra_data_dir, token=token, public_data=not args.private_data, meta={"name": "dct-sim-server", "version": 1, "solver": args.solver, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE)})
+    print(f"[서버] 인증: {'켬(토큰 ' + str(len(token)) + '자, 데이터 읽기는 ' + ('비공개' if args.private_data else '공개') + ')' if token else '끔(이 컴퓨터에서만 열려 있음)' if is_loopback(args.host) else '끔(--no-auth, 누구나 조작 가능)'}", file=sys.stderr)
     print(f"[서버] solver {args.solver}, 시나리오 {args.scenario}, ws://{args.host}:{args.port}/ws, 데이터 API http://{args.host}:{args.port}/api/meta (라이브러리 {api.meta['libraryEntries']}개)", file=sys.stderr)
     try:
-        asyncio.run(serve(engine, args.host, args.port, args.speed, origins, api=api))
+        asyncio.run(serve(engine, args.host, args.port, args.speed, origins, api=api, token=token))
     except KeyboardInterrupt:
         pass
     return 0

@@ -170,3 +170,70 @@ describe('라이브 연결', () => {
     expect(store.get('R1-T')).toMatchObject({ value: 22, quality: 'stale' });
   });
 });
+
+describe('접근 토큰(서버 인증)', () => {
+  const mkTok = (store, token) =>
+    new LiveClient('wss://sim.example.com/ws', store, { WebSocketImpl: FakeWS, setTimeoutImpl: (fn, ms) => (timers.push({ fn, ms }), timers.length), clearTimeoutImpl: () => {}, token });
+
+  it('토큰이 있으면 연결하자마자 첫 메시지로 보내고, 주소에는 붙이지 않는다', () => {
+    FakeWS.sent = [];
+    const c = mkTok(new SensorStore(sensors), 'secret-token-1234567890');
+    c.start();
+    expect(FakeWS.last.url).toBe('wss://sim.example.com/ws'); // 토큰이 주소(서버 로그, 브라우저 기록)에 들어가지 않는다
+    FakeWS.last.onopen();
+    expect(FakeWS.sent.map((x) => JSON.parse(x))).toEqual([{ type: 'auth', token: 'secret-token-1234567890' }]);
+  });
+
+  it('토큰이 없으면 아무것도 보내지 않는다(인증이 꺼진 서버와 같은 동작)', () => {
+    FakeWS.sent = [];
+    const c = mkTok(new SensorStore(sensors), null);
+    c.start();
+    FakeWS.last.onopen();
+    expect(FakeWS.sent).toEqual([]);
+  });
+
+  it('서버가 인증을 거절(1008)하면 다시 시도하지 않고 이유를 남긴다 - 토큰이 틀린 경우', () => {
+    timers.length = 0;
+    const c = mkTok(new SensorStore(sensors), 'wrong-token-123456789');
+    c.start();
+    FakeWS.last.onopen();
+    FakeWS.last.onclose({ code: 1008 });
+    expect(c.state).toBe('denied');
+    expect(c.denied).toBe('wrong');
+    expect(c.lastError.message).toBe('접근 토큰이 맞지 않다');
+    expect(timers).toEqual([]); // 재시도 예약이 없다(서버의 잠금을 부르지 않는다)
+  });
+
+  it('토큰 없이 연결했다가 거절되면 "토큰을 요구한다"로 구분한다', () => {
+    timers.length = 0;
+    const c = mkTok(new SensorStore(sensors), null);
+    c.start();
+    FakeWS.last.onopen();
+    FakeWS.last.onclose({ code: 1008 });
+    expect(c.denied).toBe('missing');
+    expect(c.lastError.message).toBe('서버가 접근 토큰을 요구한다');
+    expect(timers).toEqual([]);
+  });
+
+  it('1008이 아닌 끊김(네트워크, 1013 잠금)은 평소처럼 다시 시도한다', () => {
+    timers.length = 0;
+    const c = mkTok(new SensorStore(sensors), 'secret-token-1234567890');
+    c.start();
+    FakeWS.last.onopen();
+    FakeWS.last.onclose({ code: 1013 });
+    expect(c.state).toBe('closed');
+    expect(timers).toHaveLength(1);
+  });
+
+  it('서버의 인증 확인 메시지(auth)는 저장소에 반영하지 않고 버린 메시지로 세지도 않는다', () => {
+    const store = new SensorStore(sensors);
+    const c = mkTok(store, 'secret-token-1234567890');
+    c.start();
+    FakeWS.last.onopen();
+    const v = store.version;
+    FakeWS.last.onmessage({ data: JSON.stringify({ type: 'auth', ok: true }) });
+    expect(c.dropped).toBe(0);
+    c.flush();
+    expect(store.version).toBe(v);
+  });
+});

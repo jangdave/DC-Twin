@@ -110,10 +110,13 @@ export class UI {
     $('sc-max').addEventListener('click', (e) => e.currentTarget.dataset.rack && this.h.onSelect(e.currentTarget.dataset.rack, true));
     document.querySelectorAll('#mode-group [data-mode], #rail [data-mode]').forEach((b) => b.addEventListener('click', () => (b.dataset.mode === 'server' ? this.openServerDialog() : this.h.onMode(b.dataset.mode))));
     $('server-connect').addEventListener('click', () => {
-      const r = this.h.onServer($('server-url').value.trim());
+      const r = this.h.onServer($('server-url').value.trim(), $('server-token').value.trim() || null);
       $('server-error').hidden = r === true;
       if (r !== true) $('server-error').textContent = r;
-      else $('server-dialog').close();
+      else {
+        $('server-token').value = ''; // 토큰은 입력칸에 남겨 두지 않는다
+        $('server-dialog').close();
+      }
     });
     $('server-url').addEventListener('keydown', (e) => e.key === 'Enter' && (e.preventDefault(), $('server-connect').click()));
   }

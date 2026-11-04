@@ -86,3 +86,26 @@ describe('ServerData', () => {
     await expect(sd.connect()).rejects.toThrow('중단됨');
   });
 });
+
+describe('ServerData 오류 구분', () => {
+  it('토큰을 보내지 않는다(Authorization 머리글은 브라우저의 사전 확인을 부른다)', async () => {
+    const seen = [];
+    const f = async (url, opts) => (seen.push(opts.headers), { ok: true, status: 200, json: async () => ({ library: true, index, groups }) });
+    await new ServerData('http://h:1', { fetchImpl: f }).connect();
+    expect(seen.every((h) => h.Authorization === undefined && h.Accept === 'application/json')).toBe(true);
+  });
+
+  it('401은 서버가 데이터를 비공개로 둔 것이라고 알리고 status를 남긴다(화면이 이유를 구분한다)', async () => {
+    const f = async () => ({ ok: false, status: 401, json: async () => ({}) });
+    const e = await new ServerData('http://h:1', { fetchImpl: f }).connect().catch((x) => x);
+    expect(e.status).toBe(401);
+    expect(e.message).toMatch(/비공개/);
+  });
+
+  it('429는 잠시 막았다고 알린다', async () => {
+    const f = async () => ({ ok: false, status: 429, json: async () => ({}) });
+    const e = await new ServerData('http://h:1', { fetchImpl: f }).connect().catch((x) => x);
+    expect(e.status).toBe(429);
+    expect(e.message).toMatch(/잠시/);
+  });
+});

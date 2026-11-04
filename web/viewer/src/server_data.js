@@ -29,6 +29,7 @@ export function parseLibrary(d) {
 
 export class ServerData {
   // fetchImpl과 timeoutMs는 시험에서 바꿔 끼운다.
+  // 토큰은 보내지 않는다: Authorization 머리글을 붙이면 브라우저가 사전 확인(OPTIONS)을 먼저 보내는데 서버가 응답하지 못한다. 데이터 읽기는 서버에서 기본 공개다.
   constructor(base, { fetchImpl = (...a) => globalThis.fetch(...a), timeoutMs = 5000 } = {}) {
     this.base = base;
     this.fetch = fetchImpl;
@@ -44,7 +45,11 @@ export class ServerData {
     this.requests++;
     try {
       const r = await this.fetch(`${this.base}${path}`, { signal: ctl.signal, headers: { Accept: 'application/json' } });
-      if (!r.ok) throw new Error(`서버 응답 ${r.status}`);
+      if (!r.ok) {
+        const e = new Error(r.status === 401 ? '서버가 데이터도 비공개로 둔다(브라우저는 받을 수 없다)' : r.status === 429 ? '서버가 요청을 잠시 막았다' : `서버 응답 ${r.status}`);
+        e.status = r.status;
+        throw e;
+      }
       return await r.json();
     } finally {
       clearTimeout(timer);

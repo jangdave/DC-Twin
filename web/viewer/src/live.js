@@ -9,8 +9,11 @@ export function reconnectDelay(attempt) {
 
 export class LiveClient {
   // WebSocketImpl과 타이머 함수는 시험에서 바꿔 끼운다.
-  constructor(url, store, { WebSocketImpl = globalThis.WebSocket, setTimeoutImpl = setTimeout, clearTimeoutImpl = clearTimeout, onState = () => {} } = {}) {
+  // token: 서버가 접근 토큰을 요구할 때. 연결하자마자 첫 메시지로 보낸다(주소에 넣지 않으므로 서버 로그나 기록에 남지 않는다).
+  constructor(url, store, { WebSocketImpl = globalThis.WebSocket, setTimeoutImpl = setTimeout, clearTimeoutImpl = clearTimeout, onState = () => {}, token = null } = {}) {
     this.url = url;
+    this.token = token;
+    this.denied = null; // 서버가 인증을 거절하면 'missing'(토큰을 안 보냄) 또는 'wrong'(토큰이 틀림). 이때는 다시 시도하지 않는다
     this.store = store;
     this.WS = WebSocketImpl;
     // 브라우저의 setTimeout은 다른 객체의 메서드로 부르면 "Illegal invocation"이 나므로 함수로 감싼다
@@ -73,6 +76,13 @@ export class LiveClient {
     this.ws = ws;
     ws.onopen = () => {
       if (this.ws !== ws) return; // stop() 뒤 start()로 새 연결을 만들었다면 옛 연결의 늦은 알림은 버린다
+      if (this.token) {
+        try {
+          ws.send(JSON.stringify({ type: 'auth', token: this.token }));
+        } catch {
+          /* 보내지 못하면 서버가 시간 초과로 닫는다 */
+        }
+      }
       this.attempt = 0;
       this._set('open');
     };
@@ -87,10 +97,17 @@ export class LiveClient {
       this.lastMessageAt = Date.now();
     };
     ws.onerror = () => {};
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       if (this._stopped || this.ws !== ws) return;
       this.flush(); // 끊기기 전에 받아 둔 메시지를 먼저 반영해야 그 뒤의 '오래된 값' 표시가 덮어써지지 않는다
       this._markStale();
+      if (ev?.code === 1008) {
+        // 서버가 인증을 거절했다(토큰이 없거나 틀림). 같은 토큰으로 다시 시도해도 소용없으니 멈춘다(서버의 잠금을 부르지 않게)
+        this.denied = this.token ? 'wrong' : 'missing';
+        this.lastError = { message: this.denied === 'wrong' ? '접근 토큰이 맞지 않다' : '서버가 접근 토큰을 요구한다', at: Date.now() };
+        this._set('denied');
+        return;
+      }
       this._scheduleRetry();
     };
   }
@@ -113,6 +130,7 @@ export class LiveClient {
     if (!q.length) return 0;
     this.queue = [];
     for (const m of q) {
+      if (m.kind === 'auth') continue; // 인증 확인은 화면에 반영할 값이 아니다
       if (m.kind === 'error') {
         this.lastError = { message: m.message, at: Date.now() };
         continue;

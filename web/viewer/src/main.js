@@ -181,7 +181,7 @@ async function main() {
     },
     onCctv: () => dispatch({ type: 'overlay-toggle', value: 'cctv' }),
     onTimeline: (on) => dispatch({ type: 'timeline', on }),
-    onServer: (url) => connectServer(url),
+    onServer: (url, token) => connectServer(url, token),
     onPlay: () => state.player && ((state.player.playing = !state.player.playing), ui.renderTransport(state.player)),
     onSpeed: (x) => state.player && ((state.player.speed = x), ui.renderTransport(state.player)),
     onSeek: (t) => state.player && (state.player.seek(t), refresh()),
@@ -421,18 +421,20 @@ async function main() {
   }
 
   // 화면의 "로컬 서버" 단추와 주소 매개변수 server=가 부른다. 주소가 틀리면 이유 문장을, 맞으면 true를 돌려준다.
-  function connectServer(text) {
+  function connectServer(text, token = null) {
     const r = checkLiveUrl(text);
     if (!r.ok) return r.reason;
-    startLive(r.url, true);
+    if (token && (token.length > 256 || /\s/.test(token))) return '접근 토큰은 공백 없이 256자 이하여야 한다';
+    startLive(r.url, true, token);
     return true;
   }
 
-  function startLive(url, control = false) {
+  function startLive(url, control = false, token = null) {
     const src = new LiveSource({
       store,
       url,
       control,
+      token,
       simList: simSource.list,
       current: state.simScenario,
       onChange: () => {
@@ -462,7 +464,7 @@ async function main() {
     } catch (e) {
       serverData = null;
       console.warn('서버의 미리 계산한 값을 쓰지 않는다:', e.message);
-      ui.setDataSource('이 사이트에 포함된 파일 (서버에 데이터 API 없음)');
+      ui.setDataSource(e.status === 401 || e.status === 429 ? `이 사이트에 포함된 파일 (${e.message})` : '이 사이트에 포함된 파일 (서버에 데이터 API 없음)');
     }
   }
 

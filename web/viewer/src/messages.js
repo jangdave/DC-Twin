@@ -54,6 +54,8 @@ export function parseMessage(raw) {
       }
       return out;
     }
+    case 'auth': // 서버가 접근 토큰을 받았다는 확인(인증이 켜진 서버만 보낸다)
+      return { kind: 'auth', ok: m.ok === true };
     case 'error': {
       const message = str(m.message);
       return message ? { kind: 'error', message } : null;

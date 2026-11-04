@@ -8,6 +8,11 @@
 
 안전
 - 읽기 전용(GET, HEAD, OPTIONS만). 경로는 목록에서 찾은 파일만 연다(`..`이나 임의 경로는 404).
+- 데이터 읽기는 기본으로 공개다(`public_data=True`). 내용이 공개 사이트에 이미 있는 값이고, 토큰으로 지킬 것은 조작과 계산(WebSocket)이다.
+  `public_data=False`(서버의 `--private-data`)이면 `/healthz` 말고는 `Authorization: Bearer <토큰>`이 있어야 한다(없거나 틀리면 401). 토큰 비교는
+  시간 차이로 새지 않게 하고, 틀린 시도가 잦으면 429.
+  한계: 브라우저는 Authorization 머리글이 있으면 먼저 사전 확인(OPTIONS)을 보내는데, 이 서버가 쓰는 websockets는 GET만 받아 거기에 응답하지 못한다.
+  그래서 비공개 모드는 브라우저가 아닌 도구(curl, 스크립트)용이다. 웹 화면은 공개 모드에서 쓴다.
 - 웹 페이지 출처(Origin)가 허용 목록에 있을 때만 CORS 허용 머리글을 붙인다. 브라우저가 아닌 클라이언트는 그대로 받는다(공개 자료라 비밀이 아니다).
 - 초당 요청 수를 제한한다(전체 합).
 - 시각화 목적이며 공학적 정확성을 주장하지 않는다.
@@ -15,6 +20,7 @@
 from __future__ import annotations
 
 import gzip
+import hmac
 import json
 import re
 import time
@@ -24,8 +30,9 @@ from urllib.parse import urlsplit
 
 ID_RE = re.compile(r"^[a-z0-9_]{1,40}$")
 MAX_REQUESTS_PER_SECOND = 60
+MAX_AUTH_FAILURES_PER_MINUTE = 10  # 틀린 토큰 시도(전체 합). 넘으면 429
 CACHE_SECONDS = 300
-REASONS = {200: "OK", 204: "No Content", 304: "Not Modified", 404: "Not Found", 405: "Method Not Allowed", 429: "Too Many Requests", 503: "Service Unavailable"}
+REASONS = {200: "OK", 204: "No Content", 304: "Not Modified", 401: "Unauthorized", 404: "Not Found", 405: "Method Not Allowed", 429: "Too Many Requests", 503: "Service Unavailable"}
 
 
 @dataclass
@@ -54,8 +61,11 @@ def origin_allowed(origin: str | None, allowed) -> bool:
 
 
 class DataApi:
-    def __init__(self, data_dir: Path | None, origins, meta: dict, clock=time.monotonic, extra_dirs=()):
+    def __init__(self, data_dir: Path | None, origins, meta: dict, clock=time.monotonic, extra_dirs=(), token: str | None = None, public_data: bool = True):
         self.meta = meta
+        self.token = token
+        self.public_data = public_data
+        self._fail_window = (clock(), 0)
         self.origins = origins
         self.clock = clock
         self.index: list[dict] = []
@@ -111,6 +121,21 @@ class DataApi:
         h["Content-Length"] = str(len(body))
         return Reply(200, h, body)
 
+    def _authorized(self, headers) -> bool:
+        got = headers.get("Authorization") or ""
+        if not got.startswith("Bearer "):
+            return False
+        return hmac.compare_digest(got[7:].encode("utf-8"), self.token.encode("utf-8"))
+
+    def _too_many_failures(self) -> bool:
+        start, n = self._fail_window
+        now = self.clock()
+        if now - start >= 60.0:
+            self._fail_window = (now, 1)
+            return False
+        self._fail_window = (start, n + 1)
+        return n + 1 > MAX_AUTH_FAILURES_PER_MINUTE
+
     def _limited(self) -> bool:
         start, n = self._window
         now = self.clock()
@@ -135,12 +160,19 @@ class DataApi:
         if method == "OPTIONS":
             h = self._base_headers(origin, "no-store")
             h["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+            h["Access-Control-Allow-Headers"] = "Authorization, Accept"
+            h["Access-Control-Max-Age"] = "600"
             h["Content-Length"] = "0"
             return Reply(204, h)
         if method not in ("GET", "HEAD"):
             return Reply(405, {"Allow": "GET, HEAD, OPTIONS", "Content-Length": "0"})
         if self._limited():
             return Reply(429, {"Retry-After": "1", "Content-Length": "0"})
+        if self.token and path != "/healthz" and not (self.public_data and (path == "/api/meta" or path.startswith("/api/library"))):
+            if not self._authorized(headers):
+                if self._too_many_failures():
+                    return Reply(429, {"Retry-After": "60", "Content-Length": "0"})
+                return Reply(401, {"WWW-Authenticate": "Bearer", "Content-Length": "0", **{k: v for k, v in self._base_headers(origin, "no-store").items()}})
         gz = "gzip" in (headers.get("Accept-Encoding") or "")
         if path == "/healthz":
             return self._json({"ok": True, "solver": self.meta.get("solver")}, origin, "no-store", False)

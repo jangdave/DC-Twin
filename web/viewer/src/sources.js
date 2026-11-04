@@ -164,12 +164,13 @@ export class SimSource {
 const STATE_TEXT = (label) => ({ connecting: `${label} 연결 중`, open: `${label} 연결됨`, idle: `${label} 중지` });
 
 export class LiveSource {
-  // opts: { store, url, control, simList, current(시나리오), onChange(), makeClient(url, store, handlers) }
-  constructor({ store, url, control = false, simList = [], current = 'normal', onChange = () => {}, makeClient = (u, s, h) => new LiveClient(u, s, h) }) {
+  // opts: { store, url, control, token(접근 토큰, 선택), simList, current(시나리오), onChange(), makeClient(url, store, handlers) }
+  constructor({ store, url, control = false, token = null, simList = [], current = 'normal', onChange = () => {}, makeClient = (u, s, h) => new LiveClient(u, s, h) }) {
     this.kind = 'live';
     this.control = control;
     this.store = store;
     this.url = url;
+    this.token = token;
     this.simList = simList;
     this.current = current;
     this.onChange = onChange;
@@ -183,7 +184,7 @@ export class LiveSource {
   }
 
   open() {
-    this.client = this.makeClient(this.url, this.store, { onState: () => this.onChange() });
+    this.client = this.makeClient(this.url, this.store, { onState: () => this.onChange(), token: this.token });
     this.client.start();
   }
 
@@ -212,6 +213,7 @@ export class LiveSource {
   stateBadge() {
     const c = this.client;
     const s = c?.state ?? 'connecting';
+    if (s === 'denied') return { mode: 'closed', text: c.denied === 'wrong' ? '접근 토큰이 맞지 않다. 서버 연결 창에서 토큰을 다시 넣는다' : '서버가 접근 토큰을 요구한다. 서버 연결 창에서 토큰을 넣는다' };
     const text = s === 'closed' ? `연결 끊김, ${Math.round((c.retryInMs ?? 0) / 1000)}초 뒤 다시 시도` : STATE_TEXT(this.label)[s] ?? `${this.label} 연결 중`;
     return { mode: s === 'open' ? 'open' : s === 'closed' ? 'closed' : 'connecting', text };
   }
