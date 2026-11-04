@@ -207,7 +207,16 @@ async function main() {
   }
 
   // ---- 화면 단계와 이동 명령 (docs/20) ----
+  // 서버실 껍데기는 처음 서버실에 들어갈 때 받는다(첫 로딩 용량을 아끼려고). 실패하면 옛 어두운 바닥으로 계속 쓴다.
+  let shellPromise = null;
+  function ensureShell() {
+    shellPromise ??= scene.loadHallShell(BASE).catch((e) => {
+      console.warn('서버실 껍데기를 받지 못해 단순 바닥으로 보여 준다:', e.message);
+    });
+    return shellPromise;
+  }
   function applyStage(instant = false) {
+    if (flow.stage === 'hall') ensureShell();
     scene.setStage(flow.stage, instant);
     ui.setStage(flow.stage);
     state.stage = flow.stage;

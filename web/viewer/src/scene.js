@@ -7,6 +7,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
 import { Airflow, loadFlow } from './airflow.js';
 import { buildCity } from './city.js';
+import { prepareShell, shellVisibility } from './hall_shell.js';
 import { SETTINGS } from './quality.js';
 import { ALARM_COLOR, barFraction, confidenceColor, sampleColor } from './colors.js';
 
@@ -124,12 +125,15 @@ export class HallScene {
     floor.position.copy(this.center);
     floor.position.y = -0.01;
     this.hall.add(floor);
+    this._plainHall = [floor];
     const grid = new THREE.GridHelper(Math.max(sx, sy) * CM, Math.round(Math.max(sx, sy) / 100), 0x2c333f, 0x232933);
     grid.position.copy(this.center);
     this.hall.add(grid);
+    this._plainHall.push(grid);
     const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(sx * CM, sz * CM, sy * CM)), new THREE.LineBasicMaterial({ color: 0x3a4352 }));
     outline.position.set(this.center.x, (sz * CM) / 2, this.center.z);
     this.hall.add(outline);
+    this._plainHall.push(outline);
 
     const boxMesh = (items, material) => {
       const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, items.length);
@@ -256,6 +260,31 @@ export class HallScene {
       }));
     }
     a.step(dtSec, timeSec);
+  }
+
+  // ---- 서버실 껍데기(바닥, 벽, 천장, 조명) ----
+  // 장면 USD의 Shell을 내보낸 glb(웹 좌표, m). 받으면 옛 어두운 바닥, 격자, 점선 상자는 숨긴다.
+  async loadHallShell(baseUrl) {
+    const gltf = await new GLTFLoader().loadAsync(`${baseUrl}models/hall_shell.glb`);
+    this.shellParts = prepareShell(gltf.scene);
+    this.shell = gltf.scene;
+    this.hall.add(this.shell);
+    for (const o of this._plainHall ?? []) o.visible = false;
+    const [sx, sy, sz] = this.data.size;
+    this._shellBounds = { minX: 0, maxX: sx * CM, minZ: -sy * CM, maxZ: 0, height: sz * CM };
+    this._dirty = true;
+    return this.shellParts.size;
+  }
+
+  _updateShell() {
+    if (!this.shell) return;
+    const v = shellVisibility(this.camera.position, this._shellBounds);
+    let changed = false;
+    for (const [name, vis] of Object.entries(v)) {
+      const o = this.shellParts.get(name);
+      if (o && o.visible !== vis) { o.visible = vis; changed = true; }
+    }
+    if (changed) this._dirty = true;
   }
 
   // ---- 장비 모양(glb) ----
@@ -798,6 +827,7 @@ export class HallScene {
     }
     this.controls.update();
     this._updateDepthRange();
+    this._updateShell();
     this._stepAirflow(dtSec, timeSec);
     if (this.stage === 'exterior') {
       this.city?.update(this.reducedMotion ? 0 : dtSec);

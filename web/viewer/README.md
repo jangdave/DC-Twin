@@ -45,6 +45,15 @@ blender -b blender/rack.blend --python blender/scripts/export_glb.py -- --out we
 blender -b blender/crac.blend --python blender/scripts/export_glb.py -- --out web/viewer/public/models
 ```
 
+## 서버실 껍데기(hall_shell.glb) 다시 만들기
+
+`public/models/hall_shell.glb`(약 100 KB, 삼각형 1,252개)는 장면 USD의 `/DC/Hall01/Shell`(바닥, 벽 4개, 천장, 걸레받이, 바닥 표시, 조명)을 웹 좌표(m, Y 위)로 바꿔 내보낸 것이다. 장면에서 읽으므로 `hall01.config.json`을 고쳐 장면을 다시 만든 뒤 아래를 실행한다. 텍스처 이미지는 넣지 않고(원본이 저장소에 없다) 타일 무늬는 웹이 코드로 그린다. 처음 서버실에 들어갈 때 받으며, 받지 못하면 옛 어두운 바닥으로 계속 쓴다. 카메라가 벽 밖이면 그 벽을, 천장 위면 천장을 숨긴다.
+
+```
+cd scripts/usd_tools
+uv run --python 3.13 python export_shell_glb.py ../../usd/scenes/hall01.usda ../../web/viewer/public/models/hall_shell.glb
+```
+
 ## 시뮬레이션 기준 자료 다시 만들기
 
 파이썬 L0와 값을 비교하는 기준 자료(`test/fixtures/sim_l0.json`)는 `sim/out/sensor_manifest.json`이 있어야 만들 수 있다.
