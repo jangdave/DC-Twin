@@ -1,5 +1,6 @@
 @import "./fonts.css";
 @import "./tokens.css";
+@import "./theme.css";
 
 /* 웹 보기 화면 스타일. 디자인 시스템 토큰(tokens.css)만 쓴다. 컴포넌트 모양은 docs/24 참고. */
 * { box-sizing: border-box; }
@@ -304,4 +305,33 @@ dialog input[type="text"]:focus { border-color: var(--border-dark); }
   #rail { flex-direction: row; }
   #rail button { flex-direction: row; width: auto; gap: var(--p-1-5); padding: var(--p-1-5) var(--p-3); }
   #stage[data-stage="hall"] #stage-tools { left: 10px; right: 10px; top: 58px; }
+}
+
+/* 어두운 테마에서 값만 바꿔서는 안 되는 곳(theme.css 참고) */
+button:disabled { background: rgba(255, 255, 255, 0.04); }
+button.on, button[aria-pressed="true"], #enter-btn, .primary { color: #fff; }
+.aisle-label.hot { color: #ffbd7a; }
+dialog { background: var(--gray-0); color: var(--text-primary); border: 1px solid var(--border-disabled); }
+dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23c1cad4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); }
+#rail button.on { color: var(--text-brand); }
+
+/* ---- 화면 개편: 3D가 화면 전체, 정보 패널은 위에 뜨는 카드(PC 폭). 상단은 집계 카드를 가운데에 ---- */
+.agg { margin: 0 auto; gap: var(--p-2); }
+.agg span { display: inline-flex; align-items: baseline; gap: var(--p-1-5); padding: var(--p-1) var(--p-3); border-radius: var(--radius-large); background: var(--gray-10); border: 1px solid var(--border-disabled); }
+.agg b { font-size: var(--text-base); }
+@media (min-width: 901px) {
+  #main { position: relative; grid-template-columns: 1fr; }
+  #side { position: absolute; z-index: 3; top: 12px; right: 12px; bottom: 12px; width: 340px; border: 1px solid var(--border-disabled); border-radius: 12px; background: var(--surface-page); backdrop-filter: blur(10px); box-shadow: var(--shadow-md); }
+  #side.collapsed { display: none; }
+  #mode-badge { right: 364px; }
+  #main.side-closed #mode-badge { right: 10px; }
+  #stage-tools { max-width: calc(100% - 88px - 364px); }
+  #main.side-closed #stage-tools { max-width: calc(100% - 98px); }
+}
+@media (max-width: 900px) { #side-toggle { display: none; } }
+@media (max-width: 700px) {
+  .agg { gap: var(--p-1-5); }
+  .agg span { flex: 1; flex-direction: column; align-items: flex-start; gap: 0; padding: var(--p-1) var(--p-2-5); white-space: nowrap; }
+  .agg b { font-size: var(--text-sm); }
 }

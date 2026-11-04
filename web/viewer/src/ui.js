@@ -88,6 +88,7 @@ export class UI {
     document.querySelectorAll('#speeds [data-speed]').forEach((b) => b.addEventListener('click', () => this.h.onSpeed(Number(b.dataset.speed))));
     $('time-slider').addEventListener('input', (e) => this.h.onSeek(Number(e.target.value)));
     $('loop-check').addEventListener('change', (e) => this.h.onLoop(e.target.checked));
+    $('side-toggle').addEventListener('click', () => this.setSideOpen($('side').classList.contains('collapsed')));
     $('help-btn').addEventListener('click', () => $('help-dialog').showModal());
     $('live-back').addEventListener('click', () => this.h.onBackToRec());
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
@@ -130,6 +131,7 @@ export class UI {
 
   showTab(name) {
     this.tab = name;
+    if (document.getElementById('side').classList.contains('collapsed') && this._sideTouched !== false) this.setSideOpen(true);
     for (const t of document.querySelectorAll('#side-tabs [data-tab]')) {
       const on = t.dataset.tab === name;
       t.setAttribute('aria-selected', String(on));
@@ -178,6 +180,13 @@ export class UI {
       x.classList.toggle('on', on);
       if (x.closest('#rail')) x.setAttribute('aria-pressed', String(on));
     });
+  }
+
+  // 오른쪽 정보 패널 접기/펴기(PC 폭에서 3D 위에 떠 있을 때)
+  setSideOpen(open) {
+    $('side').classList.toggle('collapsed', !open);
+    $('main').classList.toggle('side-closed', !open);
+    $('side-toggle').setAttribute('aria-pressed', String(open));
   }
 
   // 재생 막대: 직접 시뮬레이션과 "기록 재생 막대"를 켠 기록 보기에서만 보인다(기본 모니터링 화면에서는 숨김)

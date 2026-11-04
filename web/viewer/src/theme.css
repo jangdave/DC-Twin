@@ -1,0 +1,30 @@
+/* 어두운 화면 테마. tokens.css(디자인 시스템 값)는 그대로 두고, 같은 이름의 변수를 어두운 값으로 다시 정한다.
+   회색 눈금은 뒤집어 쓴다(0이 가장 밝은 면 -> 가장 어두운 카드 면). 그래서 style.css의 var(--gray-*)가 그대로 어두운 화면이 된다.
+   docs/27 13장 참고. 참고 사례의 코드와 이미지는 쓰지 않고 분위기(3D 위에 뜬 어두운 카드)만 참고했다. */
+:root {
+  color-scheme: dark;
+  --gray-0: #151a21; --gray-5: #0d1117; --gray-10: #1c222b; --gray-20: #2b3440; --gray-30: #3d4756; --gray-40: #5c6877;
+  --gray-50: #8794a3; --gray-60: #a4afbc; --gray-70: #c1cad4; --gray-80: #d8dfe7; --gray-90: #e8edf2; --gray-95: #f3f6f9;
+
+  --brand-5: #111a28; --brand-10: #15233a; --brand-20: #1f3a63; --brand-30: #2f5da3; --brand-40: #5b8fdc;
+  --brand-50: #2f6fe0; --brand-60: #3b7bef; --brand-70: #2f6fe0;
+
+  --text-brand: #8db8ff;
+  --text-action: #8db8ff;
+  --text-disabled: var(--gray-40);
+  --text-error: #ff8c8c;
+  --text-success: #6fd28a;
+
+  --surface-page: rgba(21, 26, 33, 0.82);
+  --surface-container: var(--gray-5);
+  --surface-disabled: var(--gray-10);
+  --border-subtle: var(--gray-30);
+  --border-disabled: var(--gray-20);
+
+  --danger-subtle: #3c1f24; --warning-subtle: #3d2a14; --caution-subtle: #38300f; --normal-subtle: #14301c;
+  --scheduled-subtle: #172b4d; --emergency-subtle: #3f1d22; --disabled-subtle: var(--gray-10);
+  --tag-normal-text: #7fdc98; --tag-caution-text: #f0cf6a; --tag-danger-text: #ff9a9a; --tag-scheduled-text: #9cc2ff;
+
+  --shadow-md: 0 6px 18px -4px rgba(0, 0, 0, 0.55);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
