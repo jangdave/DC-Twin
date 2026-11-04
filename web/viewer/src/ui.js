@@ -58,22 +58,16 @@ export class UI {
       this.h.onModels(on);
     });
     $('heat-btn').addEventListener('click', (e) => {
-      const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
-      this.setHeat(on);
-      this.h.onHeat(on);
+      this.h.onHeat(!this.heatOn);
     });
     $('flow-btn').addEventListener('click', (e) => {
       const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
       e.currentTarget.setAttribute('aria-pressed', String(on));
       this.h.onFlow(on);
     });
-    this.setHeat(false);
     this.timelineOn = false;
-    $('timeline-btn').addEventListener('click', (e) => {
-      this.timelineOn = e.currentTarget.getAttribute('aria-pressed') !== 'true';
-      e.currentTarget.setAttribute('aria-pressed', String(this.timelineOn));
-      this._syncTransport();
-    });
+    $('timeline-btn').addEventListener('click', () => this.h.onTimeline(!this.timelineOn));
+    $('cctv-btn').addEventListener('click', () => this.h.onCctv());
     $('sky-btn').addEventListener('click', (e) => {
       const dusk = e.currentTarget.getAttribute('aria-pressed') !== 'true';
       e.currentTarget.setAttribute('aria-pressed', String(dusk));
@@ -138,13 +132,6 @@ export class UI {
         e.preventDefault();
       });
     }
-    // 조작 패널이 나타나면 "조작" 탭을 열고, 사라지면 요약으로 돌아간다
-    new MutationObserver(() => {
-      const shown = !$('sim-panel').hidden;
-      for (const t of ['control', 'energy', 'prep']) $(`tab-${t}`).hidden = !shown;
-      if (shown) this.showTab('control');
-      else if (['control', 'energy', 'prep'].includes(this.tab)) this.showTab('summary');
-    }).observe($('sim-panel'), { attributes: true, attributeFilter: ['hidden'] });
     this.showTab('summary');
     this.ready = true;
   }
@@ -184,23 +171,12 @@ export class UI {
     sel.value = current;
   }
 
+  // 모드 표시(글자와 색)만 맡는다. 단추와 조각의 보임·눌림은 apply()가 한곳에서 정한다.
   setMode(mode, text) {
     const b = $('mode-badge');
     b.className = `badge ${mode}`;
     b.textContent = text;
-    const own = mode === 'rec' || mode === 'sim'; // 이 화면이 재생이나 계산을 직접 하는 방식(라이브가 아님)
     this.mode = mode;
-    this._syncTransport();
-    $('timeline-btn').hidden = mode !== 'rec';
-    $('live-info').hidden = own;
-    $('scenario-select').disabled = !own;
-    $('timebar').hidden = mode === 'sim';
-    $('loop-label').hidden = mode === 'sim';
-    document.querySelectorAll('#mode-group [data-mode], #rail [data-mode]').forEach((x) => {
-      const on = x.dataset.mode === mode;
-      x.classList.toggle('on', on);
-      if (x.closest('#rail')) x.setAttribute('aria-pressed', String(on));
-    });
   }
 
   // 아래 시트 단계: peek(접힘) < half < full
@@ -226,48 +202,60 @@ export class UI {
     $('side-toggle').setAttribute('aria-pressed', String(open));
   }
 
-  // 재생 막대: 직접 시뮬레이션과 "기록 재생 막대"를 켠 기록 보기에서만 보인다(기본 모니터링 화면에서는 숨김)
-  _syncTransport() {
-    const own = this.mode === 'rec' || this.mode === 'sim';
-    $('transport').hidden = !own || (this.mode === 'rec' && !this.timelineOn);
-  }
-
   openServerDialog() {
     $('server-error').hidden = true;
     $('server-dialog').showModal();
     $('server-url').focus();
   }
 
-  // 서버에 조작을 보내는 모드: 시나리오 선택을 열고 "로컬 서버" 단추를 강조한다
-  setControlMode(on) {
-    $('scenario-select').disabled = !on;
-    document.querySelectorAll('#mode-group [data-mode]').forEach((x) => x.classList.toggle('on', on && x.dataset.mode === 'server'));
-    if (on) document.querySelectorAll('#rail [data-mode]').forEach((x) => { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
-  }
-
   setLiveText(t) {
     $('live-text').textContent = t;
   }
 
-  // 온도 색칠 단추와 그에 딸린 조각(보기 값, 범례)을 맞춘다
-  setHeat(on) {
-    this.heatOn = on;
-    $('heat-btn').setAttribute('aria-pressed', String(on));
-    $('view-group').hidden = !on;
-    $('legend').hidden = !on || $('stage').dataset.stage === 'exterior';
-  }
-
-  // 외관과 홀에 따라 보일 조각을 바꾼다
-  setStage(stage) {
-    const ext = stage === 'exterior';
-    $('exterior-card').hidden = !ext;
-    $('stage-tools').hidden = ext;
-    $('rail').hidden = ext;
-    $('legend').hidden = ext || !this.heatOn;
-    $('back-btn').hidden = ext;
-    $('stage').dataset.stage = stage;
-    $('canvas').setAttribute('aria-label', ext ? '데이터센터 건물 외관. 건물을 누르거나 Enter를 누르면 안으로 들어간다' : '데이터센터 3D 장면. 방향키로 랙을 선택할 수 있다');
-    if (ext) $('enter-btn').focus({ preventScroll: true });
+  // 화면 반영 계층: workspace.derive()가 만든 값을 DOM에 한 번에 적용한다. 보임·눌림은 여기서만 바꾼다.
+  apply(vm, ws) {
+    const prevStage = this.stage;
+    this.stage = ws.stage;
+    this.heatOn = vm.heat;
+    this.timelineOn = ws.timeline;
+    // 왼쪽 메뉴: 눌린 단추는 하나
+    $('rail').hidden = vm.rail.hidden;
+    for (const b of document.querySelectorAll('#rail button')) {
+      const key = b.id === 'cctv-btn' ? 'cctv' : b.dataset.mode;
+      const on = vm.rail.active === key;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
+    $('mode-group').querySelector('[data-mode="server"]').classList.toggle('on', vm.serverOn);
+    // 3D 위 조각
+    $('exterior-card').hidden = !vm.exteriorCard;
+    $('stage-tools').hidden = vm.stageToolsHidden;
+    $('back-btn').hidden = vm.backHidden;
+    $('legend').hidden = vm.legendHidden;
+    $('view-group').hidden = vm.viewGroupHidden;
+    $('mode-badge').hidden = vm.modeBadgeHidden;
+    $('heat-btn').setAttribute('aria-pressed', String(vm.heat));
+    $('timeline-btn').hidden = vm.timelineBtnHidden;
+    $('timeline-btn').setAttribute('aria-pressed', String(ws.timeline));
+    // 재생과 상단
+    $('transport').hidden = vm.transportHidden;
+    $('timebar').hidden = vm.timebarHidden;
+    $('loop-label').hidden = vm.timebarHidden;
+    $('live-info').hidden = vm.liveInfoHidden;
+    $('scenario-select').disabled = vm.scenarioDisabled;
+    // 오른쪽 패널 탭
+    const was = !$('tab-control').hidden;
+    for (const t of ['control', 'energy', 'prep']) $(`tab-${t}`).hidden = !vm.controlTabs;
+    if (vm.controlTabs && !was) this.showTab(vm.homeTab);
+    else if (!vm.controlTabs && ['control', 'energy', 'prep'].includes(this.tab)) this.showTab('summary');
+    // 단계가 바뀐 때만
+    if (prevStage !== ws.stage) {
+      const ext = ws.stage === 'exterior';
+      $('stage').dataset.stage = ws.stage;
+      $('canvas').setAttribute('aria-label', ext ? '데이터센터 건물 외관. 건물을 누르거나 Enter를 누르면 안으로 들어간다' : '데이터센터 3D 장면. 방향키로 랙을 선택할 수 있다');
+      if (ext) $('enter-btn').focus({ preventScroll: true });
+    }
+    $('stage').dataset.overlay = vm.cctvOpen ? 'cctv' : '';
   }
 
   renderExterior(s) {

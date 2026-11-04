@@ -7,7 +7,7 @@
   --gray-50: #8794a3; --gray-60: #a4afbc; --gray-70: #c1cad4; --gray-80: #d8dfe7; --gray-90: #e8edf2; --gray-95: #f3f6f9;
 
   --brand-5: #111a28; --brand-10: #15233a; --brand-20: #1f3a63; --brand-30: #2f5da3; --brand-40: #5b8fdc;
-  --brand-50: #2f6fe0; --brand-60: #3b7bef; --brand-70: #2f6fe0;
+  --brand-50: #2f6fe0; --brand-60: #2a63cf; --brand-70: #2f6fe0;
 
   --text-brand: #8db8ff;
   --text-action: #8db8ff;
@@ -23,7 +23,8 @@
 
   --danger-subtle: #3c1f24; --warning-subtle: #3d2a14; --caution-subtle: #38300f; --normal-subtle: #14301c;
   --scheduled-subtle: #172b4d; --emergency-subtle: #3f1d22; --disabled-subtle: var(--gray-10);
-  --tag-normal-text: #7fdc98; --tag-caution-text: #f0cf6a; --tag-danger-text: #ff9a9a; --tag-scheduled-text: #9cc2ff;
+  --tag-normal-text: #7fdc98; --tag-caution-text: #f0cf6a; --tag-danger-text: #ff9a9a; --tag-scheduled-text: #9cc2ff; --tag-warning-text: #ffbd7a;
+  --emergency: #c43d3d; /* 흰 글자가 얹히는 알람 면: 어두운 테마에서도 대비 4.5 이상 */
 
   --shadow-md: 0 6px 18px -4px rgba(0, 0, 0, 0.55);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);

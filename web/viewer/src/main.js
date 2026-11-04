@@ -15,6 +15,7 @@ import { SimRunner } from './sim/runner.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
 import { checkLiveUrl, parseParams } from './url.js';
 import { Boot, eventFraction } from './boot.js';
+import { derive, initial as wsInitial, reduce as wsReduce } from './workspace.js';
 
 const BASE = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
@@ -147,11 +148,14 @@ async function main() {
     onView: (v) => setView(v),
     onScenario: (id) => (state.server ? serverControl({ kind: 'scenario', name: ((state.simScenario = id), id) }) : state.mode === 'sim' ? startSim(id) : loadScenario(id, 0)),
     onMode: (m) => {
+      // 왼쪽 메뉴 하나를 고르면 CCTV는 닫힌다. 이미 그 출처이면 출처는 다시 시작하지 않는다.
+      dispatch({ type: 'overlay', value: null });
+      if (!state.server && state.mode === m) return;
       if (m !== 'sim') return startRecording();
       startSim(state.simScenario);
-      scene.setHeat(true); // 시뮬레이션은 값 색이 있어야 읽힌다
-      ui.setHeat(true);
     },
+    onCctv: () => dispatch({ type: 'overlay-toggle', value: 'cctv' }),
+    onTimeline: (on) => dispatch({ type: 'timeline', on }),
     onServer: (url) => connectServer(url),
     onPlay: () => state.player && ((state.player.playing = !state.player.playing), ui.renderTransport(state.player)),
     onSpeed: (x) => state.player && ((state.player.speed = x), ui.renderTransport(state.player)),
@@ -164,7 +168,7 @@ async function main() {
       scene.setModels(b);
     },
     onFlow: (b) => scene.setAirflow(b),
-    onHeat: (b) => scene.setHeat(b),
+    onHeat: (on) => dispatch({ type: 'heat', on }),
     onSky: (n) => scene.setSky(n),
     onBackToRec: () => startRecording(),
     onEnter: () => queue.push({ name: 'view.goto', value: 'hall' }),
@@ -215,6 +219,7 @@ async function main() {
     }
     state.player = state.sim;
     ui.setMode('sim', '직접 시뮬레이션 · 간이 모델');
+    dispatch({ type: 'mode', mode: 'sim' });
     ui.setScenarios(simList, id);
     ui.setScenarioCard(SCENARIOS[id].title, SCENARIOS[id].description, SCENARIOS[id].events, false);
     panel.show(true);
@@ -229,13 +234,9 @@ async function main() {
   // ---- 가상 CCTV (docs/27 10장) ----
   const cctvCams = buildCameras(sceneData);
   const cctvSets = () => alarmSets(sceneData, (k) => store.worstAlarm(k));
-  const cctvBtn = $('cctv-btn');
   const cctv = new CctvPanel({
-    onTiles: (t) => {
-      scene.setCctv(t);
-      $('stage').classList.toggle('cctv-on', !!t);
-    },
-    onClosed: () => cctvBtn.setAttribute('aria-pressed', 'false'),
+    onTiles: (t) => scene.setCctv(t),
+    onClosed: () => dispatch({ type: 'overlay', value: null }), // 칸 안의 닫기 단추로 닫은 경우
   }, tier);
   const cctvClock = () => {
     const t = state.mode === 'sim' ? state.sim?.time : state.player?.time;
@@ -243,11 +244,23 @@ async function main() {
     const s = Math.floor(t);
     return `가상 시각 ${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   };
-  cctvBtn.addEventListener('click', () => {
-    if (cctv.isOpen) return cctv.close();
-    cctv.open(cctvCams, cctvSets(), scene.tier);
-    cctvBtn.setAttribute('aria-pressed', 'true');
-  });
+
+  // ---- 작업 공간 상태: 모든 화면 전환은 dispatch 하나로 지난다(src/workspace.js 계층 설명) ----
+  let ws = wsInitial;
+  let vm = derive(ws);
+  function dispatch(action) {
+    const next = wsReduce(ws, action);
+    if (next === ws) return;
+    const prev = vm;
+    ws = next;
+    vm = derive(ws);
+    ui.apply(vm, ws);
+    if (vm.heat !== prev.heat) scene.setHeat(vm.heat);
+    if (vm.cctvOpen && !cctv.isOpen) cctv.open(cctvCams, cctvSets(), scene.tier);
+    else if (!vm.cctvOpen && cctv.isOpen) cctv.close();
+  }
+  ui.apply(vm, ws);
+  window.__ws = () => ws;
 
   // ---- 화면 단계와 이동 명령 (docs/20) ----
   // 서버실 껍데기는 처음 서버실에 들어갈 때 받는다(첫 로딩 용량을 아끼려고). 실패하면 옛 어두운 바닥으로 계속 쓴다.
@@ -259,10 +272,9 @@ async function main() {
     return shellPromise;
   }
   function applyStage(instant = false) {
-    if (flow.stage === 'exterior') cctv.close();
     if (flow.stage === 'hall') ensureShell();
     scene.setStage(flow.stage, instant);
-    ui.setStage(flow.stage);
+    dispatch({ type: 'stage', stage: flow.stage });
     state.stage = flow.stage;
     refresh();
   }
@@ -351,6 +363,7 @@ async function main() {
     panel.show(false);
     store.clear();
     ui.setMode('rec', '녹화 재생 · 실시간 아님');
+    dispatch({ type: 'mode', mode: 'rec' });
     await loadScenario(state.scenarioId, params.t);
   }
 
@@ -410,20 +423,20 @@ async function main() {
     store.clear();
     resetServerModel();
     ui.setMode('connecting', control ? '로컬 서버 연결 중' : '라이브 연결 중');
+    dispatch({ type: 'mode', mode: 'connecting', control });
     ui.setScenarioCard(control ? '로컬 서버' : '라이브', control ? '이 컴퓨터의 계산 서버가 실제 시간으로 계산한 값을 보여 준다. 시나리오와 조작은 서버로 전달된다.' : '게이트웨이가 보내는 센서 값을 그대로 보여 준다.', [], false);
     if (control) ui.setScenarios(simList, state.simScenario);
     state.live = new LiveClient(url, store, {
       onState: (s, c) => {
         const label = control ? '로컬 서버' : '라이브';
         const text = { connecting: `${label} 연결 중`, open: `${label} 연결됨`, closed: `연결 끊김, ${Math.round(c.retryInMs / 1000)}초 뒤 다시 시도`, idle: `${label} 중지` }[s];
-        ui.setMode(s === 'open' ? 'open' : s === 'closed' ? 'closed' : 'connecting', text);
-        if (control) ui.setControlMode(true);
+        const m = s === 'open' ? 'open' : s === 'closed' ? 'closed' : 'connecting';
+        ui.setMode(m, text);
+        dispatch({ type: 'mode', mode: m, control });
         ui.setLiveText(`${url}  ${text}`);
       },
     });
     state.live.start();
-    $('live-info').hidden = false;
-    $('transport').hidden = true;
   }
 
   let lastRefresh = { version: -1, at: 0 };
@@ -495,7 +508,7 @@ async function main() {
     moveSelection(d[0], d[1]);
   });
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !e.target.closest?.('dialog')) return cctv.isOpen ? cctv.close() : void queue.push({ name: 'view.back' });
+    if (e.key === 'Escape' && !e.target.closest?.('dialog')) return ws.overlay ? dispatch({ type: 'overlay', value: null }) : void queue.push({ name: 'view.back' });
     if (e.target.closest?.('select, input, textarea, dialog, button')) return;
     if (e.key === 'Enter' && flow.stage === 'exterior') return void queue.push({ name: 'view.goto', value: 'hall' });
     if (!state.player) return;
