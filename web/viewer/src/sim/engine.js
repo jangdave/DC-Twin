@@ -1,6 +1,6 @@
 // 브라우저 간이 시뮬레이션 엔진 (docs/21). generator.py의 한 단계를 JS로 옮겼다.
 // 한 단계 = 시뮬레이션 1초. step()은 저장소에 바로 넣을 수 있는 메시지(parseMessage와 같은 모양)를 돌려준다.
-import { AlarmState, DEFAULT_CONFIG, L0Solver, SCENARIOS, SUPPLY_MAX, SUPPLY_MIN, chillerFactor, mulberry32, normal, qualityFor } from './core.js';
+import { AlarmState, DEFAULT_CONFIG, L0Solver, SCENARIOS, SUPPLY_MAX, SUPPLY_MIN, coolingPower, mulberry32, normal, qualityFor } from './core.js';
 
 const START_MS = Date.parse('2026-10-15T09:00:00.000Z');
 
@@ -136,7 +136,7 @@ export class SimEngine {
         st.breakRun();
       }
     }
-    const cooling = (this.cracs.length * cfg.cooling_base_kw + cfg.fan_power_kw * fanSum) * chillerFactor(cfg);
+    const cooling = coolingPower(cfg, this.cracs.length, this.racks.length, fanSum, itPower);
     const facility = itPower + cooling + itPower * cfg.loss_ratio;
     this.energyKwh += (facility * cfg.interval_s) / 3600;
     for (const [name, value] of [

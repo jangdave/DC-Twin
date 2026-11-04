@@ -267,12 +267,12 @@ uv run --python 3.13 python -m dct_sensors --manifest ../out/sensor_manifest.jso
 
 ## 9. 집계 값 (전력량과 효율)
 
-외관 화면과 층 화면에서 보여 주는 **건물 전체 전력, IT 전력, 냉각 전력, 효율(PUE)** 은 개별 센서 값에서 계산한다. 계산은 **게이트웨이 한 곳에서** 한다(알람 판정과 같은 이유).
+외관 화면과 층 화면에서 보여 주는 **건물 전체 전력, IT 전력, 냉각 전력, 효율(PUE)** 은 개별 센서 값에서 계산한다. 계산은 원래 **게이트웨이 한 곳에서** 하기로 했다(알람 판정과 같은 이유). **실제로는 같은 식이 세 곳에 있다**: 센서 생성기(`sim/sensors/dct_sensors/aggregates.py`, 기준), 브라우저 간이 계산(`web/viewer/src/sim/core.js`), 게이트웨이(`gateway/src/core.js`). 어긋나지 않게 공유 시험 자료(`sim/sensors/tests/aggregate_vectors.json`)를 세 구현이 함께 시험한다(알람의 `alarm_vectors.json`과 같은 방식, docs/30 M1). 게이트웨이는 명령값(급기 온도)을 모르므로 CRAC 공급 온도 센서에서 거꾸로 추정한다.
 
 | 집계 값 | 계산 | 단위 |
 |---|---|---|
 | `it_power` | 홀의 모든 랙 `power`의 합 | kW |
-| `cooling_power` | CRAC 팬 속도로 추정한 냉각 전력의 합(간단한 추정식: 팬 속도에 비례하는 값과 기본 소비의 합) | kW |
+| `cooling_power` | CRAC 팬 속도로 추정한 냉각 전력(팬 속도에 비례하는 값과 기본 소비의 합)에 **급기 온도의 효율 배수**(기준보다 1도 높으면 3% 감소, 0.6~1.3배 제한)와 **IT 부하의 배수**(냉각의 60%가 IT 전력에 비례, 기준은 랙 수 x 7.33 kW)를 곱한 값. 두 배수는 **실측이 아닌 가정**이다(2026-11-04에 부하 연동을 추가했다. 그 전에는 부하와 무관한 고정값이라 부하가 클수록 PUE가 좋아지는 논리 문제가 있었다) | kW |
 | `facility_power` | `it_power` + `cooling_power` + 손실(IT 전력의 일정 비율) | kW |
 | `pue` | `facility_power` / `it_power` | 단위 없음 |
 | `energy_kwh` | `facility_power`를 시간으로 적분한 누적값(시나리오 시작부터) | kWh |

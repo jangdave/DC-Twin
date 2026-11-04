@@ -133,8 +133,21 @@ if (libDef) ok('라이브러리: 정의(sim/library.json)와 웹 목록의 항�
   const ld = index.filter((i) => i.group === 'load').sort((a, b) => a.value - b.value);
   const it = ld.map((i) => last(rec(i.id), 'it_power'));
   const fac = ld.map((i) => last(rec(i.id), 'facility_power'));
+  const coolLoad = ld.map((i) => last(rec(i.id), 'cooling_power'));
+  ok('라이브러리: 부하가 오를수록 냉각 전력도 는다(냉각이 부하와 무관하던 논리 문제의 재발 방지, docs/30 H4)', coolLoad.every((v, i) => i === 0 || v > coolLoad[i - 1]), `냉각 ${coolLoad.map((v) => v.toFixed(1))}`);
+  ok('라이브러리: 부하 연동 덕에 PUE가 부하에 따라 크게 좋아지지 않는다(70%와 130%의 PUE 차이가 0.03 이내)', Math.abs(last(rec('load_70'), 'pue') - last(rec('load_130'), 'pue')) < 0.03, `PUE ${last(rec('load_70'), 'pue')} / ${last(rec('load_130'), 'pue')}`);
   ok('라이브러리: 부하가 오를수록 IT 전력과 설비 전력이 늘고 IT 전력은 기준 대비 비율에 가깝다', it.every((v, i) => i === 0 || v > it[i - 1]) && fac.every((v, i) => i === 0 || v > fac[i - 1]) && ld.every((l, i) => Math.abs(it[i] / it[ld.findIndex((x) => x.value === 100)] - l.value / 100) < 0.03), `IT ${it.map((v) => v.toFixed(0))}`);
   void mean;
+}
+
+// 모든 녹화가 같은 보정 모델로 만들어졌고 오래된 모델이 아니다(이전에는 이벤트 녹화 4개와 새 6개가 서로 다른 모델 버전이었다)
+{
+  const models = [...recOf.entries()].map(([id, r]) => [id, r.meta?.model]);
+  const missing = models.filter(([, m]) => !m).map(([id]) => id);
+  ok('모델 출처: 모든 녹화에 보정 모델 출처(meta.model)가 있음', missing.length === 0, `출처가 없는 녹화: ${missing.join(', ')} (센서 생성기를 다시 돌려 만든다: scripts/make_sim_library.py)`);
+  const shas = new Set(models.map(([, m]) => `${m?.model_sha256}|${m?.samples_json_sha256}`));
+  ok(`모델 출처: 모든 녹화가 같은 모델과 같은 학습 데이터로 만들어짐 (${shas.size}종)`, missing.length === 0 && shas.size === 1, [...shas].join(' / '));
+  ok('모델 출처: 오래된 모델(학습 데이터가 바뀐 뒤의 model.pkl)로 만든 녹화가 없음', models.every(([, m]) => m && m.stale !== true), models.filter(([, m]) => m?.stale).map(([id]) => id).join(', '));
 }
 
 // 외부 CFD 도구(상용 포함)의 결과는 공개 자료에 들어가면 안 된다. 서버가 줄 때만 화면에 보인다(docs/04)

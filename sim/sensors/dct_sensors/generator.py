@@ -19,6 +19,7 @@ from typing import Callable, Iterator
 
 import numpy as np
 
+from .aggregates import cooling_power, facility_power
 from .alarms import AlarmState, quality_for
 from .config import Config
 from .manifest import Manifest
@@ -163,16 +164,19 @@ class Generator:
                 self.alarms[s.sensor_id].break_run()
         # 집계(11 데이터 규격 9장): 합성 추정
         n_crac = len(self.m.cracs)
-        chiller = min(max(1.0 - cfg.cooling_gain_per_c * (cfg.t_supply - cfg.t_supply_ref), 0.6), 1.3)  # 급기 온도에 따른 냉각 효율(가정). 기준(18도)에서 1
-        cooling = (n_crac * cfg.cooling_base_kw + cfg.fan_power_kw * fan_sum) * chiller
-        facility = it_power + cooling + it_power * cfg.loss_ratio
+        cooling = cooling_power(cfg, n_crac, len(self.m.rack_names), fan_sum, it_power)  # 급기 온도와 IT 부하의 영향은 aggregates.py(웹, 게이트웨이와 공유 시험 자료)
+        facility = facility_power(cfg, it_power, cooling)
         self.energy_kwh += facility * cfg.interval_s / 3600.0
         for name, val, unit in (("it_power", it_power, "kW"), ("cooling_power", cooling, "kW"), ("facility_power", facility, "kW"),
                                 ("pue", facility / it_power if it_power > 0 else 0.0, ""), ("energy_kwh", self.energy_kwh, "kWh")):
             yield {"type": "aggregate", "name": name, "value": round(val, 4), "unit": unit, "ts": ts}
 
     def run(self, duration_s: float) -> Iterator[dict]:
-        yield {"type": "scenario", "event": "start", "name": self.sc.name, "ts": iso(self.t0)}
+        start = {"type": "scenario", "event": "start", "name": self.sc.name, "ts": iso(self.t0)}
+        prov = getattr(self.solver, "provenance", None)
+        if prov:
+            start["model"] = prov  # 어떤 보정 모델로 만든 녹화인지(모델 해시, 학습 데이터 해시, 학습 시각, 오래됨 여부)
+        yield start
         steps = int(duration_s / self.cfg.interval_s)
         for i in range(steps):
             yield from self.step(i * self.cfg.interval_s)

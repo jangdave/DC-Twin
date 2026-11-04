@@ -85,6 +85,7 @@ export async function convertRecording(jsonlPath, scenarioId, sensorIds) {
   const events = [];
   const alarmsRaw = [];
   const aggRaw = [];
+  let model = null; // 보정 모델의 출처(L2 녹화의 시작 메시지에 있다)
   const rl = readline.createInterface({ input: createReadStream(jsonlPath, 'utf8'), crlfDelay: Infinity });
   for await (const line of rl) {
     if (!line.trim()) continue;
@@ -95,6 +96,7 @@ export async function convertRecording(jsonlPath, scenarioId, sensorIds) {
     else if (r.type === 'aggregate') aggRaw.push(r);
     else if (r.type === 'alarm') alarmsRaw.push(r);
     else if (r.type === 'scenario' && r.event === 'event') events.push(r);
+    else if (r.type === 'scenario' && r.event === 'start' && r.model) model = r.model;
   }
   if (startMs === null) throw new Error(`${jsonlPath}: 비어 있다`);
   const sec = (ts) => {
@@ -135,6 +137,7 @@ export async function convertRecording(jsonlPath, scenarioId, sensorIds) {
     values,
     est,
     aggregates,
+    ...(model ? { meta: { solver: 'l2', model } } : {}),
     alarms: alarmsRaw.map((a) => ({ t: sec(a.ts), sensorId: a.sensorId, from: a.from, to: a.to, value: round3(a.value) })).sort((x, y) => x.t - y.t),
     events: events.map((e) => ({ t: e.t ?? sec(e.ts), kind: e.kind, target: e.target, value: e.value })),
   };

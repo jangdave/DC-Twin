@@ -29,8 +29,23 @@ REPO = Path(__file__).resolve().parents[3]
 SURROGATE_DIR = REPO / "experiments" / "surrogate_model"
 
 
+class StaleModelError(SystemExit):
+    """model.pkl이 지금 학습 데이터(samples.json)와 맞지 않는다."""
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def load_default_predictor():
-    """model.pkl을 읽거나, 없으면 저장소의 학습 결과로 학습한다."""
+    """model.pkl을 읽거나, 없으면 저장소의 학습 결과로 학습한다. 읽은 모델에는 출처(`provenance`)를 붙인다.
+
+    model.pkl은 저장소에 없다(gitignore). 학습 이력(`model.meta.json`, 저장소에 있음)의 samples.json 해시가 지금 samples.json과 다르면
+    모델이 지금 데이터와 맞지 않으므로 거부한다(다시 학습한다: `cd experiments/surrogate_model && uv run python train_predictor.py`).
+    지금 데이터로 일부러 옛 모델을 쓰려면 환경 변수 DCT_ALLOW_STALE_MODEL=1을 준다(녹화에 `stale: true`가 남는다).
+    """
     sys.path.insert(0, str(SURROGATE_DIR))
     try:
         import predictor as pr
@@ -38,14 +53,31 @@ def load_default_predictor():
     except ImportError as exc:
         raise SystemExit(f"L2에는 scikit-learn이 필요하다(experiments/omniverse_probe 환경에서 실행): {exc}") from exc
     pkl = SURROGATE_DIR / "model.pkl"
-    if pkl.exists():
-        return pr.ResidualPredictor.load(pkl)
     import json
+    import os
 
     samples_json = rm.BASE / "surrogate" / "samples.json"
+    if pkl.exists():
+        pred = pr.ResidualPredictor.load(pkl)
+        meta_path = pkl.with_suffix(".meta.json")
+        meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else None
+        prov = {"source": "model.pkl", "model_sha256": _sha256(pkl)}
+        if meta is None:
+            prov.update({"history": None, "stale": None})  # 학습 이력이 없다: 어떤 데이터로 만들었는지 알 수 없다
+        else:
+            stale = meta.get("samples_json_sha256") != _sha256(samples_json)
+            prov.update({"trained_at": meta["trained_at"], "n_samples": meta["n_samples"], "samples_json_sha256": meta["samples_json_sha256"], "git_commit": meta["code"]["git_commit"], "power_range_kw": meta["power_range_kw"], "stale": stale})
+            if stale and os.environ.get("DCT_ALLOW_STALE_MODEL") != "1":
+                raise StaleModelError("model.pkl이 지금 학습 데이터(samples.json)와 맞지 않는다(학습 이력의 해시가 다르다). 다시 학습한다: "
+                                      "cd experiments/surrogate_model && uv run --python 3.13 python train_predictor.py  (일부러 옛 모델을 쓰려면 DCT_ALLOW_STALE_MODEL=1)")
+        pred.provenance = prov
+        return pred
+
     specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
     data = [d for d in rm.load_dataset(rm.RES / "surrogate", samples_json, False) if not d["holdout"]]
-    return pr.ResidualPredictor().fit(data, specs)
+    pred = pr.ResidualPredictor().fit(data, specs)
+    pred.provenance = {"source": "fit_on_the_fly", "model_sha256": None, "samples_json_sha256": _sha256(samples_json), "n_samples": len(data), "stale": False}
+    return pred
 
 
 def rack_title(name: str) -> str:
@@ -69,6 +101,11 @@ class L2Solver:
     def set_supply(self, value: float) -> None:
         if hasattr(self.base, "set_supply"):
             self.base.set_supply(value)
+
+    @property
+    def provenance(self) -> dict | None:
+        """이 모델의 출처(녹화의 시작 메시지에 실린다). 시험용 가짜 예측기는 None."""
+        return getattr(self.predictor, "provenance", None)
 
     def controls_changed(self) -> None:
         if hasattr(self.base, "controls_changed"):
@@ -111,6 +148,11 @@ class L2Solver:
             self._corr[key] = cur
             val = base + cur
             out[key] = val
+            level = r.level[t]
+            if abs(shift) > 1e-9 and level == "ok":
+                # 보정 모델은 기준 급기 온도(18도)에서만 배웠다. 급기가 다르면 "온도장 전체가 같은 폭으로 이동한다"는 선형 가정으로 옮겨 쓰는데
+                # 이 가정은 18도 밖에서 검증하지 않았다. 그래서 가장 높은 등급(ok)을 주지 않고 caution으로 제한한다.
+                level = "caution"
             self.estimates[key] = {"lower": round(val - (float(r.corrected[t]) - float(r.lower90[t])), 3),
-                                   "upper": round(val + (float(r.upper90[t]) - float(r.corrected[t])), 3), "confidence": r.level[t]}
+                                   "upper": round(val + (float(r.upper90[t]) - float(r.corrected[t])), 3), "confidence": level}
         return out

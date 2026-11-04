@@ -43,6 +43,15 @@ describe('녹화 변환 (JSONL -> 센서별 배열)', () => {
     expect(() => parseRecording({ ...rec, aggregates: { pue: [1.13, 1.13] } }, ids)).not.toThrow();
   });
 
+  it('시작 메시지의 보정 모델 출처를 녹화의 meta로 옮긴다(없으면 meta 자체가 없다)', async () => {
+    const model = { source: 'model.pkl', model_sha256: 'abc', samples_json_sha256: 'def', n_samples: 64, stale: false };
+    const withModel = base();
+    withModel[0] = { ...withModel[0], model };
+    const rec = await convertRecording(await jsonl(withModel), 'x', ids);
+    expect(rec.meta).toEqual({ solver: 'l2', model });
+    expect((await convertRecording(await jsonl(base()), 'x', ids)).meta).toBeUndefined();
+  });
+
   it('1초 간격이 아니면 실패', async () => {
     const lines = base();
     lines.push({ ...sample('A', 1, 22), ts: new Date(Date.parse(ts(1)) + 500).toISOString() });
@@ -102,11 +111,23 @@ describe('저장소에 올라간 정적 자료(public/data)', () => {
     expect(scene.cracs).toHaveLength(8);
     expect(scene.vents).toHaveLength(30);
   });
-  it('팬 이상 녹화의 마지막 시각 등급이 ok 48, low 12다(Unreal 실제 연결 확인과 같다)', async () => {
+  it('팬 이상 녹화의 마지막 시각 등급이 ok 48, caution 8, low 4다', async () => {
+    // 2026-11-04 보정 모델을 낮은 부하 샘플 8개를 더해 다시 학습하면서 이전 값(ok 48, low 12)에서 바뀌었다.
+    // Unreal 실제 연결 확인(이전 값)은 이전 모델 기준이라 다시 확인해야 한다(docs/27 16.10).
     const rec = JSON.parse(await readFile(path.join(PUBLIC, 'rec', 'fan_fault.json'), 'utf8'));
     const codes = Object.values(rec.est).map((e) => e.conf.at(-1));
     expect(codes.filter((c) => c === 1)).toHaveLength(48);
-    expect(codes.filter((c) => c === 3)).toHaveLength(12);
+    expect(codes.filter((c) => c === 2)).toHaveLength(8);
+    expect(codes.filter((c) => c === 3)).toHaveLength(4);
+  });
+  it('모든 녹화가 같은 보정 모델(출처 기록)로 만들어졌다', async () => {
+    const shas = new Set();
+    for (const sc of SCENARIOS) {
+      const rec = JSON.parse(await readFile(path.join(PUBLIC, 'rec', `${sc.id}.json`), 'utf8'));
+      expect(rec.meta?.model?.stale, sc.id).toBe(false);
+      shas.add(rec.meta.model.model_sha256);
+    }
+    expect(shas.size).toBe(1);
   });
 });
 
