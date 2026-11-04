@@ -764,7 +764,7 @@ await pc.close();
   const { createRequire } = await import('node:module');
   const { WebSocketServer } = createRequire(import.meta.url)(path.join(HERE, '../../../gateway/node_modules/ws'));
   const apiLog = [];
-  const startMock = async ({ withApi }) => {
+  const startMock = async ({ withApi, token = null }) => {
     const http = createServer(async (req, res) => {
       const p = new URL(req.url, 'http://x').pathname;
       if (!withApi || !p.startsWith('/api/')) return res.writeHead(404).end();
@@ -786,13 +786,37 @@ await pc.close();
     });
     const wss = new WebSocketServer({ server: http });
     const received = [];
+    const authLog = [];
     wss.on('connection', (ws) => {
-      ws.on('message', (d) => received.push(JSON.parse(String(d))));
+      let authed = !token; // 토큰이 필요한 모의 서버: 첫 메시지가 맞는 auth여야 값을 보낸다(src/serve.py와 같은 규칙)
+      if (token) {
+        const timer = setTimeout(() => authed || ws.close(1008, 'timeout'), 3000);
+        ws.once('close', () => clearTimeout(timer));
+      }
+      ws.on('message', (d) => {
+        const m = JSON.parse(String(d));
+        if (!authed) {
+          if (m.type === 'auth' && m.token === token) {
+            authed = true;
+            authLog.push('ok');
+            ws.send(JSON.stringify({ type: 'auth', ok: true }));
+            sendSnapshot();
+          } else {
+            authLog.push('fail');
+            ws.close(1008, 'auth');
+          }
+          return;
+        }
+        received.push(m);
+      });
+      const sendSnapshot = () => {
       const sensors = JSON.parse(SENSORS_JSON).map((x) => ({ type: 'sample', sensorId: x.sensorId, value: x.range[0] + (x.range[1] - x.range[0]) * 0.3, quality: 'good', ts: '2026-10-15T09:00:00.000Z', alarm: 'normal' }));
       ws.send(JSON.stringify({ type: 'snapshot', ts: '2026-10-15T09:00:00.000Z', scenario: 'normal', sensors, aggregates: [{ name: 'it_power', value: 400 }, { name: 'cooling_power', value: 30 }, { name: 'facility_power', value: 454 }, { name: 'pue', value: 1.135 }], controls: { fan: {}, powerScale: {}, supply: 18 } }));
+      };
+      if (authed) sendSnapshot();
     });
     await new Promise((r) => http.listen(0, '127.0.0.1', r));
-    return { url: `ws://127.0.0.1:${http.address().port}/ws`, received, wss, http };
+    return { url: `ws://127.0.0.1:${http.address().port}/ws`, received, wss, http, authLog };
   };
   const mock = await startMock({ withApi: true });
   const lp = await browser.newPage();
@@ -837,6 +861,36 @@ await pc.close();
 
   // 서버가 데이터 API를 주지 않으면(예: 게이트웨이): 사이트에 포함된 파일로 계속 동작한다
   apiLog.length = 0;
+  // 접근 토큰이 필요한 서버: 틀린 토큰은 거부되고 다시 시도하지 않으며, 맞는 토큰은 연결된다. 토큰은 주소에 붙지 않는다
+  const locked = await startMock({ withApi: true, token: 'ui-check-token-1234567890' });
+  const connectVia = async (token) => {
+    const ap = await browser.newPage();
+    await ap.setViewport({ width: 1440, height: 860 });
+    const wsUrls = [];
+    ap.on('framenavigated', () => {});
+    await ap.goto(`${base}?stage=hall`, { waitUntil: 'networkidle0' });
+    await ap.evaluate(() => document.getElementById('server-dialog').showModal());
+    await ap.$eval('#server-url', (e, v) => (e.value = v), locked.url);
+    if (token) await ap.$eval('#server-token', (e, v) => (e.value = v), token);
+    await ap.$eval('#server-connect', (e) => e.click());
+    await sleep(2500);
+    const r1 = await ap.evaluate(() => ({ state: window.__viewer.state.live?.state ?? null, badge: document.getElementById('mode-badge').textContent, it: document.getElementById('agg-it').textContent, field: document.getElementById('server-token').value, href: location.href }));
+    await sleep(3500);
+    const end = await ap.evaluate(() => ({ state2: window.__viewer.state.live?.state ?? null, badge2: document.getElementById('mode-badge').textContent }));
+    await ap.close();
+    return { ...r1, ...end, wsUrls };
+  };
+  const bad = await connectVia('wrong-token-000000000000');
+  ok('AUTH 틀린 토큰은 거부되고 이유가 보이며 다시 시도하지 않고 값은 오지 않음', bad.state === 'denied' && bad.state2 === 'denied' && /접근 토큰이 맞지 않다/.test(bad.badge) && bad.it === '–' && bad.field === '' && !/token/i.test(bad.href), JSON.stringify(bad));
+  const none = await connectVia(null);
+  // 토큰을 안 보낸 접속은 서버가 인증 대기 시간(모의 3초, 실제 5초)이 지나야 거부한다
+  ok('AUTH 토큰 없이 연결하면 대기 시간 뒤 거부되고 "토큰을 요구한다"로 구분해서 알림', none.state2 === 'denied' && /서버가 접근 토큰을 요구한다/.test(none.badge2) && none.it === '–', JSON.stringify(none));
+  const good = await connectVia('ui-check-token-1234567890');
+  ok('AUTH 맞는 토큰은 연결되어 값이 보이고, 입력칸은 비워지며 주소에 토큰이 없음', good.state === 'open' && good.state2 === 'open' && good.it === '400.0 kW' && good.field === '' && !/token/i.test(good.href), JSON.stringify(good));
+  ok('AUTH 서버는 실패 2번, 성공 1번만 봤다(거부된 뒤 재시도 폭주 없음)', locked.authLog.filter((x) => x === 'fail').length <= 3 && locked.authLog.filter((x) => x === 'ok').length === 1, JSON.stringify(locked.authLog));
+  locked.wss.close();
+  locked.http.close();
+
   const bare = await startMock({ withApi: false });
   const fp = await browser.newPage();
   await fp.setViewport({ width: 1440, height: 860 });

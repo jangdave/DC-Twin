@@ -83,3 +83,8 @@ experiments/openfoam_baseline/hb.txt
 *.vtu
 *.vti
 *.room
+
+# 서버 접근 토큰 등 비밀 값
+.env
+*.env
+!*.env.example

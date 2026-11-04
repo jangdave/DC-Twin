@@ -68,10 +68,28 @@ def test_dockerignore_allows_exactly_what_the_dockerfile_copies():
             assert s in allowed, f"Dockerfile.dockerignore가 {s}를 허용하지 않는다"
 
 
-def test_compose_binds_to_loopback_only_by_default():
+def test_compose_binds_to_loopback_only_by_default_and_requires_a_token():
     text = (SERVER / "docker-compose.yml").read_text(encoding="utf-8")
     assert '"127.0.0.1:8765:8765"' in text
     assert "dockerfile: server/Dockerfile" in text
+    assert "DCT_TOKEN: ${DCT_TOKEN:?" in text  # 토큰이 없으면 compose가 시작 전에 거절한다(컨테이너는 0.0.0.0으로 열어 토큰이 필수)
+    assert "read_only: true" in text and "cap_drop: [ALL]" in text and "no-new-privileges" in text
+
+
+def test_dockerfile_never_bakes_a_token_into_the_image():
+    text = (SERVER / "Dockerfile").read_text(encoding="utf-8")
+    code = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
+    assert not any(ln.startswith(("ENV DCT_TOKEN", "ARG DCT_TOKEN")) or "--token" in ln for ln in code)
+
+
+def test_secrets_files_are_ignored_by_git():
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None or not (REPO / ".git").exists():
+        pytest.skip("git 저장소가 아님")
+    for name in ("server/.env", ".env", "prod.env"):
+        assert subprocess.run(["git", "-C", str(REPO), "check-ignore", "-q", name], capture_output=True).returncode == 0, name
 
 
 def test_run_local_script_uses_existing_paths():
@@ -88,3 +106,12 @@ def test_library_files_the_image_would_serve_are_complete():
     assert (data / "library.json").exists()
     for it in index:
         assert (data / "rec" / f"{it.get('file') or it['id']}.json").exists(), it["id"]
+
+
+def test_serve_module_imports_outside_the_repo_like_in_the_container():
+    """컨테이너에서는 /app/dct_sensors/serve.py라서 저장소 루트를 찾을 수 없다. 그래도 가져오고 시작할 수 있어야 한다(Docker 첫 실행에서 실제로 났던 오류)."""
+    from dct_sensors.serve import repo_root_of
+
+    assert repo_root_of(Path("/app/dct_sensors/serve.py")) is None
+    assert repo_root_of(Path("C:/x/dct_sensors/serve.py")) is None
+    assert repo_root_of(REPO / "sim" / "sensors" / "dct_sensors" / "serve.py") == REPO

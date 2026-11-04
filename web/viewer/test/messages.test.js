@@ -52,6 +52,10 @@ describe('라이브 메시지 검사', () => {
     expect(parseMessage({ type: 'scenario', name: 'normal', event: 'event', kind: 'reboot', target: 'x', value: 1 }).info).toBeUndefined();
     expect(parseMessage({ type: 'scenario', name: 'normal', event: 'event', kind: 'crac_fan', target: 'crac_02', value: 'a' }).info).toBeUndefined();
   });
+  it('auth 확인 메시지는 ok가 true일 때만 ok', () => {
+    expect(parseMessage({ type: 'auth', ok: true })).toEqual({ kind: 'auth', ok: true });
+    expect(parseMessage({ type: 'auth', ok: 'yes' })).toEqual({ kind: 'auth', ok: false });
+  });
   it('error 메시지는 이유만 통과', () => {
     expect(parseMessage({ type: 'error', message: '알 수 없는 CRAC' })).toEqual({ kind: 'error', message: '알 수 없는 CRAC' });
     expect(parseMessage({ type: 'error' })).toBeNull();
