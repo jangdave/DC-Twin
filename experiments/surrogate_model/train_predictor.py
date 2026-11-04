@@ -55,7 +55,7 @@ meta = {
     "trained_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     "model_sha256": sha256(a.out),
     "samples_json_sha256": sha256(samples_json),
-    "code": {"git_commit": git("rev-parse", "HEAD"), "dirty": bool(git("status", "--porcelain", "--", ":(top)experiments/surrogate_model", ":(top)experiments/openfoam_baseline/surrogate/samples.json", ":(top)experiments/openfoam_baseline/results/surrogate")), "python": platform.python_version(), "scikit_learn": sklearn.__version__, "numpy": np.__version__},
+    "code": {"git_commit": git("rev-parse", "HEAD"), "dirty": bool(git("status", "--porcelain", "--untracked-files=no", "--", ":(top)experiments/surrogate_model", ":(top)experiments/openfoam_baseline/surrogate/samples.json", ":(top)experiments/openfoam_baseline/results/surrogate")), "python": platform.python_version(), "scikit_learn": sklearn.__version__, "numpy": np.__version__},
     "only_converged": a.only_converged,
     "n_samples": len(data),
     "sample_ids": sorted(used),
