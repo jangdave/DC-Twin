@@ -8,7 +8,25 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%230e1218%27/%3E%3Crect x=%273%27 y=%273%27 width=%272%27 height=%2710%27 fill=%27%234fd8ff%27/%3E%3Crect x=%277%27 y=%275%27 width=%272%27 height=%278%27 fill=%27%2319cc4d%27/%3E%3Crect x=%2711%27 y=%274%27 width=%272%27 height=%279%27 fill=%27%23ffcc00%27/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/src/style.css" />
 </head>
-<body>
+<body aria-busy="true">
+  <div id="boot" role="status" aria-live="polite">
+    <div class="boot-card">
+      <h2 class="boot-title">DC-Twin 가상 데이터센터</h2>
+      <p class="boot-sub">건물 밖에서 안으로 들어가며 온도와 공기 흐름을 보는 화면</p>
+      <div id="boot-bar" class="boot-bar" role="progressbar" aria-label="불러오는 정도" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+      <p id="boot-text" class="boot-text">화면 준비 불러오는 중…</p>
+      <ol id="boot-steps" class="boot-steps">
+        <li data-step="data" data-state="now">화면 준비</li>
+        <li data-step="model" data-state="wait">건물 모델</li>
+        <li data-step="flow" data-state="wait">기류 데이터</li>
+      </ol>
+      <div id="boot-actions" class="boot-actions" hidden>
+        <button type="button" data-act="retry">다시 시도</button>
+        <button type="button" data-act="low" hidden>낮은 화질로 열기</button>
+      </div>
+      <p class="boot-note">가상 시설입니다. 시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않습니다.</p>
+    </div>
+  </div>
   <header id="top">
     <div class="brand">
       <h1>DC-Twin 가상 데이터센터</h1>

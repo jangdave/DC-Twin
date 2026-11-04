@@ -490,12 +490,12 @@ export class HallScene {
   }
 
   // 건물 모델(glb)을 받아 단순 상자 건물을 바꾼다. 실패하면 상자로 계속 쓴다.
-  async loadExteriorModel(baseUrl) {
+  async loadExteriorModel(baseUrl, onProgress) {
     const draco = new DRACOLoader().setDecoderPath(`${baseUrl}draco/`); // 메시 압축 해제기는 public/draco에 둔다
     const loader = new GLTFLoader().setDRACOLoader(draco);
     let gltf;
     try {
-      gltf = await loader.loadAsync(`${baseUrl}models/building.glb`);
+      gltf = await loader.loadAsync(`${baseUrl}models/building.glb`, onProgress);
     } finally {
       draco.dispose();
     }
