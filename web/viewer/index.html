@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob: ws://127.0.0.1:* ws://localhost:* wss:; base-uri 'none'; form-action 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob: ws://127.0.0.1:* ws://localhost:* wss: http://127.0.0.1:* http://localhost:* https:; base-uri 'none'; form-action 'none'" />
   <title>DC-Twin 웹 보기 화면</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%230e1218%27/%3E%3Crect x=%273%27 y=%273%27 width=%272%27 height=%2710%27 fill=%27%234fd8ff%27/%3E%3Crect x=%277%27 y=%275%27 width=%272%27 height=%278%27 fill=%27%2319cc4d%27/%3E%3Crect x=%2711%27 y=%274%27 width=%272%27 height=%279%27 fill=%27%23ffcc00%27/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/src/style.css" />
@@ -140,6 +140,7 @@
           <p><b>상세 시뮬레이션</b>은 서버에 연결해서 합니다. 서버가 열 계산(Warp와 보정 모델)을 맡고, 팬, 랙 전력, 공급 온도를 직접 바꿔 계산합니다.</p>
           <button type="button" id="server-cta-btn">서버에 연결</button>
         </div>
+        <p id="data-source" class="muted small" hidden>미리 계산한 값: 이 사이트에 포함된 파일</p>
         <section id="scenario-card" aria-label="시나리오 설명과 상황 요약">
           <h2 id="sc-title">시나리오</h2>
           <p id="sc-desc" class="muted"></p>

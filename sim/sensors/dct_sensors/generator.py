@@ -92,6 +92,12 @@ class Generator:
                 raise ValueError(f"대상 랙이 매니페스트에 없다: {target}")
             for r in targets:
                 self.power_scale[r] = value
+        elif kind == "supply_temp":
+            if not 14.0 <= value <= 27.0:
+                raise ValueError("급기 온도는 14~27도여야 한다")
+            self.cfg.t_supply = float(value)  # 모델과 집계가 같은 설정을 읽는다
+            if hasattr(self.solver, "set_supply"):
+                self.solver.set_supply(float(value))
         else:
             raise ValueError(f"알 수 없는 제어 종류: {kind}")
         if hasattr(self.solver, "controls_changed"):

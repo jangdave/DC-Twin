@@ -88,6 +88,7 @@ Blender로 직접 모델링한 **가상 데이터센터**를 OpenUSD로 정의�
 | 열·기류 데이터 | `sim/thermal/` | 볼륨 데이터(VDB) 생성. 도구는 Phase 4에서 결정(D2) | [08](08_design_review.md) P5 |
 | 게이트웨이 | `gateway/` | MQTT 수신, 알람 판정, WebSocket 전달, 녹화·재생 | [11](11_data_spec.md) |
 | Unreal 클라이언트 | `unreal/` | 3D 뷰, 알람, 그래프, 스트리밍 | [12](12_unreal_design.md) |
+| 시뮬레이션 서버 | `server/`, `sim/sensors/dct_sensors/serve.py`, `api.py` | 상세 시뮬레이션 계산(L0, L1, L2)과 미리 계산한 값 제공. 웹 화면이 연결해 쓴다 | [server/README](../server/README.md) |
 
 ## 7. 서비스 방식
 - **주력:** Pixel Streaming(웹). **기준선:** Windows 패키징(exe). **비교 대상:** Omniverse(ovrtx) 뷰어.

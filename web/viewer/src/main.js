@@ -11,6 +11,7 @@ import { SCENARIOS } from './sim/core.js';
 import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
 import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
+import { ServerData, apiBaseFromWs } from './server_data.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
 import { checkLiveUrl, parseParams } from './url.js';
 import { Boot, eventFraction } from './boot.js';
@@ -149,7 +150,19 @@ async function main() {
   // 모니터링은 이상 상황 기록만, 시뮬레이션(미리 계산한 값)은 상태와 시나리오 모음 전체. 같은 파일은 한 번만 받는다.
   const recCache = new Map();
   const sensorIds = sensors.map((s) => s.sensorId);
-  const loadRec = (file) => getJson(`data/rec/${file}.json`);
+  // 미리 계산한 값은 서버에 연결되어 있으면 서버에서 받고, 안 되면 사이트에 포함된 파일을 쓴다(대체 경로).
+  let serverData = null;
+  const loadRec = async (file) => {
+    if (serverData?.ok) {
+      try {
+        return await serverData.rec(file);
+      } catch (e) {
+        console.warn('서버에서 녹화를 받지 못해 사이트의 파일을 쓴다:', e.message);
+        ui.setDataSource('이 사이트에 포함된 파일 (서버에서 받지 못함)');
+      }
+    }
+    return getJson(`data/rec/${file}.json`);
+  };
   const recSource = new RecSource({ store, sensorIds, index: index.filter((i) => !i.group || i.group === 'event'), loadJson: loadRec, cache: recCache });
   const libSource = new LibSource({ store, sensorIds, index, loadJson: loadRec, cache: recCache, groups: libGroups });
   let simSource = null; // 패널이 만들어진 뒤에 만든다
@@ -212,7 +225,7 @@ async function main() {
     rated: sensors.find((s) => s.equipmentType === 'rack' && s.metric === 'power')?.warn ?? undefined, // 랙 전력 주의 기준을 정격으로 본다(센서 정의가 기준)
     supplyWarn: sensors.find((s) => s.metric === 'supply_temp')?.warn ?? null,
     pretty: prettyName,
-    onSupply: (v) => state.sim?.setSupply(v),
+    onSupply: (v) => (state.server ? serverControl({ kind: 'supply_temp', target: 'hall', value: v }) : state.sim?.setSupply(v)),
     onScenario: (id) => ui.h.onScenario(id),
   });
 
@@ -377,13 +390,14 @@ async function main() {
   }
 
   // 서버가 알려 준 조작 상태(snapshot의 controls와 그 뒤의 이벤트)로 슬라이더를 맞춘다. 서버가 기준이다.
-  const serverModel = { fan: {}, powerScale: {}, racks: layout.racks };
+  const serverModel = { fan: {}, powerScale: {}, racks: layout.racks, supply: null };
   let ctlSeen;
   let evSeen = 0;
   function resetServerModel() {
     const c = store.controls;
     serverModel.fan = Object.fromEntries(layout.cracs.map((x) => [x, c?.fan?.[x] ?? 1]));
     serverModel.powerScale = Object.fromEntries(layout.racks.map((r) => [r.name, c?.powerScale?.[r.name] ?? 1]));
+    serverModel.supply = Number.isFinite(c?.supply) ? c.supply : null;
     evSeen = 0;
   }
   resetServerModel();
@@ -394,7 +408,8 @@ async function main() {
     }
     for (; evSeen < store.events.length; evSeen++) {
       const e = store.events[evSeen];
-      if (e.kind === 'crac_fan' && e.target in serverModel.fan) serverModel.fan[e.target] = e.value;
+      if (e.kind === 'supply_temp') serverModel.supply = e.value;
+      else if (e.kind === 'crac_fan' && e.target in serverModel.fan) serverModel.fan[e.target] = e.value;
       else if (e.kind === 'rack_power_scale') {
         const names = e.target.startsWith('row:') ? layout.racks.filter((r) => r.row === Number(e.target.slice(4))).map((r) => r.name) : [e.target];
         for (const n of names) if (n in serverModel.powerScale) serverModel.powerScale[n] = e.value;
@@ -427,7 +442,27 @@ async function main() {
         ui.setLiveText(`${url}  ${d.badge.text}`);
       },
     });
+    connectData(url); // 서버가 미리 계산한 값도 줄 수 있는지 알아본다(기다리지 않는다)
     return useSource(src);
+  }
+
+  // 서버의 데이터 API에서 미리 계산한 값의 목록을 받는다. 실패해도 사이트에 포함된 파일로 계속 동작한다.
+  async function connectData(wsUrl) {
+    const base = apiBaseFromWs(wsUrl);
+    if (!base) return;
+    const sd = new ServerData(base);
+    try {
+      const lib = await sd.connect();
+      serverData = sd;
+      libSource.index = lib.index;
+      if (lib.groups.length) libSource.groups = lib.groups;
+      ui.setDataSource(`서버(${base})에서 받음 · 항목 ${lib.index.length}개`);
+      if (state.mode === 'lib') ui.setScenarios(libSource.index, libSource.scenarioId, libSource.groups);
+    } catch (e) {
+      serverData = null;
+      console.warn('서버의 미리 계산한 값을 쓰지 않는다:', e.message);
+      ui.setDataSource('이 사이트에 포함된 파일 (서버에 데이터 API 없음)');
+    }
   }
 
   let lastRefresh = { version: -1, at: 0 };
@@ -438,7 +473,7 @@ async function main() {
     ui.renderAlarms(sensorInfo, state.mode);
     if (state.mode === 'sim' && state.sim) panel.renderLog(state.sim.log);
     if (state.server) syncServerPanel();
-    if (state.mode === 'sim' || state.mode === 'lib' || state.server) insight.render(state.server || state.mode === 'lib' ? null : state.sim?.engine, state.mode === 'lib' ? libSource.scenarioId : state.simScenario, state.mode);
+    if (state.mode === 'sim' || state.mode === 'lib' || state.server) insight.render(state.server || state.mode === 'lib' ? null : state.sim?.engine, state.mode === 'lib' ? libSource.scenarioId : state.simScenario, state.mode, state.server ? serverModel.supply : null);
     ui.renderDetail(state.view);
     if (flow.stage === 'exterior') ui.renderExterior(summarize(store, rackKeys));
     if (cctv.isOpen) cctv.setAlarms(cctvSets());

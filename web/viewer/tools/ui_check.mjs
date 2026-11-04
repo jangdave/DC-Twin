@@ -103,7 +103,7 @@ await page.evaluate(() => window.__viewer.state.player.seek(200));
 await sleep(200);
 const alarms200 = await page.$$eval('#alarm-list li', (l) => l.length);
 await page.evaluate(() => window.__viewer.state.player.seek(10));
-await sleep(200);
+await sleep(500); // 화면 갱신은 250ms 간격 제한이 있어 되감기 직후 200ms로는 모자랄 때가 있다
 const alarms10 = await page.$$eval('#alarm-list li', (l) => l.length);
 ok('FR-12 알람 목록이 재생 시각에 따라 달라짐', alarms200 === 2 && alarms10 === 0, `(200초 ${alarms200}건, 10초 ${alarms10}건)`);
 await page.evaluate(() => window.__viewer.state.player.seek(200));
@@ -759,37 +759,87 @@ await pc.close();
   await lp.close();
 }
 
-// 출처 전환: 라이브와 로컬 서버가 어댑터를 거쳐 화면까지 이어지는가 (모의 게이트웨이를 띄워 확인)
+// 출처 전환과 서버 데이터: 라이브와 로컬 서버가 어댑터를 거쳐 화면까지 이어지는가, 서버가 미리 계산한 값을 주는가 (모의 서버: 같은 포트에 WebSocket과 HTTP 데이터 API)
 {
   const { createRequire } = await import('node:module');
   const { WebSocketServer } = createRequire(import.meta.url)(path.join(HERE, '../../../gateway/node_modules/ws'));
-  const wss = new WebSocketServer({ port: 0, host: '127.0.0.1' });
-  await new Promise((r) => wss.on('listening', r));
-  const received = [];
-  wss.on('connection', (ws) => {
-    ws.on('message', (d) => received.push(JSON.parse(String(d))));
-    const sensors = JSON.parse(SENSORS_JSON).map((x) => ({ type: 'sample', sensorId: x.sensorId, value: x.range[0] + (x.range[1] - x.range[0]) * 0.3, quality: 'good', ts: '2026-10-15T09:00:00.000Z', alarm: 'normal' }));
-    ws.send(JSON.stringify({ type: 'snapshot', ts: '2026-10-15T09:00:00.000Z', scenario: 'normal', sensors, aggregates: [{ name: 'it_power', value: 400 }, { name: 'cooling_power', value: 30 }, { name: 'facility_power', value: 454 }, { name: 'pue', value: 1.135 }], controls: { fan: {}, powerScale: {} } }));
-  });
-  const url = `ws://127.0.0.1:${wss.address().port}/ws`;
+  const apiLog = [];
+  const startMock = async ({ withApi }) => {
+    const http = createServer(async (req, res) => {
+      const p = new URL(req.url, 'http://x').pathname;
+      if (!withApi || !p.startsWith('/api/')) return res.writeHead(404).end();
+      apiLog.push(p);
+      const send = (obj) => res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }).end(typeof obj === 'string' ? obj : JSON.stringify(obj));
+      try {
+        if (p === '/api/meta') return send({ name: 'mock', solver: 'l0', library: true, controls: ['supply_temp'] });
+        if (p === '/api/library') return send({ version: 1, groups: JSON.parse(await readFile(path.join(DIST, 'data/library.json'), 'utf8')).groups, index: JSON.parse(await readFile(path.join(DIST, 'data/index.json'), 'utf8')) });
+        const m = /^\/api\/library\/([a-z0-9_]+)$/.exec(p);
+        if (m) return send(await readFile(path.join(DIST, `data/rec/${m[1]}.json`), 'utf8'));
+      } catch { /* 아래 404 */ }
+      res.writeHead(404).end();
+    });
+    const wss = new WebSocketServer({ server: http });
+    const received = [];
+    wss.on('connection', (ws) => {
+      ws.on('message', (d) => received.push(JSON.parse(String(d))));
+      const sensors = JSON.parse(SENSORS_JSON).map((x) => ({ type: 'sample', sensorId: x.sensorId, value: x.range[0] + (x.range[1] - x.range[0]) * 0.3, quality: 'good', ts: '2026-10-15T09:00:00.000Z', alarm: 'normal' }));
+      ws.send(JSON.stringify({ type: 'snapshot', ts: '2026-10-15T09:00:00.000Z', scenario: 'normal', sensors, aggregates: [{ name: 'it_power', value: 400 }, { name: 'cooling_power', value: 30 }, { name: 'facility_power', value: 454 }, { name: 'pue', value: 1.135 }], controls: { fan: {}, powerScale: {}, supply: 18 } }));
+    });
+    await new Promise((r) => http.listen(0, '127.0.0.1', r));
+    return { url: `ws://127.0.0.1:${http.address().port}/ws`, received, wss, http };
+  };
+  const mock = await startMock({ withApi: true });
   const lp = await browser.newPage();
   await lp.setViewport({ width: 1440, height: 860 });
-  await lp.goto(`${base}?stage=hall&server=${encodeURIComponent(url)}`, { waitUntil: 'networkidle0' });
+  await lp.goto(`${base}?stage=hall&server=${encodeURIComponent(mock.url)}`, { waitUntil: 'networkidle0' });
   await lp.waitForFunction(() => window.__viewer?.state.live, { timeout: 15000 });
-  await sleep(1200);
+  await sleep(1500);
   const L = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, server: window.__viewer.state.server, badge: document.getElementById('mode-badge').textContent, player: window.__viewer.state.player, panel: !document.getElementById('sim-panel').hidden, it: document.getElementById('agg-it').textContent, serverOn: document.querySelector('[data-mode="server"]').classList.contains('on'), rail: [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').length, liveInfo: !document.getElementById('live-info').hidden }));
   ok('LIVE 로컬 서버: 연결되고 스냅샷 값이 화면에 보이며 조작 패널이 열리고 "로컬 서버"만 눌림', L.mode === 'live' && L.server && /연결됨/.test(L.badge) && L.player === null && L.panel && L.it === '400.0 kW' && L.serverOn && L.rail === 0 && L.liveInfo, JSON.stringify(L));
   await lp.evaluate(() => window.__viewer.panel.h.onFan('crac_01', 0.5));
   await sleep(300);
-  ok('LIVE 슬라이더 조작이 서버로 전달됨', received.some((m) => m.type === 'control' && m.target === 'crac_01'), JSON.stringify(received.slice(-2)));
-  await lp.$eval('#rail [data-mode="rec"]', (e) => e.click());
+  ok('LIVE 슬라이더 조작이 서버로 전달됨', mock.received.some((m) => m.type === 'control' && m.target === 'crac_01'), JSON.stringify(mock.received.slice(-2)));
+  // 서버 모드의 공급 온도 슬라이더: 서버가 알려 준 값(18)으로 맞춰지고, 움직이면 supply_temp 조작이 간다
+  await lp.$eval('#side-tabs [data-tab="energy"]', (e) => e.click());
+  const sup0 = await lp.evaluate(() => ({ row: !document.querySelector('#pane-energy .sim-supply').hidden, value: document.querySelector('#pane-energy .sim-supply input').value }));
+  await lp.evaluate(() => { const i = document.querySelector('#pane-energy .sim-supply input'); i.value = '22'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  await sleep(300);
+  ok('LIVE 서버 모드에서 공급 온도 슬라이더가 서버 값으로 보이고, 움직이면 supply_temp 조작이 서버로 간다', sup0.row && sup0.value === '18' && mock.received.some((m) => m.type === 'control' && m.kind === 'supply_temp' && m.value === 22), JSON.stringify({ sup0, got: mock.received.slice(-1) }));
+  ok('DATA 서버에 연결하면 데이터 API에서 목록을 받았다(meta, library)', apiLog.includes('/api/meta') && apiLog.includes('/api/library'), JSON.stringify(apiLog));
+  // 서버에 연결한 채 시뮬레이션(미리 계산한 값)으로: 녹화를 서버에서 받는다
+  await lp.$eval('#rail [data-mode="lib"]', (e) => e.click());
+  await lp.waitForFunction(() => window.__viewer.state.mode === 'lib' && window.__viewer.state.player, { timeout: 10000 });
+  await lp.select('#scenario-select', 'supply_22');
   await sleep(800);
-  const R = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, live: window.__viewer.state.live, server: window.__viewer.state.server, panel: !document.getElementById('sim-panel').hidden, serverOn: document.querySelector('[data-mode="server"]').classList.contains('on'), badge: document.getElementById('mode-badge').textContent }));
-  ok('LIVE 서버에서 모니터링으로 돌아가면 연결이 끊기고 녹화로 바뀜', R.mode === 'rec' && R.live === null && !R.server && !R.panel && !R.serverOn, JSON.stringify(R));
+  const D1 = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, src: document.getElementById('data-source').textContent, hidden: document.getElementById('data-source').hidden, cool: window.__viewer.store.aggregates.cooling_power }));
+  ok('DATA 서버에 연결한 뒤의 시뮬레이션 값은 서버에서 받고 화면에 출처가 보임', apiLog.includes('/api/library/supply_22') && /서버\(http:\/\/127\.0\.0\.1:\d+\)에서 받음/.test(D1.src) && !D1.hidden && D1.cool < 30, JSON.stringify({ apiLog, D1 }));
   await sleep(500);
-  ok('LIVE 돌아간 뒤에도 서버로 다시 연결하지 않음', wss.clients.size === 0, `${wss.clients.size}개 연결`);
+  ok('LIVE 시뮬레이션으로 옮기면 서버 연결이 끊김', mock.wss.clients.size === 0, `${mock.wss.clients.size}개 연결`);
+  await lp.$eval('#rail [data-mode="rec"]', (e) => e.click());
+  await sleep(600);
+  const R = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, live: window.__viewer.state.live, server: window.__viewer.state.server, panel: !document.getElementById('sim-panel').hidden, serverOn: document.querySelector('[data-mode="server"]').classList.contains('on') }));
+  ok('LIVE 모니터링으로 돌아가면 녹화로 바뀌고 서버로 다시 연결하지 않음', R.mode === 'rec' && R.live === null && !R.server && !R.panel && !R.serverOn && mock.wss.clients.size === 0, JSON.stringify(R));
   await lp.close();
-  wss.close();
+  mock.wss.close();
+  mock.http.close();
+
+  // 서버가 데이터 API를 주지 않으면(예: 게이트웨이): 사이트에 포함된 파일로 계속 동작한다
+  apiLog.length = 0;
+  const bare = await startMock({ withApi: false });
+  const fp = await browser.newPage();
+  await fp.setViewport({ width: 1440, height: 860 });
+  await fp.goto(`${base}?stage=hall&server=${encodeURIComponent(bare.url)}`, { waitUntil: 'networkidle0' });
+  await fp.waitForFunction(() => window.__viewer?.state.live, { timeout: 15000 });
+  await sleep(1500);
+  await fp.$eval('#rail [data-mode="lib"]', (e) => e.click());
+  await fp.waitForFunction(() => window.__viewer.state.mode === 'lib' && window.__viewer.state.player, { timeout: 10000 });
+  await fp.select('#scenario-select', 'supply_24');
+  await sleep(800);
+  const F = await fp.evaluate(() => ({ src: document.getElementById('data-source').textContent, cool: window.__viewer.store.aggregates.cooling_power, opts: document.querySelectorAll('#scenario-select option').length }));
+  ok('DATA 서버에 데이터 API가 없어도 사이트의 파일로 미리 계산한 값이 동작하고 출처를 알림', /서버에 데이터 API 없음/.test(F.src) && F.cool < 28 && F.opts === 12, JSON.stringify(F));
+  await fp.close();
+  bare.wss.close();
+  bare.http.close();
 }
 
 await browser.close();

@@ -58,7 +58,16 @@ describe('라이브 메시지 검사', () => {
   });
   it('snapshot의 controls는 장비 이름과 숫자만 남긴다', () => {
     const m = parseMessage({ type: 'snapshot', sensors: [], aggregates: {}, controls: { fan: { crac_01: 0.5, evil: 1, crac_02: 'x' }, powerScale: { rack_01: 1.2, 'row:02': 1 } } });
-    expect(m.controls).toEqual({ fan: { crac_01: 0.5 }, powerScale: { rack_01: 1.2 } });
+    expect(m.controls).toEqual({ fan: { crac_01: 0.5 }, powerScale: { rack_01: 1.2 }, supply: null });
     expect(parseMessage({ type: 'snapshot', sensors: [], aggregates: {} }).controls).toBeNull();
+  });
+  it('서버가 알려 주는 급기 온도는 숫자일 때만 받고, supply_temp 조작 사건을 이해한다', () => {
+    const snap = (supply) => parseMessage({ type: 'snapshot', sensors: [], aggregates: {}, controls: { fan: {}, powerScale: {}, supply } });
+    expect(snap(22.5).controls.supply).toBe(22.5);
+    expect(snap('22').controls.supply).toBeNull();
+    const ev = parseMessage({ type: 'scenario', event: 'event', name: 'normal', kind: 'supply_temp', target: 'hall', value: 24, t: 12 });
+    expect(ev.info).toEqual({ kind: 'supply_temp', target: 'hall', value: 24 });
+    expect(ev.t).toBe(12);
+    expect(parseMessage({ type: 'scenario', event: 'event', name: 'normal', kind: 'evil', target: 'hall', value: 1 }).info).toBeUndefined();
   });
 });

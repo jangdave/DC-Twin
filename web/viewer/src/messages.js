@@ -48,7 +48,7 @@ export function parseMessage(raw) {
       const name = str(m.name);
       if (!name || (m.event !== 'start' && m.event !== 'end' && m.event !== 'event')) return null;
       const out = { kind: 'scenario', name, event: m.event, ts: str(m.ts) };
-      if (m.event === 'event' && ['crac_fan', 'rack_power_scale'].includes(m.kind) && str(m.target) && num(m.value) !== null) {
+      if (m.event === 'event' && ['crac_fan', 'rack_power_scale', 'supply_temp'].includes(m.kind) && str(m.target) && num(m.value) !== null) {
         out.info = { kind: m.kind, target: m.target, value: m.value };
         if (num(m.t) !== null) out.t = m.t;
       }
@@ -83,7 +83,7 @@ export function parseMessage(raw) {
       const c = m.controls;
       if (c && typeof c === 'object' && c.fan && c.powerScale) {
         const clean = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => /^(rack|crac)_\d+$/.test(k) && num(v) !== null));
-        controls = { fan: clean(c.fan), powerScale: clean(c.powerScale) };
+        controls = { fan: clean(c.fan), powerScale: clean(c.powerScale), supply: num(c.supply) }; // supply: 서버가 알려 주는 급기 온도(없으면 null)
       }
       return { kind: 'snapshot', ts: str(m.ts), scenario, sensors, aggregates, controls };
     }
