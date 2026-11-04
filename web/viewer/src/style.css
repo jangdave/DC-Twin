@@ -405,3 +405,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .cta { display: grid; gap: var(--p-2); padding: var(--p-3); border: 1px dashed var(--border-subtle); border-radius: var(--radius-medium); background: var(--surface-container); }
 .cta p { margin: 0; font-size: var(--text-sm); }
 .cta button { justify-self: start; }
+
+/* 그래픽 컨텍스트 손실 안내 */
+#gl-lost { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); z-index: 60; padding: var(--p-2) var(--p-4); border-radius: var(--radius-medium); background: var(--warning-subtle); color: var(--tag-warning-text); border: 1px solid var(--tag-warning-text); font-size: var(--text-sm); max-width: min(92vw, 560px); }
+#gl-lost[hidden] { display: none; }

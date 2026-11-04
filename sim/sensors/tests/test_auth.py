@@ -264,3 +264,85 @@ def test_no_auth_flag_is_the_only_way_to_open_remote_without_a_token(monkeypatch
 
     monkeypatch.setattr(sv.asyncio, "run", fake_run)
     assert sv.main(["--manifest", str(MANIFEST), "--host", "0.0.0.0", "--allow-remote", "--no-auth"]) == 0 and called["ok"]
+
+
+def test_silent_connections_count_as_failures_and_get_blocked(manifest, monkeypatch):
+    """아무것도 보내지 않는 접속도 틀린 시도로 센다. 반복하면 잠시 막히고 자리를 계속 차지하지 못한다."""
+    monkeypatch.setattr(sv, "AUTH_TIMEOUT_S", 0.2)
+
+    async def body(port, srv):
+        for _ in range(sv.AUTH_FAILS_PER_MINUTE):
+            ws = await connect(port)
+            assert await closed_code(ws, timeout=3) == 1008
+        ws = await connect(port)
+        assert await closed_code(ws, timeout=3) == 1013  # 잠금
+
+    run_server(manifest, body)
+
+
+def test_one_peer_cannot_hold_all_pending_slots(manifest, monkeypatch):
+    monkeypatch.setattr(sv, "AUTH_TIMEOUT_S", 3.0)
+
+    async def body(port, srv):
+        held = [await connect(port) for _ in range(sv.MAX_PENDING_PER_PEER)]
+        await asyncio.sleep(0.3)
+        assert srv.pending == sv.MAX_PENDING_PER_PEER
+        extra = await connect(port)
+        assert await closed_code(extra, timeout=2) == 1013  # 같은 주소의 추가 접속은 거절
+        assert srv.pending == sv.MAX_PENDING_PER_PEER  # 정상 인증 자리를 한 곳이 다 차지하지 못한다(최대 16 중 4)
+        # 자리를 쥔 접속이 인증하면 자리가 돌아온다
+        await held[0].send(json.dumps({"type": "auth", "token": TOKEN}))
+        assert json.loads(await held[0].recv())["ok"] is True
+        await asyncio.sleep(0.2)
+        assert srv.pending == sv.MAX_PENDING_PER_PEER - 1
+        for w in held:
+            await w.close()
+        await asyncio.sleep(0.3)
+        assert srv.pending == 0 and srv.pending_by == {}
+
+    run_server(manifest, body)
+
+
+def test_healthz_answers_even_when_the_rate_limit_is_hit(manifest):
+    now = [100.0]
+    api = DataApi(REPO / "web" / "viewer" / "public" / "data", ORIGINS, {"solver": "l0"}, clock=lambda: now[0])
+    codes = [api.route("GET", "/api/meta", {}).status for _ in range(70)]
+    assert codes.count(429) == 10  # 요청 제한이 걸린 상태에서도
+    assert api.route("GET", "/healthz", {}).status == 200  # 헬스체크는 답한다(도커가 정상 서버를 죽이지 않는다)
+
+
+def test_a_step_error_does_not_kill_the_server(manifest, monkeypatch):
+    engine = sv.Engine(manifest, Config(), "l0", "normal", seed=3)
+    calls = {"n": 0}
+    real = engine.step
+
+    def flaky():
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("계산 오류(시험)")
+        return real()
+
+    monkeypatch.setattr(engine, "step", flaky)
+
+    async def main():
+        port = free_port()
+        ready, box = asyncio.Event(), []
+        task = asyncio.create_task(sv.serve(engine, "127.0.0.1", port, speed=20.0, ready=ready, server_box=box, token=None))
+        await asyncio.wait_for(ready.wait(), 5)
+        try:
+            async with await connect(port) as ws:
+                await asyncio.wait_for(ws.recv(), 5)  # snapshot
+                for _ in range(300):
+                    m = json.loads(await asyncio.wait_for(ws.recv(), 6))  # 오류 뒤에도 값이 계속 온다
+                    if calls["n"] >= 4 and m.get("type") == "sample":
+                        return calls["n"]
+                raise AssertionError("오류 뒤에 값이 오지 않았다")
+        finally:
+            box[0].stop()
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):  # noqa: BLE001
+                pass
+
+    assert asyncio.run(main()) >= 4

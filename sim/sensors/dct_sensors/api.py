@@ -166,6 +166,8 @@ class DataApi:
             return Reply(204, h)
         if method not in ("GET", "HEAD"):
             return Reply(405, {"Allow": "GET, HEAD, OPTIONS", "Content-Length": "0"})
+        if path == "/healthz":  # 헬스체크는 요청 제한 앞에서 답한다(요청을 쏟아 부어 헬스체크를 실패시켜 컨테이너를 재시작시키는 것을 막는다)
+            return self._json({"ok": True, "solver": self.meta.get("solver")}, origin, "no-store", False)
         if self._limited():
             return Reply(429, {"Retry-After": "1", "Content-Length": "0"})
         if self.token and path != "/healthz" and not (self.public_data and (path == "/api/meta" or path.startswith("/api/library"))):

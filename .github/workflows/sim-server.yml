@@ -1,0 +1,106 @@
+# 시뮬레이션 서버, 센서 생성기, 게이트웨이, 데이터의 자동 시험. 이전에는 웹 보기 화면만 CI에서 돌았고
+# 파이썬 시험, 게이트웨이 시험, 데이터 정합성, Docker 이미지는 사람이 직접 돌릴 때만 확인됐다(docs/30 아키텍처 검토).
+# GPU가 필요한 시험(Warp, 보정 모델 L1/L2)은 여기서 돌리지 않는다.
+name: sim-server
+
+on:
+  pull_request:
+    paths:
+      - 'sim/**'
+      - 'server/**'
+      - 'gateway/**'
+      - 'scripts/**'
+      - 'web/viewer/public/data/**'
+      - 'web/viewer/tools/check_data.mjs'
+      - '.github/workflows/sim-server.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sim/**'
+      - 'server/**'
+      - 'gateway/**'
+      - 'scripts/**'
+      - 'web/viewer/public/data/**'
+      - 'web/viewer/tools/check_data.mjs'
+      - '.github/workflows/sim-server.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sim-server-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: 파이썬 시험(센서 생성기, 서버, 외부 결과 변환)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: sim/sensors
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.13'
+      - name: 시험
+        run: uv run --python 3.13 --extra serve python -m pytest tests -q
+
+  gateway:
+    name: 게이트웨이 시험
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: gateway/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  data:
+    name: 데이터 정합성(저장소 안의 자료만, 원본 재생성 비교는 건너뜀)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web/viewer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/viewer/package-lock.json
+      - run: npm ci
+      - run: node tools/check_data.mjs
+
+  docker:
+    name: Docker 이미지 빌드와 기동 확인
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: 빌드
+        run: docker build -f server/Dockerfile -t dct-sim-server .
+      - name: 토큰 없이는 시작하지 않는다
+        run: |
+          set +e
+          docker run --rm dct-sim-server
+          code=$?
+          echo "종료 코드: $code"
+          test "$code" = "2"
+      - name: 토큰을 주면 뜨고, 데이터 API가 답하고, 틀린 인증은 거부한다
+        run: |
+          docker run -d --name dct -p 127.0.0.1:18765:8765 -e DCT_TOKEN=ci-token-0123456789ABCDEF --read-only --cap-drop ALL --security-opt no-new-privileges:true dct-sim-server
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:18765/healthz && break; sleep 1; done
+          curl -sf http://127.0.0.1:18765/api/meta | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['libraryEntries']==12 and d['solver']=='l0', d"
+          curl -s -o /dev/null -w "경로 탈출: %{http_code}\n" "http://127.0.0.1:18765/api/library/..%2F..%2Fetc%2Fpasswd" | grep -q "404"
+          docker exec dct id -u | grep -q 10001
+          docker rm -f dct

@@ -236,3 +236,20 @@ describe('LiveSource 접근 토큰', () => {
     expect(s.describe().badge.text).toMatch(/토큰을 요구한다/);
   });
 });
+
+describe('RecSource 연속 전환 경쟁', () => {
+  it('느린 시나리오가 나중에 끝나도 마지막으로 연 시나리오가 이긴다', async () => {
+    const gates = {};
+    const loadJson = (file) => new Promise((resolve) => (gates[file] = () => resolve(read(`../public/data/rec/${file}.json`))));
+    const s = new RecSource({ store: new SensorStore(sensors), sensorIds: ids, index, loadJson });
+    const slow = s.open({ scenarioId: 'fan_fault' }); // 먼저 눌렀지만 늦게 끝난다
+    const fast = s.open({ scenarioId: 'normal' });
+    gates.normal();
+    await fast;
+    expect(s.scenarioId).toBe('normal');
+    gates.fan_fault();
+    await slow; // 늦게 도착해도
+    expect(s.scenarioId).toBe('normal'); // 덮어쓰지 않는다
+    expect(s.player.rec.scenario).toBe('normal');
+  });
+});

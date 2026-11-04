@@ -3,6 +3,20 @@ import { applyMessage } from './apply.js';
 import { parseMessage } from './messages.js';
 
 // 재접속 간격(ms): 2초부터 늘려 가며 최대 10초
+// 받은 메시지 큐가 이 길이를 넘으면 센서마다 가장 최근 값만 남긴다(탭이 숨겨져 화면이 못 비울 때 메모리가 늘지 않게).
+// snapshot, alarm, scenario, error 같은 사건은 순서를 지켜 모두 남긴다.
+export const QUEUE_COMPACT_AT = 2000;
+
+export function compactQueue(queue) {
+  const lastSample = new Map();
+  const lastAgg = new Map();
+  queue.forEach((m, i) => {
+    if (m.kind === 'sample') lastSample.set(m.sensorId, i);
+    else if (m.kind === 'aggregate') lastAgg.set(m.name, i);
+  });
+  return queue.filter((m, i) => (m.kind === 'sample' ? lastSample.get(m.sensorId) === i : m.kind === 'aggregate' ? lastAgg.get(m.name) === i : true));
+}
+
 export function reconnectDelay(attempt) {
   return Math.min(10000, Math.round(2000 * 1.5 ** attempt));
 }
@@ -24,6 +38,7 @@ export class LiveClient {
     this.attempt = 0;
     this.queue = [];
     this.dropped = 0; // 형식이 틀려 버린 메시지 수
+    this.compacted = 0; // 큐가 길어져 같은 센서의 옛 값을 합친 수
     this.lastMessageAt = null;
     this.retryInMs = 0;
     this._stopped = false;
@@ -95,6 +110,11 @@ export class LiveClient {
       }
       this.queue.push(m);
       this.lastMessageAt = Date.now();
+      if (this.queue.length >= QUEUE_COMPACT_AT) {
+        const before = this.queue.length;
+        this.queue = compactQueue(this.queue);
+        this.compacted += before - this.queue.length;
+      }
     };
     ws.onerror = () => {};
     ws.onclose = (ev) => {

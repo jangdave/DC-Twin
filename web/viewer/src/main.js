@@ -152,12 +152,22 @@ async function main() {
   const sensorIds = sensors.map((s) => s.sensorId);
   // 미리 계산한 값은 서버에 연결되어 있으면 서버에서 받고, 안 되면 사이트에 포함된 파일을 쓴다(대체 경로).
   let serverData = null;
+  let dataSeq = 0; // 서버 데이터 연결 순번(서버를 연달아 바꿀 때 늦게 온 옛 응답을 버린다)
+  const staticLib = { index: null, groups: null }; // 사이트에 포함된 목록(서버 값을 받지 못하면 되돌린다)
+  const restoreStaticLib = () => {
+    if (!staticLib.index) return;
+    libSource.index = staticLib.index;
+    libSource.groups = staticLib.groups;
+    if (state.mode === 'lib') ui.setScenarios(libSource.index, libSource.scenarioId, libSource.groups);
+  };
   const loadRec = async (file) => {
     if (serverData?.ok) {
       try {
         return await serverData.rec(file);
       } catch (e) {
         console.warn('서버에서 녹화를 받지 못해 사이트의 파일을 쓴다:', e.message);
+        serverData = null;
+        restoreStaticLib(); // 서버에만 있던 항목이 목록에 남아 눌러도 열리지 않는 일을 막는다
         ui.setDataSource('이 사이트에 포함된 파일 (서버에서 받지 못함)');
       }
     }
@@ -165,6 +175,8 @@ async function main() {
   };
   const recSource = new RecSource({ store, sensorIds, index: index.filter((i) => !i.group || i.group === 'event'), loadJson: loadRec, cache: recCache });
   const libSource = new LibSource({ store, sensorIds, index, loadJson: loadRec, cache: recCache, groups: libGroups });
+  staticLib.index = libSource.index;
+  staticLib.groups = libSource.groups;
   let simSource = null; // 패널이 만들어진 뒤에 만든다
 
   const ui = new UI(store, {
@@ -257,7 +269,9 @@ async function main() {
     if (src.player) ui.renderTransport(src.player);
     refresh();
   }
+  let switchSeq = 0; // 출처 전환 순번. 느린 열기가 나중에 끝나도 마지막으로 누른 전환만 화면에 반영한다
   async function useSource(next, args) {
+    const mine = ++switchSeq;
     if (source && source !== next) {
       source.close();
       store.clear(); // 다른 출처의 값이 남지 않게(같은 녹화 안에서 시나리오만 바꿀 때는 지우지 않는다)
@@ -266,12 +280,17 @@ async function main() {
     source = next;
     resetServerModel();
     presentMode(next.describe()); // 열기에 실패해도 어느 출처인지는 보인다
+    let failure = null;
     try {
       await next.open(args);
     } catch (e) {
-      console.error(e);
+      failure = e;
+    }
+    if (mine !== switchSeq) return false; // 그 사이에 다른 출처나 시나리오를 골랐다: 이 결과(성공이든 실패든)는 버린다
+    if (failure) {
+      console.error(failure);
       badge.className = 'badge closed';
-      badge.textContent = `녹화를 열 수 없다: ${e.message}`;
+      badge.textContent = `녹화를 열 수 없다: ${failure.message}`;
       return prev === next;
     }
     present(next);
@@ -452,9 +471,11 @@ async function main() {
   async function connectData(wsUrl) {
     const base = apiBaseFromWs(wsUrl);
     if (!base) return;
+    const mine = ++dataSeq;
     const sd = new ServerData(base);
     try {
       const lib = await sd.connect();
+      if (mine !== dataSeq) return; // 그 사이에 다른 서버에 연결했다: 옛 응답은 버린다
       serverData = sd;
       libSource.index = lib.index;
       if (lib.groups.length) libSource.groups = lib.groups;
@@ -462,7 +483,9 @@ async function main() {
       ui.setDataSource(`서버(${base})에서 받음 · 항목 ${lib.index.length}개${ext ? ` (이 컴퓨터의 외부 솔버 결과 ${ext}개 포함, 서버가 줄 때만 보임)` : ''}`);
       if (state.mode === 'lib') ui.setScenarios(libSource.index, libSource.scenarioId, libSource.groups);
     } catch (e) {
+      if (mine !== dataSeq) return;
       serverData = null;
+      restoreStaticLib();
       console.warn('서버의 미리 계산한 값을 쓰지 않는다:', e.message);
       ui.setDataSource(e.status === 401 || e.status === 429 ? `이 사이트에 포함된 파일 (${e.message})` : '이 사이트에 포함된 파일 (서버에 데이터 API 없음)');
     }
@@ -484,6 +507,12 @@ async function main() {
 
   // ---- 장면 조작: 선택, 말풍선, 키보드 ----
   const canvas = $('canvas');
+  // 모바일에서 탭 전환이나 그래픽 재설정으로 컨텍스트를 잃으면 검게 멈춘다. three.js가 복구를 시도하므로 우리는 안내만 한다.
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    $('gl-lost').hidden = false;
+  });
+  canvas.addEventListener('webglcontextrestored', () => ($('gl-lost').hidden = true));
   const rect = () => canvas.getBoundingClientRect();
   let downAt = null;
   canvas.addEventListener('pointerdown', (e) => (downAt = { x: e.clientX, y: e.clientY }));
@@ -598,6 +627,11 @@ async function main() {
     scene.update(dt, now / 1000);
     requestAnimationFrame(frame);
   }
+
+  // 탭이 숨겨지면 rAF가 멈추지만 라이브 연결은 계속 받는다. 큐가 쌓이지 않게 1초마다 비운다.
+  setInterval(() => {
+    if (document.hidden) source?.advance(0);
+  }, 1000);
 
   setView(state.view);
   if (params.liveError) console.warn(`라이브 주소를 쓰지 않는다: ${params.liveError}`);

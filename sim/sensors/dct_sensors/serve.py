@@ -45,6 +45,7 @@ SUPPLY_RANGE = (14.0, 27.0)       # 급기 온도(도). 웹 간이 계산과 같
 MIN_TOKEN_LEN = 16                # 접근 토큰의 최소 길이
 AUTH_TIMEOUT_S = 5.0              # 접속한 뒤 이 시간 안에 첫 메시지로 토큰을 보내야 한다
 MAX_PENDING = 16                  # 아직 인증하지 않은 접속의 최대 수
+MAX_PENDING_PER_PEER = 4          # 같은 주소가 인증을 기다리며 잡아 둘 수 있는 자리(한 곳이 16자리를 다 차지하지 못하게)
 AUTH_FAILS_PER_MINUTE = 5         # 같은 주소에서 틀린 토큰을 보낼 수 있는 횟수(분당). 넘으면 잠시 막는다
 
 
@@ -237,6 +238,7 @@ class Server:
         self.token = token
         self.clock = clock
         self.pending = 0  # 인증을 기다리는 접속 수
+        self.pending_by: dict[str, int] = {}  # 주소별 인증 대기 수
         self.fails: dict[str, tuple[float, int]] = {}  # 주소 -> (창 시작, 틀린 횟수)
         self.speed = speed
         self.clients: set = set()
@@ -248,7 +250,13 @@ class Server:
         loop = asyncio.get_running_loop()
         nxt = loop.time()
         while not self._stop.is_set():
-            msgs = await loop.run_in_executor(None, self.engine.step)
+            try:
+                msgs = await loop.run_in_executor(None, self.engine.step)
+            except Exception as exc:  # noqa: BLE001  한 단계의 계산 오류로 서버 전체가 죽지 않게 한다
+                print(f"[서버] 계산 중 오류, 1초 뒤 계속한다: {type(exc).__name__}: {exc}", file=sys.stderr)
+                await asyncio.sleep(1.0)
+                nxt = loop.time()
+                continue
             if self.clients:
                 for m in msgs:
                     websockets.broadcast(self.clients, json.dumps(m, ensure_ascii=False, separators=(",", ":")))
@@ -294,14 +302,16 @@ class Server:
         if self._blocked(peer):
             await ws.close(1013, "틀린 시도가 많아 잠시 막았다")
             return False
-        if self.pending >= MAX_PENDING:
+        if self.pending >= MAX_PENDING or self.pending_by.get(peer, 0) >= MAX_PENDING_PER_PEER:
             await ws.close(1013, "접속이 너무 많다")
             return False
         self.pending += 1
+        self.pending_by[peer] = self.pending_by.get(peer, 0) + 1
         try:
             try:
                 raw = await asyncio.wait_for(ws.recv(), AUTH_TIMEOUT_S)
             except (asyncio.TimeoutError, websockets.ConnectionClosed):
+                self._record_fail(peer)  # 아무 말 없이 자리만 차지하는 접속도 틀린 시도로 센다(반복하면 잠시 막힌다)
                 await ws.close(1008, "인증 시간이 지났다")
                 return False
             got = parse_auth(raw)
@@ -314,6 +324,11 @@ class Server:
             return True
         finally:
             self.pending -= 1
+            left = self.pending_by.get(peer, 1) - 1
+            if left > 0:
+                self.pending_by[peer] = left
+            else:
+                self.pending_by.pop(peer, None)
 
     async def handler(self, ws) -> None:
         import websockets
@@ -370,6 +385,14 @@ async def serve(engine: Engine, host: str, port: int, speed: float = 1.0, origin
     async with websockets.serve(srv.handler, host, port, origins=origins or DEFAULT_ORIGINS, max_size=MAX_MESSAGE_BYTES, max_queue=16, process_request=srv.process_request):
         if ready is not None:
             ready.set()
+        import signal
+
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):  # docker stop(SIGTERM)에 바로 정리하고 끝난다. Windows는 지원하지 않아 건너뛴다
+            try:
+                loop.add_signal_handler(sig, srv.stop)
+            except (NotImplementedError, RuntimeError, ValueError):
+                break
         await srv.ticker()
 
 

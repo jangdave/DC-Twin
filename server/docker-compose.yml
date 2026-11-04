@@ -13,7 +13,10 @@ services:
     environment:
       DCT_TOKEN: ${DCT_TOKEN:?server/.env 또는 환경 변수 DCT_TOKEN에 16자 이상 접근 토큰을 정해 주세요}
     restart: unless-stopped
+    init: true  # 종료 신호와 좀비 프로세스를 처리하는 작은 init(PID 1)을 둔다
     read_only: true
+    pids_limit: 128
+    cpus: 2
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     mem_limit: 512m
