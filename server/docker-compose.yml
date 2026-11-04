@@ -1,0 +1,17 @@
+# 저장소 루트에서: docker compose -f server/docker-compose.yml up --build
+# 기본은 이 컴퓨터(127.0.0.1)에서만 닿는다. 밖에 여는 방법과 위험은 server/README.md의 "밖에 열기".
+# 주의: 이 구성은 Docker가 없는 컴퓨터에서 만들어 실행을 시험하지 못했다.
+services:
+  sim-server:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: dct-sim-server
+    ports:
+      - "127.0.0.1:8765:8765"
+    # 허용할 웹 페이지 출처를 더하려면(예: 직접 올린 사이트): command: ["--solver", "l0", "--origin", "https://example.com"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m

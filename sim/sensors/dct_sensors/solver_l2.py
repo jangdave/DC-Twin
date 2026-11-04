@@ -66,6 +66,10 @@ class L2Solver:
         self.fallback_steps = 0
         self.last_reason = ""
 
+    def set_supply(self, value: float) -> None:
+        if hasattr(self.base, "set_supply"):
+            self.base.set_supply(value)
+
     def controls_changed(self) -> None:
         if hasattr(self.base, "controls_changed"):
             self.base.controls_changed()

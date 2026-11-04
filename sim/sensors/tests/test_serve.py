@@ -228,3 +228,32 @@ def test_refuses_non_loopback_host(manifest, tmp_path, capsys):
     assert "막아" in capsys.readouterr().err
     assert sv.is_loopback("127.0.0.1") and sv.is_loopback("localhost") and sv.is_loopback("::1")
     assert not sv.is_loopback("192.168.0.5") and not sv.is_loopback("0.0.0.0")
+
+
+class TestSupplyControl:
+    """급기 온도 조작: 검사, 모델과 집계에 반영, 시나리오를 다시 시작하면 처음 값으로."""
+
+    def test_validate(self, manifest):
+        ok = sv.validate_control('{"type":"control","kind":"supply_temp","value":22.5}', manifest)
+        assert ok == {"kind": "supply_temp", "target": "hall", "value": 22.5}
+        for bad in ('{"type":"control","kind":"supply_temp","value":13.9}', '{"type":"control","kind":"supply_temp","value":27.1}',
+                    '{"type":"control","kind":"supply_temp","value":"20"}', '{"type":"control","kind":"supply_temp"}', '{"type":"control","kind":"supply_temp","value":true}'):
+            with pytest.raises(ValueError):
+                sv.validate_control(bad, manifest)
+
+    def test_engine_applies_supply_to_model_and_cooling_and_restart_resets(self, engine):
+        def cool(msgs):
+            return next(m["value"] for m in msgs if m["type"] == "aggregate" and m["name"] == "cooling_power")
+
+        base = cool(engine.step())
+        ev = engine.control("supply_temp", "hall", 24.0)
+        assert ev["kind"] == "supply_temp" and ev["value"] == 24.0 and ev["event"] == "event"
+        assert engine.state.snapshot()["controls"]["supply"] == 24.0
+        hot = cool(engine.step())
+        assert abs(hot / base - 0.82) < 0.01   # (1 - 0.03 x 6) = 0.82
+        engine.start("normal")
+        assert engine.cfg.t_supply == 18.0 and engine.state.snapshot()["controls"]["supply"] == 18.0
+
+    def test_out_of_range_is_rejected_by_generator(self, engine):
+        with pytest.raises(ValueError):
+            engine.control("supply_temp", "hall", 40.0)

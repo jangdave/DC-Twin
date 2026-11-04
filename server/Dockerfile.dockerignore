@@ -1,0 +1,8 @@
+# Dockerfile이 쓰는 것만 빌드 문맥에 넣는다(저장소 전체는 수 GB다).
+*
+!sim/sensors/dct_sensors
+!server/data/sensor_manifest.json
+!web/viewer/public/data/index.json
+!web/viewer/public/data/library.json
+!web/viewer/public/data/rec
+**/__pycache__

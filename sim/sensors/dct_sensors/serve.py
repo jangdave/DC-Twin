@@ -19,12 +19,15 @@ import asyncio
 import datetime as dt
 import ipaddress
 import json
+import os
 import re
 import sys
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
+from .api import DataApi
 from .config import Config
 from .generator import Generator, iso
 from .manifest import Manifest, load_manifest
@@ -36,6 +39,8 @@ MAX_CLIENTS = 8
 CONTROLS_PER_SECOND = 20          # 접속 하나가 초당 보낼 수 있는 조작 수
 SPEED_RANGE = (0.5, 20.0)
 POWER_RANGE = (0.0, 3.0)
+SUPPLY_RANGE = (14.0, 27.0)       # 급기 온도(도). 웹 간이 계산과 같은 범위
+REPO = Path(__file__).resolve().parents[3]
 DEFAULT_ORIGINS = [
     None,  # 브라우저가 아닌 클라이언트(시험 도구)
     re.compile(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$"),
@@ -103,15 +108,19 @@ class Engine:
         self.gen: Generator | None = None
         self.t = 0.0
         self.state.controls_fn = self._controls
+        self.supply0 = cfg.t_supply  # 시나리오를 다시 시작하면 이 값으로 돌아간다
         self.start(scenario)
 
     def _controls(self) -> dict:
         g = self.gen
-        return {"fan": dict(g.fan_ctl), "powerScale": dict(g.power_scale)} if g else {}
+        return {"fan": dict(g.fan_ctl), "powerScale": dict(g.power_scale), "supply": self.cfg.t_supply} if g else {}
 
     def start(self, scenario: str) -> dict:
         """시나리오를 처음부터 시작한다. l0는 모델 상태도 새로 만들고, l1/l2는 열 상태를 이어 간다(제어만 처음으로)."""
         with self.lock:
+            self.cfg.t_supply = self.supply0
+            if hasattr(self.solver, "set_supply"):
+                self.solver.set_supply(self.supply0)
             if self.solver_name == "l0":
                 self.solver = make_solver("l0", self.m, self.cfg)
             self.gen = Generator(self.m, get(scenario), self.solver, self.cfg, seed=self.seed)
@@ -163,6 +172,11 @@ def validate_control(raw: str | bytes, manifest: Manifest) -> dict:
         if not _num(value) or not POWER_RANGE[0] <= value <= POWER_RANGE[1]:
             raise ValueError(f"전력 배수는 {POWER_RANGE[0]}~{POWER_RANGE[1]}이어야 한다")
         return {"kind": kind, "target": target, "value": float(value)}
+    if kind == "supply_temp":
+        value = d.get("value")
+        if not _num(value) or not SUPPLY_RANGE[0] <= value <= SUPPLY_RANGE[1]:
+            raise ValueError(f"급기 온도는 {SUPPLY_RANGE[0]:g}~{SUPPLY_RANGE[1]:g}도여야 한다")
+        return {"kind": kind, "target": "hall", "value": float(value)}
     if kind == "scenario":
         name = d.get("name")
         if name not in SCENARIOS:
@@ -181,8 +195,9 @@ def _num(v) -> bool:
 
 
 class Server:
-    def __init__(self, engine: Engine, speed: float = 1.0):
+    def __init__(self, engine: Engine, speed: float = 1.0, api: DataApi | None = None):
         self.engine = engine
+        self.api = api
         self.speed = speed
         self.clients: set = set()
         self._stop = asyncio.Event()
@@ -203,6 +218,18 @@ class Server:
                 await asyncio.sleep(delay)
             else:
                 nxt = loop.time()  # 계산이 느리면 따라잡으려 몰아서 보내지 않고 그 시점부터 다시 맞춘다
+
+    async def process_request(self, connection, request):
+        """같은 포트에서 HTTP 데이터 API(GET /api/...)를 먼저 받고, 그 밖의 요청은 WebSocket 핸드셰이크로 넘긴다."""
+        from websockets.datastructures import Headers
+        from websockets.http11 import Response
+
+        if self.api is None or request.headers.get("Upgrade", "").lower() == "websocket":
+            return None
+        reply = self.api.route("GET", request.path, request.headers)  # 이 서버의 HTTP는 읽기 전용이라 GET만 들어온다
+        if reply is None:
+            return None
+        return Response(reply.status, reply.reason, Headers(reply.headers), reply.body)
 
     async def handler(self, ws) -> None:
         import websockets
@@ -246,13 +273,13 @@ class Server:
         self._stop.set()
 
 
-async def serve(engine: Engine, host: str, port: int, speed: float = 1.0, origins=None, ready: asyncio.Event | None = None, server_box: list | None = None) -> None:
+async def serve(engine: Engine, host: str, port: int, speed: float = 1.0, origins=None, ready: asyncio.Event | None = None, server_box: list | None = None, api: DataApi | None = None) -> None:
     import websockets
 
-    srv = Server(engine, speed)
+    srv = Server(engine, speed, api)
     if server_box is not None:
         server_box.append(srv)
-    async with websockets.serve(srv.handler, host, port, origins=origins or DEFAULT_ORIGINS, max_size=MAX_MESSAGE_BYTES, max_queue=16):
+    async with websockets.serve(srv.handler, host, port, origins=origins or DEFAULT_ORIGINS, max_size=MAX_MESSAGE_BYTES, max_queue=16, process_request=srv.process_request):
         if ready is not None:
             ready.set()
         await srv.ticker()
@@ -269,6 +296,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--speed", type=float, default=1.0, help="시간 배율(1이면 실시간)")
     ap.add_argument("--config", default=None)
     ap.add_argument("--scene", default=None, help="(l1, l2) 홀 장면 USD 경로")
+    ap.add_argument("--data-dir", default=None, help="미리 계산한 값(index.json, library.json, rec/)이 있는 폴더. 기본은 저장소의 web/viewer/public/data 또는 환경 변수 DCT_DATA_DIR")
     ap.add_argument("--origin", action="append", default=[], help="허용할 웹 페이지 출처를 더한다(예: https://example.com)")
     ap.add_argument("--allow-remote", action="store_true", help="127.0.0.1이 아닌 주소로 여는 것을 허용한다(권장하지 않음)")
     args = ap.parse_args(argv)
@@ -282,9 +310,12 @@ def main(argv: list[str] | None = None) -> int:
     m = load_manifest(args.manifest)
     kw = {"scene": args.scene} if args.solver in ("l1", "l2") and args.scene else {}
     engine = Engine(m, cfg, args.solver, args.scenario, args.seed, kw)
-    print(f"[서버] solver {args.solver}, 시나리오 {args.scenario}, ws://{args.host}:{args.port}/ws (웹: ?live=ws://{args.host}:{args.port}/ws)", file=sys.stderr)
+    origins = DEFAULT_ORIGINS + args.origin
+    data_dir = args.data_dir or os.environ.get("DCT_DATA_DIR") or (REPO / "web" / "viewer" / "public" / "data")
+    api = DataApi(data_dir if Path(data_dir).exists() else None, origins, {"name": "dct-sim-server", "version": 1, "solver": args.solver, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE)})
+    print(f"[서버] solver {args.solver}, 시나리오 {args.scenario}, ws://{args.host}:{args.port}/ws, 데이터 API http://{args.host}:{args.port}/api/meta (라이브러리 {api.meta['libraryEntries']}개)", file=sys.stderr)
     try:
-        asyncio.run(serve(engine, args.host, args.port, args.speed, DEFAULT_ORIGINS + args.origin))
+        asyncio.run(serve(engine, args.host, args.port, args.speed, origins, api=api))
     except KeyboardInterrupt:
         pass
     return 0

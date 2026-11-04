@@ -223,6 +223,11 @@ export class UI {
     $('server-url').focus();
   }
 
+  // 미리 계산한 값을 어디서 받았는지(서버, 사이트에 포함된 파일)
+  setDataSource(text) {
+    $('data-source').textContent = `미리 계산한 값: ${text}`;
+  }
+
   setLiveText(t) {
     $('live-text').textContent = t;
   }
@@ -268,6 +273,7 @@ export class UI {
     if (extra.includes(this.tab) && !vm.tabs[this.tab]) this.showTab(key === '000' ? 'summary' : vm.homeTab); // 보던 탭이 사라지면 옮긴다
     else if (changed && !hadAny && key !== '000') this.showTab(vm.homeTab); // 처음 나타나면 그 출처의 첫 탭을 연다
     $('server-cta').hidden = !vm.serverCta;
+    $('data-source').hidden = ws.mode !== 'lib';
     // 단계가 바뀐 때만
     if (prevStage !== ws.stage) {
       const ext = ws.stage === 'exterior';

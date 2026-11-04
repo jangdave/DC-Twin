@@ -21,3 +21,7 @@
 
 # 셸 스크립트는 항상 LF(WSL에서 CRLF면 사례 이름에 CR이 들어가 조용히 실패한다)
 *.sh text eol=lf
+
+# 컨테이너 빌드에 쓰는 파일은 윈도우에서도 LF로 둔다(리눅스 빌드가 줄 끝 문자에 걸리지 않게)
+server/Dockerfile* text eol=lf
+server/*.yml text eol=lf

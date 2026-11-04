@@ -148,7 +148,7 @@ export class InsightPanel {
 
   // engine: 직접 시뮬레이션 엔진(없으면 서버 모드), scenario: 지금 시나리오 이름
   // kind: 'sim'(브라우저 간이 계산) | 'lib'(미리 계산한 값) | 'live'(서버). 서버와 미리 계산한 값에서는 engine이 없다.
-  render(engine, scenario, kind = 'sim') {
+  render(engine, scenario, kind = 'sim', supplyNow = null) {
     this._scenario = scenario;
     const r = this.refs;
     const now = snapshot(this.o.store, this.o.rackKeys, this.o.warnIn);
@@ -161,14 +161,15 @@ export class InsightPanel {
     this._renderCmp(now);
 
     const lib = kind === 'lib';
-    r.supplyBox.hidden = !engine && !lib; // 서버 모드에서는 공급 온도를 바꾸지 않는다. 미리 계산한 값에서는 슬라이더 대신 안내를 보인다.
-    r.supplyRow.hidden = !engine;
-    if (engine && document.activeElement !== r.supply) {
-      r.supply.value = String(engine.cfg.t_supply);
-      r.supplyVal.textContent = `${engine.cfg.t_supply.toFixed(1)} °C`;
+    // 급기 온도 값: 간이 계산은 엔진에서, 서버는 서버가 알려 준 값(supplyNow)에서 읽는다. 미리 계산한 값에는 없다(슬라이더 대신 안내).
+    const cur = engine ? engine.cfg.t_supply : Number.isFinite(supplyNow) ? supplyNow : null;
+    r.supplyBox.hidden = cur === null && !lib;
+    r.supplyRow.hidden = cur === null;
+    if (cur !== null && document.activeElement !== r.supply) {
+      r.supply.value = String(cur);
+      r.supplyVal.textContent = `${cur.toFixed(1)} °C`;
     }
     const supplyWarn = this.o.supplyWarn ?? null; // 냉각 장치 공급 온도 센서의 주의 기준
-    const cur = engine ? engine.cfg.t_supply : null;
     let room = supplyRoom(now.maxIn, this.o.warnIn);
     if (room !== null && supplyWarn !== null && cur !== null) room = Math.min(room, Math.max(0, supplyWarn - cur));
     const over = supplyWarn !== null && cur !== null && cur > supplyWarn;

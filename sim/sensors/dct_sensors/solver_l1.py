@@ -59,6 +59,10 @@ class L1Solver:
         for _ in range(int(warmup_s / self.sim.dt_phys)):  # 초기 온도(24도)에서 정상 상태로 예열한다(센서 값은 내보내지 않음)
             self.sim.step()
 
+    def set_supply(self, value: float) -> None:
+        """급기 온도를 바꾼다. Warp 계산이 다음 단계부터 새 값을 쓴다(공기가 새 온도로 서서히 바뀐다)."""
+        self.sim.t_supply = float(value)
+
     def step(self, dt: float, controls: Controls) -> dict[str, float]:
         fan = np.array([controls.fan.get(c, 1.0) for c in self.crac_names], dtype=np.float32)
         if not np.array_equal(fan, self.fan):  # 팬 상태가 바뀌면 흐름을 다시 푼다

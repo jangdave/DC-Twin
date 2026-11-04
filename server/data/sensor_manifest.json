@@ -1,0 +1,3074 @@
+{
+  "version": 1,
+  "hall": "hall01",
+  "sensors": [
+    {
+      "sensorId": "H01-CR01-FAN-SPEED",
+      "topic": "dct/v1/hall01/crac_01/fan_speed",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_01/Anchors/Sensor_FAN_SPEED",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_01",
+      "equipmentType": "crac",
+      "metric": "fan_speed",
+      "unit": "percent",
+      "range": [
+        0,
+        100
+      ],
+      "warn": 20,
+      "critical": 5,
+      "direction": "low"
+    },
+    {
+      "sensorId": "H01-CR01-RETURN-TEMP",
+      "topic": "dct/v1/hall01/crac_01/return_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_01/Anchors/Sensor_RETURN_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_01",
+      "equipmentType": "crac",
+      "metric": "return_temp",
+      "unit": "degC",
+      "range": [
+        15,
+        50
+      ],
+      "warn": 35,
+      "critical": 42
+    },
+    {
+      "sensorId": "H01-CR01-SUPPLY-TEMP",
+      "topic": "dct/v1/hall01/crac_01/supply_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_01/Anchors/Sensor_SUPPLY_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_01",
+      "equipmentType": "crac",
+      "metric": "supply_temp",
+      "unit": "degC",
+      "range": [
+        10,
+        30
+      ],
+      "warn": 22,
+      "critical": 26
+    },
+    {
+      "sensorId": "H01-CR02-FAN-SPEED",
+      "topic": "dct/v1/hall01/crac_02/fan_speed",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_02/Anchors/Sensor_FAN_SPEED",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_02",
+      "equipmentType": "crac",
+      "metric": "fan_speed",
+      "unit": "percent",
+      "range": [
+        0,
+        100
+      ],
+      "warn": 20,
+      "critical": 5,
+      "direction": "low"
+    },
+    {
+      "sensorId": "H01-CR02-RETURN-TEMP",
+      "topic": "dct/v1/hall01/crac_02/return_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_02/Anchors/Sensor_RETURN_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_02",
+      "equipmentType": "crac",
+      "metric": "return_temp",
+      "unit": "degC",
+      "range": [
+        15,
+        50
+      ],
+      "warn": 35,
+      "critical": 42
+    },
+    {
+      "sensorId": "H01-CR02-SUPPLY-TEMP",
+      "topic": "dct/v1/hall01/crac_02/supply_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_02/Anchors/Sensor_SUPPLY_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_02",
+      "equipmentType": "crac",
+      "metric": "supply_temp",
+      "unit": "degC",
+      "range": [
+        10,
+        30
+      ],
+      "warn": 22,
+      "critical": 26
+    },
+    {
+      "sensorId": "H01-CR03-FAN-SPEED",
+      "topic": "dct/v1/hall01/crac_03/fan_speed",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_03/Anchors/Sensor_FAN_SPEED",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_03",
+      "equipmentType": "crac",
+      "metric": "fan_speed",
+      "unit": "percent",
+      "range": [
+        0,
+        100
+      ],
+      "warn": 20,
+      "critical": 5,
+      "direction": "low"
+    },
+    {
+      "sensorId": "H01-CR03-RETURN-TEMP",
+      "topic": "dct/v1/hall01/crac_03/return_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_03/Anchors/Sensor_RETURN_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_03",
+      "equipmentType": "crac",
+      "metric": "return_temp",
+      "unit": "degC",
+      "range": [
+        15,
+        50
+      ],
+      "warn": 35,
+      "critical": 42
+    },
+    {
+      "sensorId": "H01-CR03-SUPPLY-TEMP",
+      "topic": "dct/v1/hall01/crac_03/supply_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_03/Anchors/Sensor_SUPPLY_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_03",
+      "equipmentType": "crac",
+      "metric": "supply_temp",
+      "unit": "degC",
+      "range": [
+        10,
+        30
+      ],
+      "warn": 22,
+      "critical": 26
+    },
+    {
+      "sensorId": "H01-CR04-FAN-SPEED",
+      "topic": "dct/v1/hall01/crac_04/fan_speed",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_04/Anchors/Sensor_FAN_SPEED",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_04",
+      "equipmentType": "crac",
+      "metric": "fan_speed",
+      "unit": "percent",
+      "range": [
+        0,
+        100
+      ],
+      "warn": 20,
+      "critical": 5,
+      "direction": "low"
+    },
+    {
+      "sensorId": "H01-CR04-RETURN-TEMP",
+      "topic": "dct/v1/hall01/crac_04/return_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_04/Anchors/Sensor_RETURN_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_04",
+      "equipmentType": "crac",
+      "metric": "return_temp",
+      "unit": "degC",
+      "range": [
+        15,
+        50
+      ],
+      "warn": 35,
+      "critical": 42
+    },
+    {
+      "sensorId": "H01-CR04-SUPPLY-TEMP",
+      "topic": "dct/v1/hall01/crac_04/supply_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_04/Anchors/Sensor_SUPPLY_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_04",
+      "equipmentType": "crac",
+      "metric": "supply_temp",
+      "unit": "degC",
+      "range": [
+        10,
+        30
+      ],
+      "warn": 22,
+      "critical": 26
+    },
+    {
+      "sensorId": "H01-CR05-FAN-SPEED",
+      "topic": "dct/v1/hall01/crac_05/fan_speed",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_05/Anchors/Sensor_FAN_SPEED",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_05",
+      "equipmentType": "crac",
+      "metric": "fan_speed",
+      "unit": "percent",
+      "range": [
+        0,
+        100
+      ],
+      "warn": 20,
+      "critical": 5,
+      "direction": "low"
+    },
+    {
+      "sensorId": "H01-CR05-RETURN-TEMP",
+      "topic": "dct/v1/hall01/crac_05/return_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_05/Anchors/Sensor_RETURN_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_05",
+      "equipmentType": "crac",
+      "metric": "return_temp",
+      "unit": "degC",
+      "range": [
+        15,
+        50
+      ],
+      "warn": 35,
+      "critical": 42
+    },
+    {
+      "sensorId": "H01-CR05-SUPPLY-TEMP",
+      "topic": "dct/v1/hall01/crac_05/supply_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_05/Anchors/Sensor_SUPPLY_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_05",
+      "equipmentType": "crac",
+      "metric": "supply_temp",
+      "unit": "degC",
+      "range": [
+        10,
+        30
+      ],
+      "warn": 22,
+      "critical": 26
+    },
+    {
+      "sensorId": "H01-CR06-FAN-SPEED",
+      "topic": "dct/v1/hall01/crac_06/fan_speed",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_06/Anchors/Sensor_FAN_SPEED",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_06",
+      "equipmentType": "crac",
+      "metric": "fan_speed",
+      "unit": "percent",
+      "range": [
+        0,
+        100
+      ],
+      "warn": 20,
+      "critical": 5,
+      "direction": "low"
+    },
+    {
+      "sensorId": "H01-CR06-RETURN-TEMP",
+      "topic": "dct/v1/hall01/crac_06/return_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_06/Anchors/Sensor_RETURN_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_06",
+      "equipmentType": "crac",
+      "metric": "return_temp",
+      "unit": "degC",
+      "range": [
+        15,
+        50
+      ],
+      "warn": 35,
+      "critical": 42
+    },
+    {
+      "sensorId": "H01-CR06-SUPPLY-TEMP",
+      "topic": "dct/v1/hall01/crac_06/supply_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_06/Anchors/Sensor_SUPPLY_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_06",
+      "equipmentType": "crac",
+      "metric": "supply_temp",
+      "unit": "degC",
+      "range": [
+        10,
+        30
+      ],
+      "warn": 22,
+      "critical": 26
+    },
+    {
+      "sensorId": "H01-CR07-FAN-SPEED",
+      "topic": "dct/v1/hall01/crac_07/fan_speed",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_07/Anchors/Sensor_FAN_SPEED",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_07",
+      "equipmentType": "crac",
+      "metric": "fan_speed",
+      "unit": "percent",
+      "range": [
+        0,
+        100
+      ],
+      "warn": 20,
+      "critical": 5,
+      "direction": "low"
+    },
+    {
+      "sensorId": "H01-CR07-RETURN-TEMP",
+      "topic": "dct/v1/hall01/crac_07/return_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_07/Anchors/Sensor_RETURN_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_07",
+      "equipmentType": "crac",
+      "metric": "return_temp",
+      "unit": "degC",
+      "range": [
+        15,
+        50
+      ],
+      "warn": 35,
+      "critical": 42
+    },
+    {
+      "sensorId": "H01-CR07-SUPPLY-TEMP",
+      "topic": "dct/v1/hall01/crac_07/supply_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_07/Anchors/Sensor_SUPPLY_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_07",
+      "equipmentType": "crac",
+      "metric": "supply_temp",
+      "unit": "degC",
+      "range": [
+        10,
+        30
+      ],
+      "warn": 22,
+      "critical": 26
+    },
+    {
+      "sensorId": "H01-CR08-FAN-SPEED",
+      "topic": "dct/v1/hall01/crac_08/fan_speed",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_08/Anchors/Sensor_FAN_SPEED",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_08",
+      "equipmentType": "crac",
+      "metric": "fan_speed",
+      "unit": "percent",
+      "range": [
+        0,
+        100
+      ],
+      "warn": 20,
+      "critical": 5,
+      "direction": "low"
+    },
+    {
+      "sensorId": "H01-CR08-RETURN-TEMP",
+      "topic": "dct/v1/hall01/crac_08/return_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_08/Anchors/Sensor_RETURN_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_08",
+      "equipmentType": "crac",
+      "metric": "return_temp",
+      "unit": "degC",
+      "range": [
+        15,
+        50
+      ],
+      "warn": 35,
+      "critical": 42
+    },
+    {
+      "sensorId": "H01-CR08-SUPPLY-TEMP",
+      "topic": "dct/v1/hall01/crac_08/supply_temp",
+      "usdPath": "/DC/Hall01/Cooling/CRAC_08/Anchors/Sensor_SUPPLY_TEMP",
+      "equipmentPath": "/DC/Hall01/Cooling/CRAC_08",
+      "equipmentType": "crac",
+      "metric": "supply_temp",
+      "unit": "degC",
+      "range": [
+        10,
+        30
+      ],
+      "warn": 22,
+      "critical": 26
+    },
+    {
+      "sensorId": "H01-RK01-POWER",
+      "topic": "dct/v1/hall01/rack_01/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_01/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_01",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK01-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_01/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_01/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_01",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK01-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_01/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_01/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_01",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK02-POWER",
+      "topic": "dct/v1/hall01/rack_02/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_02/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_02",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK02-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_02/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_02/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_02",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK02-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_02/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_02/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_02",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK03-POWER",
+      "topic": "dct/v1/hall01/rack_03/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_03/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_03",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK03-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_03/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_03/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_03",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK03-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_03/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_03/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_03",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK04-POWER",
+      "topic": "dct/v1/hall01/rack_04/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_04/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_04",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK04-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_04/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_04/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_04",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK04-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_04/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_04/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_04",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK05-POWER",
+      "topic": "dct/v1/hall01/rack_05/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_05/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_05",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK05-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_05/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_05/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_05",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK05-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_05/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_05/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_05",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK06-POWER",
+      "topic": "dct/v1/hall01/rack_06/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_06/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_06",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK06-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_06/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_06/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_06",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK06-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_06/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_06/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_06",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK07-POWER",
+      "topic": "dct/v1/hall01/rack_07/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_07/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_07",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK07-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_07/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_07/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_07",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK07-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_07/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_07/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_07",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK08-POWER",
+      "topic": "dct/v1/hall01/rack_08/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_08/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_08",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK08-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_08/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_08/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_08",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK08-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_08/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_08/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_08",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK09-POWER",
+      "topic": "dct/v1/hall01/rack_09/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_09/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_09",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK09-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_09/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_09/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_09",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK09-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_09/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_09/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_09",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK10-POWER",
+      "topic": "dct/v1/hall01/rack_10/power",
+      "usdPath": "/DC/Hall01/Row01/Rack_10/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_10",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK10-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_10/temp_in",
+      "usdPath": "/DC/Hall01/Row01/Rack_10/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_10",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK10-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_10/temp_out",
+      "usdPath": "/DC/Hall01/Row01/Rack_10/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row01/Rack_10",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK11-POWER",
+      "topic": "dct/v1/hall01/rack_11/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_11/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_11",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK11-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_11/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_11/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_11",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK11-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_11/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_11/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_11",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK12-POWER",
+      "topic": "dct/v1/hall01/rack_12/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_12/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_12",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK12-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_12/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_12/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_12",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK12-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_12/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_12/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_12",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK13-POWER",
+      "topic": "dct/v1/hall01/rack_13/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_13/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_13",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK13-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_13/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_13/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_13",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK13-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_13/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_13/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_13",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK14-POWER",
+      "topic": "dct/v1/hall01/rack_14/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_14/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_14",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK14-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_14/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_14/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_14",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK14-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_14/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_14/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_14",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK15-POWER",
+      "topic": "dct/v1/hall01/rack_15/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_15/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_15",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK15-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_15/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_15/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_15",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK15-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_15/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_15/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_15",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK16-POWER",
+      "topic": "dct/v1/hall01/rack_16/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_16/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_16",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK16-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_16/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_16/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_16",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK16-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_16/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_16/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_16",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK17-POWER",
+      "topic": "dct/v1/hall01/rack_17/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_17/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_17",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK17-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_17/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_17/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_17",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK17-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_17/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_17/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_17",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK18-POWER",
+      "topic": "dct/v1/hall01/rack_18/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_18/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_18",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK18-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_18/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_18/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_18",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK18-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_18/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_18/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_18",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK19-POWER",
+      "topic": "dct/v1/hall01/rack_19/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_19/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_19",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK19-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_19/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_19/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_19",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK19-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_19/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_19/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_19",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK20-POWER",
+      "topic": "dct/v1/hall01/rack_20/power",
+      "usdPath": "/DC/Hall01/Row02/Rack_20/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_20",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK20-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_20/temp_in",
+      "usdPath": "/DC/Hall01/Row02/Rack_20/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_20",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK20-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_20/temp_out",
+      "usdPath": "/DC/Hall01/Row02/Rack_20/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row02/Rack_20",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK21-POWER",
+      "topic": "dct/v1/hall01/rack_21/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_21/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_21",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK21-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_21/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_21/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_21",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK21-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_21/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_21/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_21",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK22-POWER",
+      "topic": "dct/v1/hall01/rack_22/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_22/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_22",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK22-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_22/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_22/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_22",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK22-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_22/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_22/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_22",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK23-POWER",
+      "topic": "dct/v1/hall01/rack_23/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_23/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_23",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK23-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_23/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_23/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_23",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK23-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_23/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_23/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_23",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK24-POWER",
+      "topic": "dct/v1/hall01/rack_24/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_24/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_24",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK24-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_24/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_24/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_24",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK24-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_24/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_24/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_24",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK25-POWER",
+      "topic": "dct/v1/hall01/rack_25/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_25/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_25",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK25-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_25/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_25/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_25",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK25-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_25/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_25/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_25",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK26-POWER",
+      "topic": "dct/v1/hall01/rack_26/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_26/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_26",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK26-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_26/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_26/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_26",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK26-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_26/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_26/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_26",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK27-POWER",
+      "topic": "dct/v1/hall01/rack_27/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_27/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_27",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK27-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_27/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_27/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_27",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK27-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_27/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_27/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_27",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK28-POWER",
+      "topic": "dct/v1/hall01/rack_28/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_28/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_28",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK28-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_28/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_28/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_28",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK28-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_28/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_28/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_28",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK29-POWER",
+      "topic": "dct/v1/hall01/rack_29/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_29/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_29",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK29-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_29/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_29/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_29",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK29-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_29/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_29/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_29",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK30-POWER",
+      "topic": "dct/v1/hall01/rack_30/power",
+      "usdPath": "/DC/Hall01/Row03/Rack_30/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_30",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK30-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_30/temp_in",
+      "usdPath": "/DC/Hall01/Row03/Rack_30/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_30",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK30-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_30/temp_out",
+      "usdPath": "/DC/Hall01/Row03/Rack_30/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row03/Rack_30",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK31-POWER",
+      "topic": "dct/v1/hall01/rack_31/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_31/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_31",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK31-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_31/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_31/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_31",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK31-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_31/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_31/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_31",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK32-POWER",
+      "topic": "dct/v1/hall01/rack_32/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_32/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_32",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK32-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_32/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_32/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_32",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK32-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_32/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_32/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_32",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK33-POWER",
+      "topic": "dct/v1/hall01/rack_33/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_33/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_33",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK33-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_33/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_33/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_33",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK33-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_33/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_33/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_33",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK34-POWER",
+      "topic": "dct/v1/hall01/rack_34/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_34/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_34",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK34-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_34/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_34/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_34",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK34-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_34/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_34/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_34",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK35-POWER",
+      "topic": "dct/v1/hall01/rack_35/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_35/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_35",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK35-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_35/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_35/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_35",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK35-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_35/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_35/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_35",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK36-POWER",
+      "topic": "dct/v1/hall01/rack_36/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_36/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_36",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK36-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_36/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_36/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_36",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK36-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_36/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_36/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_36",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK37-POWER",
+      "topic": "dct/v1/hall01/rack_37/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_37/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_37",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK37-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_37/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_37/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_37",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK37-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_37/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_37/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_37",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK38-POWER",
+      "topic": "dct/v1/hall01/rack_38/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_38/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_38",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK38-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_38/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_38/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_38",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK38-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_38/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_38/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_38",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK39-POWER",
+      "topic": "dct/v1/hall01/rack_39/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_39/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_39",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK39-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_39/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_39/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_39",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK39-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_39/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_39/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_39",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK40-POWER",
+      "topic": "dct/v1/hall01/rack_40/power",
+      "usdPath": "/DC/Hall01/Row04/Rack_40/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_40",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK40-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_40/temp_in",
+      "usdPath": "/DC/Hall01/Row04/Rack_40/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_40",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK40-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_40/temp_out",
+      "usdPath": "/DC/Hall01/Row04/Rack_40/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row04/Rack_40",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK41-POWER",
+      "topic": "dct/v1/hall01/rack_41/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_41/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_41",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK41-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_41/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_41/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_41",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK41-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_41/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_41/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_41",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK42-POWER",
+      "topic": "dct/v1/hall01/rack_42/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_42/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_42",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK42-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_42/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_42/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_42",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK42-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_42/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_42/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_42",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK43-POWER",
+      "topic": "dct/v1/hall01/rack_43/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_43/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_43",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK43-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_43/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_43/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_43",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK43-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_43/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_43/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_43",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK44-POWER",
+      "topic": "dct/v1/hall01/rack_44/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_44/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_44",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK44-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_44/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_44/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_44",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK44-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_44/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_44/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_44",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK45-POWER",
+      "topic": "dct/v1/hall01/rack_45/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_45/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_45",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK45-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_45/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_45/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_45",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK45-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_45/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_45/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_45",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK46-POWER",
+      "topic": "dct/v1/hall01/rack_46/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_46/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_46",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK46-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_46/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_46/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_46",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK46-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_46/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_46/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_46",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK47-POWER",
+      "topic": "dct/v1/hall01/rack_47/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_47/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_47",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK47-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_47/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_47/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_47",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK47-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_47/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_47/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_47",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK48-POWER",
+      "topic": "dct/v1/hall01/rack_48/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_48/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_48",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK48-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_48/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_48/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_48",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK48-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_48/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_48/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_48",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK49-POWER",
+      "topic": "dct/v1/hall01/rack_49/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_49/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_49",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK49-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_49/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_49/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_49",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK49-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_49/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_49/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_49",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK50-POWER",
+      "topic": "dct/v1/hall01/rack_50/power",
+      "usdPath": "/DC/Hall01/Row05/Rack_50/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_50",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK50-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_50/temp_in",
+      "usdPath": "/DC/Hall01/Row05/Rack_50/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_50",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK50-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_50/temp_out",
+      "usdPath": "/DC/Hall01/Row05/Rack_50/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row05/Rack_50",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK51-POWER",
+      "topic": "dct/v1/hall01/rack_51/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_51/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_51",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK51-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_51/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_51/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_51",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK51-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_51/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_51/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_51",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK52-POWER",
+      "topic": "dct/v1/hall01/rack_52/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_52/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_52",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK52-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_52/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_52/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_52",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK52-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_52/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_52/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_52",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK53-POWER",
+      "topic": "dct/v1/hall01/rack_53/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_53/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_53",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK53-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_53/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_53/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_53",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK53-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_53/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_53/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_53",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK54-POWER",
+      "topic": "dct/v1/hall01/rack_54/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_54/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_54",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK54-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_54/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_54/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_54",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK54-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_54/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_54/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_54",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK55-POWER",
+      "topic": "dct/v1/hall01/rack_55/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_55/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_55",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK55-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_55/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_55/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_55",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK55-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_55/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_55/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_55",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK56-POWER",
+      "topic": "dct/v1/hall01/rack_56/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_56/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_56",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK56-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_56/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_56/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_56",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK56-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_56/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_56/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_56",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK57-POWER",
+      "topic": "dct/v1/hall01/rack_57/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_57/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_57",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK57-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_57/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_57/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_57",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK57-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_57/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_57/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_57",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK58-POWER",
+      "topic": "dct/v1/hall01/rack_58/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_58/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_58",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK58-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_58/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_58/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_58",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK58-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_58/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_58/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_58",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK59-POWER",
+      "topic": "dct/v1/hall01/rack_59/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_59/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_59",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK59-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_59/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_59/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_59",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK59-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_59/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_59/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_59",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    },
+    {
+      "sensorId": "H01-RK60-POWER",
+      "topic": "dct/v1/hall01/rack_60/power",
+      "usdPath": "/DC/Hall01/Row06/Rack_60/Anchors/Sensor_POWER",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_60",
+      "equipmentType": "rack",
+      "metric": "power",
+      "unit": "kW",
+      "range": [
+        0,
+        15
+      ],
+      "warn": 10,
+      "critical": 13
+    },
+    {
+      "sensorId": "H01-RK60-TEMP-IN",
+      "topic": "dct/v1/hall01/rack_60/temp_in",
+      "usdPath": "/DC/Hall01/Row06/Rack_60/Anchors/Sensor_TEMP_IN",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_60",
+      "equipmentType": "rack",
+      "metric": "temp_in",
+      "unit": "degC",
+      "range": [
+        10,
+        45
+      ],
+      "warn": 27,
+      "critical": 32
+    },
+    {
+      "sensorId": "H01-RK60-TEMP-OUT",
+      "topic": "dct/v1/hall01/rack_60/temp_out",
+      "usdPath": "/DC/Hall01/Row06/Rack_60/Anchors/Sensor_TEMP_OUT",
+      "equipmentPath": "/DC/Hall01/Row06/Rack_60",
+      "equipmentType": "rack",
+      "metric": "temp_out",
+      "unit": "degC",
+      "range": [
+        15,
+        60
+      ],
+      "warn": 40,
+      "critical": 50
+    }
+  ]
+}
