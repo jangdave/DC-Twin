@@ -112,6 +112,7 @@ export class HallScene {
     this._buildStatic(data, sx, sy, sz);
     this._buildRacks(data);
     this._buildCracs(data);
+    this.setHeat(false);
     this._buildSelection();
     this._buildLabels(data);
     this._buildExterior(data, sx, sy, sz);
@@ -238,9 +239,16 @@ export class HallScene {
   async loadAirflow(baseUrl) {
     const flow = await loadFlow(baseUrl);
     this.airflow = new Airflow(flow, this.data, this.store, this.rackKeys, this.cracKeys, { count: this.q.particles });
-    this.airflow.points.visible = this.showAirflow ?? true;
+    this.airflow.points.visible = this.showAirflow ?? false; // 서버실 기본 보기에서는 끈다(시뮬레이션 메뉴에서 켠다)
     this.hall.add(this.airflow.points);
     return this.airflow.count;
+  }
+
+  // 온도 색칠(랙 앞면과 윗면의 값 색, 신뢰 막대)을 켜고 끈다. 끄면 장비 원래 모습만 보인다. 알람 테두리는 항상 보인다.
+  setHeat(on) {
+    this.heat = on;
+    for (const m of [this.rackFront, this.rackTop, this.cracFront, this.barTrack, this.bar]) m.visible = on;
+    this._dirty = true;
   }
 
   setAirflow(on) {

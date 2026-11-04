@@ -68,8 +68,9 @@
           <div id="layers" class="tool-group" role="group" aria-label="표시">
             <span class="tool-title">표시</span>
             <button type="button" id="labels-btn" aria-pressed="false">통로 이름</button>
+            <button type="button" id="heat-btn" aria-pressed="false" title="랙 온도를 색으로 칠한다">온도 색칠</button>
             <button type="button" id="model-btn" aria-pressed="true" hidden>장비 모양</button>
-            <button type="button" id="flow-btn" aria-pressed="true" hidden title="시각화 목적의 공기 흐름. 실제 계산 결과가 아니다">공기 흐름</button>
+            <button type="button" id="flow-btn" aria-pressed="false" hidden title="시각화 목적의 공기 흐름. 실제 계산 결과가 아니다">공기 흐름</button>
           </div>
         </div>
       </div>
@@ -80,10 +81,9 @@
       <div id="exterior-card" hidden aria-live="polite">
         <h2>가상 데이터센터</h2>
         <dl>
-          <dt>알람</dt><dd id="ext-alarms">–</dd>
-          <dt>최고 입구 온도</dt><dd id="ext-temp">–</dd>
-          <dt>IT 전력</dt><dd id="ext-it">–</dd>
+          <dt>건물 전체 전력</dt><dd id="ext-total">–</dd>
           <dt>PUE</dt><dd id="ext-pue">–</dd>
+          <dt>상태</dt><dd id="ext-status">–</dd>
         </dl>
         <p class="muted" id="ext-note">건물을 누르거나 단추를 눌러 안으로 들어가세요.</p>
         <button id="enter-btn" type="button">홀 들어가기 (Enter)</button>

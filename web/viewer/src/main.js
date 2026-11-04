@@ -156,6 +156,7 @@ async function main() {
       scene.setModels(b);
     },
     onFlow: (b) => scene.setAirflow(b),
+    onHeat: (b) => scene.setHeat(b),
     onSky: (n) => scene.setSky(n),
     onBackToRec: () => startRecording(),
     onEnter: () => queue.push({ name: 'view.goto', value: 'hall' }),
