@@ -12,6 +12,8 @@ Omniverse(OpenUSD 기반 저작·시뮬레이션)와 Unreal Engine 5.8(운영자
 - 시뮬레이션 결과는 "시각화 목적"으로 표기한다. 공학적 정확성을 주장하지 않는다(`docs/04_clean_room_policy.md`). 외부 솔버(FDS, OpenFOAM) 결과는 나중에 같은 격자 `.npy` 형식으로 받는다(ADR-009).
 - 회사 자산을 참조하는 시험 스크립트는 gitignore된 `experiments/omniverse_probe/local_only/`(및 `out/local_only/`)에만 둔다. 시험용 Unreal 프로젝트는 저장소 밖 `D:\ue_probe\`에 둔다. 상용 도구(외부 CFD 제품 등)로 계산한 결과나 화면은 올리지 않는다.
 - 커밋 전에 `git diff --cached`에서 금지어(`.claude/cleanroom-terms.local.txt`)와 업무 머티리얼·파라미터 이름이 0건인지 확인한다(`.claude/skills/clean-room-check`).
+- **외부 CFD 도구(Reality DC 등 상용 포함)의 결과·모델 파일(`*.vtk`, `*.vtu`, `*.vti`, `*.room`)과 화면은 저장소, PR, 영상, 문서에 올리지 않는다.** 변환 파이프라인(`sim/sensors/dct_sensors/external`)은 gitignore된 `sim/out/local_only/`에만 쓰고, 결과는 로컬 서버가 줄 때만 화면에 보인다. **Reality DC 사용은 라이선스 확인 전까지 보류**한다(2026-11-04, 사용자 결정). CI(`external_guard.test.js`)가 추적 파일을 검사한다.
+- 서버 접근 토큰, `.env` 값은 커밋하지 않고 대화나 로그에 찍지 않는다. 서버를 `127.0.0.1` 밖으로 열면 토큰이 필수다(`server/README.md`).
 - `D:\UnrealProject\**`, `D:\omniverse-labs-main\**`는 수정하지 않는다(권한으로도 차단).
 
 ## 구조 요약
@@ -33,7 +35,9 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 | `usd/scenes/hall01.config.json` | 홀 배치 원본(랙 6줄 x 10기, CRAC 8기). 장면은 이 파일에서만 만든다 |
 | `gateway/` | MQTT → WebSocket/REST 게이트웨이 (Node) |
 | `unreal/` | UE 5.8 프로젝트 `unreal/DataCenter_DT/DataCenter_DT.uproject` (C++, 모듈 `DataCenter_DT`) |
-| `web/` | 하이브리드 UI용 웹 패널 (일부 패널) |
+| `web/viewer/` | 웹 보기 화면(Three.js, Vite). GitHub Pages에 자동 배포. 메뉴: 모니터링 / 시뮬레이션(미리 계산한 값 12개) / 간이 계산(브라우저 L0) / CCTV. 설명은 `web/viewer/README.md`, 설계는 `docs/27` |
+| `server/` | 시뮬레이션 서버 실행 구성(Docker, compose, `run_local.ps1`, 센서 매니페스트·앵커 사본). 코드는 `sim/sensors/dct_sensors/serve.py`, `api.py`. 인증, 안전, 한계는 `server/README.md` |
+| `sim/library.json` | 미리 계산해 두는 상태와 시나리오 정의(이상 상황 4, 급기 온도 5, 부하 3). 생성은 `scripts/make_sim_library.py` |
 | `experiments/` | 비교 실험 코드와 측정 결과 |
 | `scripts/` | 환경 점검, 실행 보조 스크립트 |
 
@@ -43,13 +47,27 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 - **MQTT 토픽**: `dct/v1/{hall}/{asset}/{metric}`(예: `dct/v1/hall01/rack_01/temp_in`), 페이로드는 JSON(`ts`, `value`, `unit`, `quality`). 시나리오 이름은 MQTT에 없고 게이트웨이 재생 입력에서만 온다(`docs/11`).
 - **UE C++**: 모듈 `DataCenter_DT`(엔진 매크로 `DATACENTER_DT_API`), 계층 `Core / Data / World / UI / Streaming`. 접두 `DCT`. 새 코드만 작성, 회사 프로젝트 클래스명 재사용 금지.
 - **Python**: `uv`로 환경 관리, 3.13 권장(`ovrtx` 휠 호환). 시스템 Python 3.14는 사용하지 않는다.
-- **Git 워크플로**(`docs/06_workflow.md`): `main`에서 직접 작업하지 않는다. 작업 시작 시 `feat|fix|docs|chore|exp/<주제>` 브랜치를 먼저 만들고, Conventional Commits로 커밋(`type(scope)`는 영어 키워드, **제목·본문은 한글**: 예 `feat(sim): cooling_failure 시나리오 생성기 추가`), PR → Squash merge. 바이너리는 Git LFS. 사용자가 요청할 때만 commit/push/PR을 만든다. force push 금지.
+- **Git 워크플로**(`docs/06_workflow.md`): `main`에서 직접 작업하지 않는다. 작업 시작 시 `feat|fix|docs|chore|exp/<주제>` 브랜치를 먼저 만들고, Conventional Commits로 커밋(`type(scope)`는 영어 키워드, **제목·본문은 한글**: 예 `feat(sim): cooling_failure 시나리오 생성기 추가`), PR → Squash merge. 바이너리는 Git LFS. 커밋·푸시·PR·squash 병합은 사용자가 위임했다(2026-11-02): 규칙을 지키며 알아서 진행하고 CI 통과 뒤 병합한다. force push 금지, `main` 직접 push 금지.
 
 ## 문서·용어 규칙
 - 다른 개발자가 읽고 인수인계받을 수 있게 쓴다. **쉬운 말을 쓰고, 용어는 `docs/07_glossary_and_writing_rules.md`의 "쓰는 말"로 통일한다.**
 - 약어는 처음 나올 때 풀어 쓰고, 어려운 외래어·한자어는 피한다. 새 용어를 만들면 용어집에 추가한다.
 - 문서 맨 위에 목적과 상태(초안/채택/폐기)를 적고, 결정에는 이유와 다른 방법을 함께 적는다.
 - 응답과 문서에서 "하네스", "클린룸", "스모크 테스트", "베이크"는 용어집 표기("작업 환경 설정", "회사 자산 분리 규칙", "동작 확인 테스트", "미리 계산한 데이터")를 쓴다.
+
+## 검증과 실행 명령
+PR 전에 해당하는 것을 돌린다. 하나라도 실패하면 이유를 밝히고 고친다(시험을 약하게 바꾸지 않는다). 전체 순서와 주의는 `.claude/skills/verify-all`.
+| 대상 | 명령(폴더) | 시간 |
+|---|---|---|
+| 웹 단위 시험 | `npx vitest run` (`web/viewer`) | 몇 초 |
+| 웹 빌드와 용량 | `npm run build` | 1분 이내 |
+| 화면 시험(puppeteer, Edge) | `node tools/ui_check.mjs` (빌드 뒤) | 2~3분(120초 도구 제한을 넘으므로 백그라운드로) |
+| 글자 대비 | `node tools/contrast_check.mjs` | 1분 |
+| 데이터 정합성 | `node tools/check_data.mjs` | 몇 초 |
+| 파이썬 시험 | `uv run --python 3.13 --extra serve python -m pytest tests` (`sim/sensors`) | 1분 |
+| Warp 열 계산 시험 | `uv run --python 3.13 python -m pytest tests` (`experiments/omniverse_probe`) | 1분 |
+| 서버 | `server/run_local.ps1`(GPU L2 또는 `-Solver l0`), Docker는 `server/README.md` | |
+주의: 점검용으로 띄운 서버와 브라우저, Kit(`kit.exe`) 프로세스는 끝내고 정리한다. Kit 스크립트는 파일이 있는 상태에서 실행한다(없으면 종료되지 않는다).
 
 ## 작업 방식
 - **우선순위**: 가장 중요한 것은 Omniverse 시뮬레이션과 센서 데이터의 Unreal 연동·표현이다(`docs/14_sim_to_unreal_core.md`). 외관과 둘러보기는 보조다. 진행 순서는 ① 내부 구조 모델링 → ② 그 구조로 시뮬레이션 → ③ Unreal에서 확인이며, 외부 솔버 연동은 이 구조가 동작한 뒤에 붙인다.
@@ -59,6 +77,6 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 - 환경 점검: `scripts/check_env.ps1`. 결과 기록: `docs/05_env_status.md`.
 
 ## 환경 (2026-10-15 확인)
-RTX 5090 32GB / Ryzen 9 9950X3D / RAM 126GB / UE 5.8.3(5.7.4, 5.5.4도 설치) / Blender 5.1 / Node, Git, uv, WSL 있음 / Mosquitto, Docker 없음.
+RTX 5090 32GB / Ryzen 9 9950X3D / RAM 126GB / UE 5.8.3(5.7.4, 5.5.4도 설치) / Blender 5.1 / Node, Git, uv, WSL 있음 / Mosquitto 없음. Docker Engine은 WSL Ubuntu 24.04에 설치(29.1.3, 2026-11-04; Docker Desktop은 라이선스 약관 때문에 쓰지 않음, Windows에서는 `wsl -u root -- bash <스크립트>`로 실행. 한 줄 명령은 PowerShell과 WSL의 인용이 엉키므로 스크립트 파일로 쓴다).
 Omniverse: Kit SDK 110.4.0 앱 설치·실행 확인(`D:\omniverse-kit\kit-app-template`, 앱 `dctwin.base_editor`), Warp 1.18.0, `ovrtx 0.3.0`, `ovphysx 0.3.7`. 시험 환경은 `experiments/omniverse_probe`(uv, Python 3.13), 결과는 `experiments/results/E0_omniverse_capability_probe.md`.
 도구 경로: Blender `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, GitHub CLI `C:\Users\User\tools\gh-2.102.0\bin\bin\gh.exe`(PATH 미등록). 저장소는 `main` 보호(PR 필수, Squash merge만).
