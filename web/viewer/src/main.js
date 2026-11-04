@@ -143,7 +143,12 @@ async function main() {
     onSelect: (eq, focus) => selectEquipment(eq, focus),
     onView: (v) => setView(v),
     onScenario: (id) => (state.server ? serverControl({ kind: 'scenario', name: ((state.simScenario = id), id) }) : state.mode === 'sim' ? startSim(id) : loadScenario(id, 0)),
-    onMode: (m) => (m === 'sim' ? startSim(state.simScenario) : startRecording()),
+    onMode: (m) => {
+      if (m !== 'sim') return startRecording();
+      startSim(state.simScenario);
+      scene.setHeat(true); // 시뮬레이션은 값 색이 있어야 읽힌다
+      ui.setHeat(true);
+    },
     onServer: (url) => connectServer(url),
     onPlay: () => state.player && ((state.player.playing = !state.player.playing), ui.renderTransport(state.player)),
     onSpeed: (x) => state.player && ((state.player.speed = x), ui.renderTransport(state.player)),
