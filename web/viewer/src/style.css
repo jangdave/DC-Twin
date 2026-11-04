@@ -136,7 +136,7 @@ input[type="radio"], input[type="checkbox"], input[type="range"] { accent-color:
 /* ---- 오른쪽 패널: 위에 탭(Tab-Line), 아래에 한 번에 한 장 ---- */
 #side { border-left: 1px solid var(--border-disabled); background: var(--gray-0); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 #side-tabs { flex: none; display: flex; gap: var(--p-1); padding: 0 var(--p-2); border-bottom: 1px solid var(--border-disabled); overflow-x: auto; }
-#side-tabs button { min-height: 40px; padding: 0 var(--p-3); border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--text-tertiary); font-size: var(--text-sm); white-space: nowrap; }
+#side-tabs button { flex: 1 1 auto; min-height: 40px; padding: 0 var(--p-2); border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--text-tertiary); font-size: var(--text-sm); white-space: nowrap; }
 #side-tabs button:hover { background: var(--brand-5); color: var(--text-primary); }
 #side-tabs button[aria-selected="true"] { color: var(--text-brand); border-bottom-color: var(--fill-primary); font-weight: var(--weight-semibold); }
 .count { display: inline-block; min-width: 16px; height: 16px; padding: 0 var(--p-1); border-radius: var(--radius-max); background: var(--emergency); color: var(--text-inverse); font-size: var(--text-xxs); line-height: 16px; text-align: center; font-weight: var(--weight-semibold); }
@@ -213,7 +213,7 @@ dialog input[type="text"]:focus { border-color: var(--border-dark); }
   h1 { font-size: var(--text-sm); }
   .tool-title { display: none; }
   #stage-tools { top: 44px; right: 10px; }
-  .tool-groups { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+  .tool-groups { flex-wrap: wrap; max-width: 100%; }
   .tool-group { flex: none; }
   #view-group label span { height: 26px; padding: 0 var(--p-2-5); }
 }
@@ -303,7 +303,9 @@ dialog input[type="text"]:focus { border-color: var(--border-dark); }
 #stage[data-stage="hall"] #stage-tools { left: 88px; }
 @media (max-width: 700px) {
   #rail { flex-direction: row; }
-  #rail button { flex-direction: row; width: auto; gap: var(--p-1-5); padding: var(--p-1-5) var(--p-3); }
+  #rail { right: 10px; }
+  #rail button { flex: 1 1 0; min-width: 0; flex-direction: row; justify-content: center; width: auto; gap: var(--p-1); padding: var(--p-1-5) var(--p-2); white-space: nowrap; word-break: keep-all; font-size: 12px; }
+  #rail button svg { flex: none; width: 16px; height: 16px; }
   #stage[data-stage="hall"] #stage-tools { left: 10px; right: 10px; top: 58px; }
 }
 
@@ -409,3 +411,9 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 /* 그래픽 컨텍스트 손실 안내 */
 #gl-lost { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); z-index: 60; padding: var(--p-2) var(--p-4); border-radius: var(--radius-medium); background: var(--warning-subtle); color: var(--tag-warning-text); border: 1px solid var(--tag-warning-text); font-size: var(--text-sm); max-width: min(92vw, 560px); }
 #gl-lost[hidden] { display: none; }
+
+/* 휴대폰: 손가락으로 누르는 버튼은 높이 32px 이상(점검: tools/interact_check.mjs) */
+@media (max-width: 700px) {
+  #top button, #rail button, #cctv button, #stage-tools button, #stage-tools label span, #side button, #bottom button, #server-cta-btn { min-height: 32px; }
+  #sheet-handle { height: 32px; }
+}
