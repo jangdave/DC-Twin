@@ -63,7 +63,9 @@ export class RecSource {
 
   // args: { scenarioId, t } 같은 출처 안에서 시나리오를 바꾸면 재생 설정(반복, 속도, 일시정지)을 이어 간다
   async open({ scenarioId, t = 0 }) {
+    const mine = (this._openSeq = (this._openSeq ?? 0) + 1);
     const rec = await this._load(scenarioId);
+    if (mine !== this._openSeq) return; // 그 사이 다른 시나리오를 열었다: 늦게 끝난 쪽이 덮어쓰지 않는다
     const old = this.player;
     this.scenarioId = scenarioId;
     this.player = new RecordingPlayer(rec, this.store, { loop: old?.loop ?? true, speed: old?.speed ?? 1 });
@@ -151,7 +153,7 @@ export class SimSource {
     return {
       kind: 'sim',
       control: false,
-      badge: { mode: 'sim', text: '직접 시뮬레이션 · 간이 모델' },
+      badge: { mode: 'sim', text: '간이 계산 · 브라우저 간이 모델' },
       panel: 'sim',
       scenarios: { list: this.list, current: this.scenarioId },
       card: { title: s.title, desc: s.description, events: s.events, seekable: false },

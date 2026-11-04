@@ -163,8 +163,8 @@
       </div>
 
       <div class="pane" id="pane-control" role="tabpanel" aria-labelledby="tab-control" hidden>
-        <section id="sim-panel" hidden aria-label="직접 시뮬레이션 조작">
-          <h2>직접 시뮬레이션</h2>
+        <section id="sim-panel" hidden aria-label="간이 계산 조작">
+          <h2>간이 계산</h2>
           <p class="muted sim-note" id="sim-note">간이 모델(1차 지연 식)을 이 브라우저에서 계산한 값이다. 보정 모델(AI)은 쓰지 않아 신뢰 막대가 나오지 않는다.</p>
           <div id="sim-speed" hidden role="group" aria-label="서버 속도">
             <span class="muted">서버 속도</span>
@@ -220,6 +220,8 @@
     </div>
     <p id="disclaimer">시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않는다. 가상 시설이다.</p>
   </footer>
+
+  <div id="gl-lost" role="status" hidden>그래픽이 잠시 멈췄다. 자동으로 복구를 시도한다. 복구되지 않으면 페이지를 새로 고친다.</div>
 
   <dialog id="server-dialog">
     <h2>로컬 계산 서버에 연결</h2>

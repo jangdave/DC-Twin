@@ -116,10 +116,10 @@ def test_origin_allowed_rules():
 def test_rate_limit_resets_each_second(data_dir):
     now = [100.0]
     api = make(data_dir, clock=lambda: now[0])
-    codes = [get(api, "/healthz").status for _ in range(70)]
+    codes = [get(api, "/api/meta").status for _ in range(70)]  # (/healthz는 제한 앞에서 답한다. test_auth.py)
     assert codes.count(200) == 60 and codes.count(429) == 10
     now[0] += 1.1
-    assert get(api, "/healthz").status == 200
+    assert get(api, "/api/meta").status == 200
 
 
 def test_without_data_dir_the_library_is_unavailable_but_meta_works():

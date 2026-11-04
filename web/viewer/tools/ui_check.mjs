@@ -332,7 +332,8 @@ const nearAt = async (h, dz) => pdp.evaluate(async ([h, dz]) => {
   s.controls.minDistance = 0.5; s.controls.enableDamping = false;
   s.camera.position.set(s.center.x, h, s.center.z + dz);
   s.controls.target.set(s.center.x, 0, s.center.z); s.controls.update();
-  await new Promise((r) => setTimeout(r, 400));
+  // 고정 시간 대신 프레임 두 번을 기다린다(CPU가 바쁘면 렌더링이 느려 400 ms 안에 갱신되지 않을 수 있다)
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   return s.camera.near;
 }, [h, dz]);
 const nearClose = await nearAt(8, 20);
@@ -426,7 +427,7 @@ await p5.setViewport({ width: 1280, height: 800 });
 await p5.goto(`${base}?stage=hall&mode=sim&scenario=normal`, { waitUntil: 'networkidle0' });
 await p5.waitForFunction(() => window.__viewer?.state.sim, { timeout: 15000 });
 const vis5 = (sel) => p5.$eval(sel, (e) => !e.hidden);
-ok('SIM 직접 시뮬레이션으로 시작: 패널이 보이고 시간 막대와 반복은 숨김', (await vis5('#sim-panel')) && !(await vis5('#timebar')) && !(await vis5('#loop-label')) && (await p5.$eval('#mode-badge', (e) => e.textContent)).includes('직접 시뮬레이션'));
+ok('SIM 간이 계산으로 시작: 패널이 보이고 시간 막대와 반복은 숨김', (await vis5('#sim-panel')) && !(await vis5('#timebar')) && !(await vis5('#loop-label')) && (await p5.$eval('#mode-badge', (e) => e.textContent)).includes('간이 계산'));
 ok('SIM CRAC 슬라이더 8개, 줄 슬라이더 6개', (await p5.$$eval('#sim-fans input', (l) => l.length)) === 8 && (await p5.$$eval('#sim-rows input', (l) => l.length)) === 6);
 ok('SIM 첫 값이 바로 보임(센서 204개, 입구 온도 18~20도)', await p5.evaluate(() => {
   const v = window.__viewer;
@@ -465,7 +466,7 @@ await sleep(800);
 ok('SIM 녹화 재생으로 돌아오면 패널이 숨고 시간 막대가 다시 보임', !(await vis5('#sim-panel')) && (await vis5('#timebar')) && (await p5.$eval('#mode-badge', (e) => e.textContent)).includes('녹화'));
 await p5.click('#rail [data-mode="sim"]');
 await sleep(500);
-ok('SIM 다시 직접 시뮬레이션으로 전환', (await vis5('#sim-panel')) && (await p5.evaluate(() => window.__viewer.state.mode)) === 'sim');
+ok('SIM 다시 간이 계산으로 전환', (await vis5('#sim-panel')) && (await p5.evaluate(() => window.__viewer.state.mode)) === 'sim');
 await p5.screenshot({ path: path.join(OUT, 'sim_mode.png') });
 
 // BOOT 첫 로딩 화면: 처음 HTML에 있고, 장면이 준비되면 사라지며, 자료를 못 받으면 이유와 다시 시도가 보인다
@@ -757,6 +758,37 @@ await pc.close();
   const D = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, tabs: ['control', 'energy', 'prep'].map((t) => !document.getElementById(`tab-${t}`).hidden), opts: document.querySelectorAll('#scenario-select option').length }));
   ok('LIB 모니터링으로 돌아가면 에너지 탭이 사라지고 목록은 이상 상황 4개', D.mode === 'rec' && D.tabs.every((x) => !x) && D.opts === 4, JSON.stringify(D));
   await lp.close();
+}
+
+// 견고함: 느린 열기가 나중에 끝나도 마지막으로 누른 전환이 이긴다 / 그래픽 컨텍스트 손실 안내
+{
+  const rp = await browser.newPage();
+  await rp.setViewport({ width: 1440, height: 860 });
+  await rp.setRequestInterception(true);
+  rp.on('request', (r) => (r.url().includes('rec/supply_24.json') ? setTimeout(() => r.continue().catch(() => {}), 2500) : r.continue().catch(() => {})));
+  await rp.goto(base + '?stage=hall', { waitUntil: 'networkidle0' });
+  await rp.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+  await rp.evaluate(() => { window.__viewer.startLibrary('supply_24'); }); // 느린 녹화를 열기 시작하고(기다리지 않는다)
+  await sleep(200);
+  await rp.$eval('#rail [data-mode="sim"]', (e) => e.click()); // 곧바로 간이 계산으로 바꾼다
+  await sleep(4000); // 느린 녹화가 그 뒤에 도착한다
+  const R = await rp.evaluate(() => ({ stateMode: window.__viewer.state.mode, wsMode: window.__ws().mode, badge: document.getElementById('mode-badge').textContent, rail: [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()), tabs: !document.getElementById('tab-control').hidden }));
+  ok('ROBUST 느린 시나리오 열기가 나중에 끝나도 마지막에 고른 간이 계산이 유지되고 화면 표시와 실제 출처가 같음', R.stateMode === 'sim' && R.wsMode === 'sim' && /간이/.test(R.badge) && JSON.stringify(R.rail) === '["간이 계산"]' && R.tabs, JSON.stringify(R));
+  // 그래픽 컨텍스트 손실: 안내가 보이고, 복구되면 사라진다
+  const lost = await rp.evaluate(async () => {
+    const c = document.getElementById('canvas');
+    const gl = c.getContext('webgl2') || c.getContext('webgl');
+    const ext = gl?.getExtension('WEBGL_lose_context');
+    if (!ext) return { skipped: true };
+    ext.loseContext();
+    await new Promise((r) => setTimeout(r, 300));
+    const shown = !document.getElementById('gl-lost').hidden;
+    ext.restoreContext();
+    await new Promise((r) => setTimeout(r, 800));
+    return { shown, hiddenAgain: document.getElementById('gl-lost').hidden };
+  });
+  ok('ROBUST 그래픽 컨텍스트를 잃으면 안내가 보이고 복구되면 사라짐', lost.skipped || (lost.shown && lost.hiddenAgain), JSON.stringify(lost));
+  await rp.close();
 }
 
 // 출처 전환과 서버 데이터: 라이브와 로컬 서버가 어댑터를 거쳐 화면까지 이어지는가, 서버가 미리 계산한 값을 주는가 (모의 서버: 같은 포트에 WebSocket과 HTTP 데이터 API)

@@ -7,7 +7,8 @@
 FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
-RUN pip install numpy websockets && useradd --system --uid 10001 --no-create-home dct
+# 버전을 고정한다(sim/sensors/uv.lock과 같은 값). 올릴 때는 uv.lock과 함께 바꾼다.
+RUN pip install numpy==2.5.4 websockets==17.4 && useradd --system --uid 10001 --no-create-home dct
 WORKDIR /app
 
 # 서버 코드와 데이터(센서 매니페스트, 미리 계산한 값의 목록과 녹화)만 넣는다. 나머지는 Dockerfile.dockerignore가 막는다.

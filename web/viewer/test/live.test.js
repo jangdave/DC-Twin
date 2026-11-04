@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LiveClient, reconnectDelay } from '../src/live.js';
+import { LiveClient, QUEUE_COMPACT_AT, compactQueue, reconnectDelay } from '../src/live.js';
 import { SensorStore } from '../src/store.js';
 import { sensors } from './fixtures.js';
 
@@ -235,5 +235,43 @@ describe('접근 토큰(서버 인증)', () => {
     expect(c.dropped).toBe(0);
     c.flush();
     expect(store.version).toBe(v);
+  });
+});
+
+describe('받은 메시지 큐 상한(탭이 숨겨져 화면이 못 비울 때)', () => {
+  it('compactQueue: 센서마다 가장 최근 값만 남기고 사건(snapshot, alarm, scenario)은 순서대로 모두 남긴다', () => {
+    const q = [
+      { kind: 'snapshot' },
+      { kind: 'sample', sensorId: 'A', value: 1 },
+      { kind: 'sample', sensorId: 'B', value: 1 },
+      { kind: 'alarm', sensorId: 'A', to: 'warn' },
+      { kind: 'sample', sensorId: 'A', value: 2 },
+      { kind: 'aggregate', name: 'it_power', value: 1 },
+      { kind: 'scenario', event: 'event' },
+      { kind: 'aggregate', name: 'it_power', value: 2 },
+      { kind: 'sample', sensorId: 'A', value: 3 },
+    ];
+    expect(compactQueue(q).map((m) => `${m.kind}:${m.sensorId ?? m.name ?? ''}:${m.value ?? ''}`)).toEqual([
+      'snapshot::', 'sample:B:1', 'alarm:A:', 'scenario::', 'aggregate:it_power:2', 'sample:A:3',
+    ]);
+  });
+
+  it('메시지가 계속 쌓여도 큐 길이가 상한 근처에서 멈추고, 나중에 비우면 최신 값이 반영된다', () => {
+    const store = new SensorStore(sensors);
+    const c = mk(store);
+    c.start();
+    FakeWS.last.onopen();
+    const id = sensors[0].sensorId;
+    FakeWS.last.onmessage({ data: JSON.stringify({ type: 'alarm', sensorId: id, from: 'normal', to: 'warn', value: 30 }) });
+    let max = 0;
+    for (let i = 0; i < QUEUE_COMPACT_AT * 5; i++) {
+      FakeWS.last.onmessage({ data: JSON.stringify({ type: 'sample', sensorId: id, value: i, quality: 'good', ts: '2026-10-15T09:00:00.000Z' }) });
+      max = Math.max(max, c.queue.length);
+    }
+    expect(max).toBeLessThanOrEqual(QUEUE_COMPACT_AT);
+    expect(c.compacted).toBeGreaterThan(QUEUE_COMPACT_AT * 3);
+    c.flush();
+    expect(store.get(id).value).toBe(QUEUE_COMPACT_AT * 5 - 1); // 마지막 값이 반영됐다
+    expect(store.alarmLog.length).toBe(1); // 알람 사건은 합쳐지지 않았다
   });
 });

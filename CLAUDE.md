@@ -9,7 +9,7 @@ Omniverse(OpenUSD 기반 저작·시뮬레이션)와 Unreal Engine 5.8(운영자
 - 이 저장소는 **공개 포트폴리오용**이다. 재직 회사 프로젝트(`D:\UnrealProject\` 아래 업무 프로젝트)의 **코드·에셋·데이터·고객사/내부 명칭을 복사하거나 붙이지 않는다.** 금지어 목록은 저장소에 두지 않고 로컬 파일 `.claude/cleanroom-terms.local.txt`(gitignore)에 둔다.
 - 해당 프로젝트는 **읽기 전용 참조**다. 설계 아이디어(계층 구조, 서비스 분리, 배포 절차)만 참고하고 **코드는 새로 작성**한다.
 - 모델링은 직접 제작(Blender)한 **가상 시설**만 쓴다. 실제 시설 형상/도면/좌표/로고 금지.
-- 시뮬레이션 결과는 "시각화 목적"으로 표기한다. 공학적 정확성을 주장하지 않는다(`docs/04_clean_room_policy.md`). 외부 솔버(FDS, OpenFOAM) 결과는 나중에 같은 격자 `.npy` 형식으로 받는다(ADR-009).
+- 시뮬레이션 결과는 "시각화 목적"으로 표기한다. 공학적 정확성을 주장하지 않는다(`docs/04_clean_room_policy.md`). 외부 솔버(FDS, OpenFOAM) 결과는 나중에 같은 격자 `.npy` 형식으로 받는다(방향은 `docs/17_direction_review.md` 머리말에만 있고 ADR로는 아직 쓰지 않았다. ADR-009는 홀 배치와 냉각 방식이다).
 - 회사 자산을 참조하는 시험 스크립트는 gitignore된 `experiments/omniverse_probe/local_only/`(및 `out/local_only/`)에만 둔다. 시험용 Unreal 프로젝트는 저장소 밖 `D:\ue_probe\`에 둔다. 상용 도구(외부 CFD 제품 등)로 계산한 결과나 화면은 올리지 않는다.
 - 커밋 전에 `git diff --cached`에서 금지어(`.claude/cleanroom-terms.local.txt`)와 업무 머티리얼·파라미터 이름이 0건인지 확인한다(`.claude/skills/clean-room-check`).
 - **외부 CFD 도구(Reality DC 등 상용 포함)의 결과·모델 파일(`*.vtk`, `*.vtu`, `*.vti`, `*.room`)과 화면은 저장소, PR, 영상, 문서에 올리지 않는다.** 변환 파이프라인(`sim/sensors/dct_sensors/external`)은 gitignore된 `sim/out/local_only/`에만 쓰고, 결과는 로컬 서버가 줄 때만 화면에 보인다. **Reality DC 사용은 라이선스 확인 전까지 보류**한다(2026-11-04, 사용자 결정). CI(`external_guard.test.js`)가 추적 파일을 검사한다.
@@ -30,7 +30,7 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 | `docs/` | 기획·설계·로드맵·실험·정책, `docs/decisions/`(ADR) |
 | `blender/` | .blend 원본, 내보내기 스크립트 |
 | `usd/` | 내보낸 USD 에셋/씬 (`assets/`, `scenes/`) |
-| `sim/` | 센서 시나리오 생성기, 열/기류 데이터 생성, Omniverse 스크립트 |
+| `sim/` | 센서 시나리오 생성기(`sensors/`), 서버. `thermal/`은 비어 있고 실제 열 계산(Warp)은 `experiments/omniverse_probe/hall60_sim.py`에 있다(옮기는 안은 `docs/30`) |
 | `scripts/usd_tools/` | USD 검증(`validate_usd.py`), 에셋 마무리(`finalize_asset.py`), 장면 생성(`build_scene.py`) |
 | `usd/scenes/hall01.config.json` | 홀 배치 원본(랙 6줄 x 10기, CRAC 8기). 장면은 이 파일에서만 만든다 |
 | `gateway/` | MQTT → WebSocket/REST 게이트웨이 (Node) |
