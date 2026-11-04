@@ -20,6 +20,18 @@ export function makeTileTexture(THREE_, { size = 256, n = 4, base = '#4a4f58', g
   const g = c.getContext('2d');
   g.fillStyle = base;
   g.fillRect(0, 0, size, size);
+  // 타일마다 밝기를 조금씩 달리하고 잔 점을 뿌려 단조로움을 줄인다(고정된 난수라 항상 같은 모양)
+  let seed = 12345;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const step0 = size / n;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    g.fillStyle = `rgba(${rnd() < 0.5 ? '255,255,255' : '0,0,0'},${(rnd() * 0.07).toFixed(3)})`;
+    g.fillRect(i * step0, j * step0, step0, step0);
+  }
+  for (let k = 0; k < size * 6; k++) {
+    g.fillStyle = `rgba(${rnd() < 0.5 ? '255,255,255' : '0,0,0'},${(rnd() * 0.06).toFixed(3)})`;
+    g.fillRect(rnd() * size, rnd() * size, 1.5, 1.5);
+  }
   g.strokeStyle = grout;
   g.lineWidth = line;
   const step = size / n;
@@ -44,10 +56,10 @@ export function prepareShell(root) {
     const name = o.name;
     parts.set(name, o);
     if (name === 'floor') {
-      o.material.map = makeTileTexture(THREE, { base: '#555a63', grout: '#30343b', n: 8 });
+      o.material.map = makeTileTexture(THREE, { base: '#4b515b', grout: '#262a31', n: 8 });
       o.material.color.set(0xffffff);
     } else if (name === 'ceiling') {
-      o.material.map = makeTileTexture(THREE, { base: '#c9ccd2', grout: '#9aa0aa', n: 6 });
+      o.material.map = makeTileTexture(THREE, { base: '#8c919b', grout: '#6b707a', n: 6 });
       o.material.color.set(0xffffff);
     }
     if (o.material.map) o.material.needsUpdate = true;
