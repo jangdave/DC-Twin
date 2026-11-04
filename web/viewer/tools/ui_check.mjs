@@ -510,6 +510,42 @@ await pc.close();
   await rp.close();
 }
 
+// 휴대폰: 3D가 화면을 채우고 정보 패널은 아래 시트(접힘, 반, 전체). 장비를 고르면 시트가 반으로 올라오고, 한 손가락으로 끌면 3D가 돈다
+{
+  const mp = await browser.newPage();
+  await mp.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await mp.goto(`${base}?stage=hall`, { waitUntil: 'networkidle0' });
+  await mp.waitForFunction(() => window.__viewer?.scene?.shell, { timeout: 40000 }).catch(() => {});
+  const m0 = await mp.evaluate(() => ({ sheet: document.getElementById('side').dataset.sheet, sideH: Math.round(document.getElementById('side').getBoundingClientRect().height), stageH: Math.round(document.getElementById('stage').getBoundingClientRect().height), scroll: document.documentElement.scrollHeight - innerHeight }));
+  ok('SHEET 휴대폰 처음: 시트는 접힘(80px 이하), 3D가 400px 이상, 화면이 세로로 밀리지 않음', m0.sheet === 'peek' && m0.sideH <= 80 && m0.stageH >= 400 && m0.scroll <= 1, JSON.stringify(m0));
+  const sheetOf = () => mp.evaluate(() => document.getElementById('side').dataset.sheet);
+  await mp.tap('#sheet-handle');
+  const h1 = await sheetOf();
+  await sleep(450); // 시트가 움직이는 동안 손잡이 위치가 바뀌므로 멈춘 뒤 누른다
+  await mp.tap('#sheet-handle');
+  const h2 = await sheetOf();
+  await sleep(450);
+  await mp.tap('#sheet-handle');
+  const h3 = await sheetOf();
+  await sleep(450);
+  ok('SHEET 손잡이를 누를 때마다 접힘 -> 반 -> 전체 -> 접힘', h1 === 'half' && h2 === 'full' && h3 === 'peek', JSON.stringify([h1, h2, h3]));
+  await mp.evaluate(() => window.__viewer.selectEquipment('rack_05'));
+  await sleep(300);
+  const sel = await mp.evaluate(() => ({ sheet: document.getElementById('side').dataset.sheet, tab: document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab }));
+  ok('SHEET 장비를 고르면 시트가 반으로 올라오고 장비 탭이 열림', sel.sheet === 'half' && sel.tab === 'detail', JSON.stringify(sel));
+  await mp.evaluate(() => document.getElementById('sheet-handle').dispatchEvent(new PointerEvent('pointerdown', { clientY: 500, pointerId: 1, bubbles: true })));
+  await mp.evaluate(() => document.getElementById('sheet-handle').dispatchEvent(new PointerEvent('pointerup', { clientY: 560, pointerId: 1, bubbles: true })));
+  ok('SHEET 손잡이를 아래로 밀면 한 단계 내려감', (await sheetOf()) === 'peek');
+  const before = await mp.evaluate(() => window.__viewer.scene.camera.position.toArray());
+  await mp.touchscreen.touchStart(195, 300);
+  for (let i = 1; i <= 8; i++) await mp.touchscreen.touchMove(195 + i * 15, 300);
+  await mp.touchscreen.touchEnd();
+  await sleep(300);
+  const after = await mp.evaluate(() => window.__viewer.scene.camera.position.toArray());
+  ok('TOUCH 한 손가락으로 끌면 3D 시점이 돈다', Math.hypot(...after.map((v, i) => v - before[i])) > 0.3, JSON.stringify({ before, after }));
+  await mp.close();
+}
+
 // 가상 CCTV: 메뉴로 열면 칸이 보이고 모든 칸에 "가상 CCTV" 표시, 칸마다 실제로 그려지고, 알람 구역은 빨간 테두리, Esc로 닫음
 {
   const cp = await browser.newPage();

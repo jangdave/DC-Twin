@@ -30,6 +30,8 @@ export class UI {
     this.store = store;
     this.h = handlers; // { onSelect(eq), onView(v), onScenario(id), onPlay(), onSpeed(x), onSeek(t), onLoop(b), onPreset(p), onLabels(b), onBackToRec(), onEnter(), onBack(), onMode(m), onModels(on), onFlow(on), onHeat(on), onSky(name), onServer(url) }
     this.mode = 'rec';
+    this.sheet = 'peek';
+    this.ready = false;
     this.metricTab = null;
     this.heatOn = false;
     this.selected = null;
@@ -88,6 +90,23 @@ export class UI {
     document.querySelectorAll('#speeds [data-speed]').forEach((b) => b.addEventListener('click', () => this.h.onSpeed(Number(b.dataset.speed))));
     $('time-slider').addEventListener('input', (e) => this.h.onSeek(Number(e.target.value)));
     $('loop-check').addEventListener('change', (e) => this.h.onLoop(e.target.checked));
+    // 휴대폰: 정보 패널은 아래에서 올라오는 시트(접힘 / 반 / 전체). 손잡이를 누르면 한 단계씩, 위아래로 밀면 그 방향으로
+    const handle = $('sheet-handle');
+    let dragY = null;
+    handle.addEventListener('pointerdown', (e) => { dragY = e.clientY; handle.setPointerCapture?.(e.pointerId); });
+    handle.addEventListener('pointerup', (e) => {
+      if (dragY === null) return;
+      const dy = e.clientY - dragY;
+      dragY = null;
+      if (Math.abs(dy) < 24) this.cycleSheet();
+      else this.stepSheet(dy < 0 ? 1 : -1);
+    });
+    handle.addEventListener('pointercancel', () => (dragY = null));
+    handle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.cycleSheet(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); this.stepSheet(1); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); this.stepSheet(-1); }
+    });
     $('side-toggle').addEventListener('click', () => this.setSideOpen($('side').classList.contains('collapsed')));
     $('help-btn').addEventListener('click', () => $('help-dialog').showModal());
     $('live-back').addEventListener('click', () => this.h.onBackToRec());
@@ -127,10 +146,12 @@ export class UI {
       else if (this.tab === 'control') this.showTab('summary');
     }).observe($('sim-panel'), { attributes: true, attributeFilter: ['hidden'] });
     this.showTab('summary');
+    this.ready = true;
   }
 
   showTab(name) {
     this.tab = name;
+    if (this.ready && this.sheet === 'peek' && window.matchMedia('(max-width: 900px)').matches) this.setSheet('half'); // 휴대폰: 탭이나 선택으로 접힌 시트를 반으로 올림
     if (document.getElementById('side').classList.contains('collapsed') && this._sideTouched !== false) this.setSideOpen(true);
     for (const t of document.querySelectorAll('#side-tabs [data-tab]')) {
       const on = t.dataset.tab === name;
@@ -180,6 +201,22 @@ export class UI {
       x.classList.toggle('on', on);
       if (x.closest('#rail')) x.setAttribute('aria-pressed', String(on));
     });
+  }
+
+  // 아래 시트 단계: peek(접힘) < half < full
+  setSheet(s) {
+    this.sheet = s;
+    $('side').dataset.sheet = s;
+    $('sheet-handle').setAttribute('aria-expanded', String(s !== 'peek'));
+  }
+
+  stepSheet(d) {
+    const order = ['peek', 'half', 'full'];
+    this.setSheet(order[Math.max(0, Math.min(2, order.indexOf(this.sheet) + d))]);
+  }
+
+  cycleSheet() {
+    this.setSheet({ peek: 'half', half: 'full', full: 'peek' }[this.sheet]);
   }
 
   // 오른쪽 정보 패널 접기/펴기(PC 폭에서 3D 위에 떠 있을 때)
