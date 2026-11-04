@@ -200,6 +200,14 @@ describe('LibSource(미리 계산한 값)', () => {
     }
     expect(cool.every((v, i) => i === 0 || v < cool[i - 1])).toBe(true);
   });
+  it('외부 솔버 결과 항목은 우리 모델의 값이 아니라고 표시한다', async () => {
+    const ext = { ...index.find((i) => i.id === 'normal'), id: 'ext_demo', group: 'external', source: 'external', tool: '합성 시험 데이터' };
+    const src = new LibSource({ store: new SensorStore(sensors), sensorIds: ids, index: [...index, ext], loadJson: async () => read('../public/data/rec/normal.json') });
+    await src.open({ scenarioId: 'ext_demo' });
+    expect(src.describe().badge.text).toBe('외부 솔버 결과 (합성 시험 데이터) · 이 컴퓨터의 서버만 줌');
+    await src.open({ scenarioId: 'normal' });
+    expect(src.describe().badge.text).toMatch(/Warp 열 시뮬레이션/);
+  });
   it('모니터링(RecSource)과 같은 캐시를 쓰면 같은 녹화를 다시 받지 않는다', async () => {
     const cache = new Map();
     const loaded = [];

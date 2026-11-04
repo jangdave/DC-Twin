@@ -1,0 +1,2052 @@
+{
+ "version": 1,
+ "unit": "cm",
+ "size_cm": [
+  1100.0,
+  1360.0,
+  400.0
+ ],
+ "scene": "usd/scenes/hall01.usda",
+ "anchors": [
+  {
+   "equipment": "crac_01",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    50.0,
+    50.0,
+    225.0
+   ]
+  },
+  {
+   "equipment": "crac_01",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    105.0,
+    50.0,
+    132.0
+   ]
+  },
+  {
+   "equipment": "crac_01",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    -5.0,
+    50.0,
+    30.0
+   ]
+  },
+  {
+   "equipment": "crac_02",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    50.0,
+    470.0,
+    225.0
+   ]
+  },
+  {
+   "equipment": "crac_02",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    105.0,
+    470.0,
+    132.0
+   ]
+  },
+  {
+   "equipment": "crac_02",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    -5.0,
+    470.0,
+    30.0
+   ]
+  },
+  {
+   "equipment": "crac_03",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    50.0,
+    890.0,
+    225.0
+   ]
+  },
+  {
+   "equipment": "crac_03",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    105.0,
+    890.0,
+    132.0
+   ]
+  },
+  {
+   "equipment": "crac_03",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    -5.0,
+    890.0,
+    30.0
+   ]
+  },
+  {
+   "equipment": "crac_04",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    50.0,
+    1310.0,
+    225.0
+   ]
+  },
+  {
+   "equipment": "crac_04",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    105.0,
+    1310.0,
+    132.0
+   ]
+  },
+  {
+   "equipment": "crac_04",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    -5.0,
+    1310.0,
+    30.0
+   ]
+  },
+  {
+   "equipment": "crac_05",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    1050.0,
+    50.0,
+    225.0
+   ]
+  },
+  {
+   "equipment": "crac_05",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    995.0,
+    50.0,
+    132.0
+   ]
+  },
+  {
+   "equipment": "crac_05",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    1105.0,
+    50.0,
+    30.0
+   ]
+  },
+  {
+   "equipment": "crac_06",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    1050.0,
+    470.0,
+    225.0
+   ]
+  },
+  {
+   "equipment": "crac_06",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    995.0,
+    470.0,
+    132.0
+   ]
+  },
+  {
+   "equipment": "crac_06",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    1105.0,
+    470.0,
+    30.0
+   ]
+  },
+  {
+   "equipment": "crac_07",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    1050.0,
+    890.0,
+    225.0
+   ]
+  },
+  {
+   "equipment": "crac_07",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    995.0,
+    890.0,
+    132.0
+   ]
+  },
+  {
+   "equipment": "crac_07",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    1105.0,
+    890.0,
+    30.0
+   ]
+  },
+  {
+   "equipment": "crac_08",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    1050.0,
+    1310.0,
+    225.0
+   ]
+  },
+  {
+   "equipment": "crac_08",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    995.0,
+    1310.0,
+    132.0
+   ]
+  },
+  {
+   "equipment": "crac_08",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    1105.0,
+    1310.0,
+    30.0
+   ]
+  },
+  {
+   "equipment": "rack_01",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_01",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_01",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_02",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_02",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_02",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_03",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_03",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_03",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_04",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_04",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_04",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_05",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_05",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_05",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_06",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_06",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_06",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_07",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_07",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_07",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_08",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_08",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_08",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_09",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_09",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_09",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_10",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_10",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_10",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_11",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_11",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_11",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_12",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_12",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_12",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_13",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_13",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_13",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_14",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_14",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_14",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_15",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_15",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_15",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_16",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_16",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_16",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_17",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_17",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_17",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_18",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_18",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_18",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_19",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_19",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_19",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_20",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_20",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_20",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_21",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_21",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_21",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_22",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_22",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_22",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_23",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_23",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_23",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_24",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_24",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_24",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_25",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_25",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_25",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_26",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_26",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_26",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_27",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_27",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_27",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_28",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_28",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_28",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_29",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_29",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_29",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_30",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_30",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_30",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_31",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_31",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_31",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_32",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_32",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_32",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_33",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_33",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_33",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_34",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_34",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_34",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_35",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_35",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_35",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_36",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_36",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_36",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_37",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_37",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_37",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_38",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_38",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_38",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_39",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_39",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_39",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_40",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_40",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_40",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_41",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_41",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_41",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_42",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_42",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_42",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_43",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_43",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_43",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_44",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_44",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_44",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_45",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_45",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_45",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_46",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_46",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_46",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_47",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_47",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_47",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_48",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_48",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_48",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_49",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_49",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_49",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_50",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_50",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_50",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_51",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_51",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_51",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_52",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_52",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_52",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_53",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_53",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_53",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_54",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_54",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_54",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_55",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_55",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_55",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_56",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_56",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_56",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_57",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_57",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_57",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_58",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_58",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_58",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_59",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_59",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_59",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_60",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "equipment": "rack_60",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "equipment": "rack_60",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    1265.0,
+    120.0
+   ]
+  }
+ ]
+}

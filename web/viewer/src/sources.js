@@ -91,7 +91,8 @@ export class RecSource {
     return {
       kind: this.kind,
       control: false,
-      badge: { mode: this.kind, text: this.badgeText },
+      // 항목의 출처가 외부 솔버면 우리 모델이 만든 값이 아니므로 표시를 바꾼다(잘못된 출처 표시를 막는다)
+      badge: { mode: this.kind, text: meta?.source === 'external' ? `외부 솔버 결과${meta.tool ? ` (${meta.tool})` : ''} · 이 컴퓨터의 서버만 줌` : this.badgeText },
       panel: 'none',
       scenarios: { list: this.index, current: this.scenarioId, groups: this.groups },
       card: { title: meta?.title ?? this.scenarioId, desc: meta?.note ?? '', events: rec?.events ?? [], seekable: true },
