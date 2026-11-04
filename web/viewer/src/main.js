@@ -2,6 +2,7 @@
 import { CommandQueue, FlowState, summarize } from './flow.js';
 import { alarmSets, buildCameras } from './cctv.js';
 import { CctvPanel } from './cctv_ui.js';
+import { InsightPanel } from './sim/insight_panel.js';
 import { detectQuality, browserEnv, lowerTier, SETTINGS } from './quality.js';
 import { HallScene, VIEWS } from './scene.js';
 import { LiveClient } from './live.js';
@@ -186,6 +187,17 @@ async function main() {
   );
   const layout = layoutFrom(sceneData.racks, sensors);
   panel.build(layout.cracs, simRows);
+  const rackRow = new Map(sceneData.racks.map((r) => [r.name.toLowerCase(), r.row]));
+  const insight = new InsightPanel({
+    store,
+    rackKeys,
+    rowOf: (k) => rackRow.get(k),
+    warnIn: sensors.find((s) => s.metric === 'temp_in')?.warn ?? 27,
+    supplyWarn: sensors.find((s) => s.metric === 'supply_temp')?.warn ?? null,
+    pretty: prettyName,
+    onSupply: (v) => state.sim?.setSupply(v),
+    onScenario: (id) => ui.h.onScenario(id),
+  });
 
   function startSim(id = 'normal') {
     if (!SCENARIOS[id]) id = 'normal';
@@ -422,6 +434,7 @@ async function main() {
     ui.renderAlarms(sensorInfo, state.mode);
     if (state.mode === 'sim' && state.sim) panel.renderLog(state.sim.log);
     if (state.server) syncServerPanel();
+    if (state.mode === 'sim' || state.server) insight.render(state.server ? null : state.sim?.engine, state.simScenario);
     ui.renderDetail(state.view);
     if (flow.stage === 'exterior') ui.renderExterior(summarize(store, rackKeys));
     if (cctv.isOpen) cctv.setAlarms(cctvSets());

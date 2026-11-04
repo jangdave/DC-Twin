@@ -141,9 +141,9 @@ export class UI {
     // 조작 패널이 나타나면 "조작" 탭을 열고, 사라지면 요약으로 돌아간다
     new MutationObserver(() => {
       const shown = !$('sim-panel').hidden;
-      $('tab-control').hidden = !shown;
+      for (const t of ['control', 'energy', 'prep']) $(`tab-${t}`).hidden = !shown;
       if (shown) this.showTab('control');
-      else if (this.tab === 'control') this.showTab('summary');
+      else if (['control', 'energy', 'prep'].includes(this.tab)) this.showTab('summary');
     }).observe($('sim-panel'), { attributes: true, attributeFilter: ['hidden'] });
     this.showTab('summary');
     this.ready = true;
