@@ -6,13 +6,11 @@ import { InsightPanel } from './sim/insight_panel.js';
 import { detectQuality, browserEnv, lowerTier, SETTINGS } from './quality.js';
 import { HallScene } from './scene.js';
 import { VIEWS } from './views.js';
-import { LiveClient } from './live.js';
-import { parseRecording, RecordingPlayer } from './recording.js';
 import { SensorStore } from './store.js';
 import { SCENARIOS } from './sim/core.js';
 import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
-import { SimRunner } from './sim/runner.js';
+import { LiveSource, RecSource, SimSource } from './sources.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
 import { checkLiveUrl, parseParams } from './url.js';
 import { Boot, eventFraction } from './boot.js';
@@ -131,20 +129,23 @@ async function main() {
     modelsState = 'deferred';
   }
 
+  // 데이터 출처(녹화, 시뮬레이션, 라이브/서버)는 어댑터가 같은 모양으로 감싼다(src/sources.js). 지금 쓰는 출처는 source 하나다.
+  let source = null;
   const state = {
-    mode: 'rec', // rec | sim | live
-    sim: null,
-    server: false, // 로컬 계산 서버에 조작을 보내는 라이브
     simScenario: params.scenario ?? 'normal',
-    scenarioId: params.scenario ?? 'normal',
-    player: null,
-    live: null,
     view: params.view ?? 'temp_in',
     selected: null,
-    recCache: new Map(),
-    lastSec: -1,
     stage: flow.stage,
+    // 아래는 지금 출처에서 읽는 값(점검 도구와 기존 코드가 같은 이름으로 읽는다)
+    get mode() { return source?.kind ?? 'rec'; }, // rec | sim | live
+    get server() { return !!source?.control; }, // 로컬 계산 서버에 조작을 보내는 라이브
+    get player() { return source?.player ?? null; },
+    get sim() { return simSource?.runner ?? null; },
+    get live() { return source?.kind === 'live' ? source.client : null; },
+    get scenarioId() { return recSource.scenarioId ?? params.scenario ?? 'normal'; },
   };
+  const recSource = new RecSource({ store, sensorIds: sensors.map((s) => s.sensorId), index, loadJson: (id) => getJson(`data/rec/${id}.json`) });
+  let simSource = null; // 패널이 만들어진 뒤에 만든다
 
   const ui = new UI(store, {
     onSelect: (eq, focus) => selectEquipment(eq, focus),
@@ -207,33 +208,58 @@ async function main() {
     onScenario: (id) => ui.h.onScenario(id),
   });
 
-  function startSim(id = 'normal') {
-    if (!SCENARIOS[id]) id = 'normal';
-    if (state.live) {
-      state.live.stop();
-      state.live = null;
+  simSource = new SimSource({
+    store,
+    scenarios: SCENARIOS,
+    makeEngine: () => new SimEngine({ sensors, ...layout, seed: 7, basePower: simInit?.basePower ?? null, phase: simInit?.phase ?? null }),
+    onEvent: (_e, engine) => panel.syncFromEngine(engine),
+  });
+
+  // ---- 출처 전환: 어떤 출처든 이 경로 하나로 바뀐다 ----
+  // 모드 표시와 패널(출처가 정하는 부분). 연결 상태가 바뀔 때도 쓴다.
+  function presentMode(d) {
+    ui.setMode(d.badge.mode, d.badge.text);
+    dispatch({ type: 'mode', mode: d.badge.mode, control: d.control });
+  }
+  function present(src) {
+    const d = src.describe();
+    presentMode(d);
+    panel.setServerMode(d.panel === 'server');
+    panel.show(d.panel !== 'none');
+    if (d.timebar) ui.setupTimebar(d.timebar.n, d.timebar.events);
+    ui.setScenarioCard(d.card.title, d.card.desc, d.card.events, d.card.seekable);
+    if (d.scenarios) ui.setScenarios(d.scenarios.list, d.scenarios.current);
+    if (src.engine) {
+      panel.syncFromEngine(src.engine);
+      panel.setSelected(state.selected, src.engine);
     }
-    state.mode = 'sim';
-    state.server = false;
-    panel.setServerMode(false);
-    state.simScenario = id;
-    if (!state.sim) {
-      const engine = new SimEngine({ sensors, ...layout, seed: 7, basePower: simInit?.basePower ?? null, phase: simInit?.phase ?? null });
-      state.sim = new SimRunner(engine, store, { onEvent: () => panel.syncFromEngine(engine) });
-    }
-    state.player = state.sim;
-    ui.setMode('sim', '직접 시뮬레이션 · 간이 모델');
-    dispatch({ type: 'mode', mode: 'sim' });
-    ui.setScenarios(simList, id);
-    ui.setScenarioCard(SCENARIOS[id].title, SCENARIOS[id].description, SCENARIOS[id].events, false);
-    panel.show(true);
-    state.sim.start(id);
-    panel.syncFromEngine(state.sim.engine);
-    panel.setSelected(state.selected, state.sim.engine);
-    ui.renderTransport(state.sim);
-    state.lastSec = -1;
+    if (src.player) ui.renderTransport(src.player);
     refresh();
   }
+  async function useSource(next, args) {
+    if (source && source !== next) {
+      source.close();
+      store.clear(); // 다른 출처의 값이 남지 않게(같은 녹화 안에서 시나리오만 바꿀 때는 지우지 않는다)
+    }
+    const prev = source;
+    source = next;
+    resetServerModel();
+    presentMode(next.describe()); // 열기에 실패해도 어느 출처인지는 보인다
+    try {
+      await next.open(args);
+    } catch (e) {
+      console.error(e);
+      badge.className = 'badge closed';
+      badge.textContent = `녹화를 열 수 없다: ${e.message}`;
+      return prev === next;
+    }
+    present(next);
+    return true;
+  }
+  const startSim = (id = 'normal') => {
+    state.simScenario = SCENARIOS[id] ? id : 'normal';
+    return useSource(simSource, { scenarioId: state.simScenario });
+  };
 
   // ---- 가상 CCTV (docs/27 10장) ----
   const cctvCams = buildCameras(sceneData);
@@ -327,53 +353,12 @@ async function main() {
     if (state.selected && focus) scene.focus(state.selected);
   }
 
-  async function loadRecording(id) {
-    if (state.recCache.has(id)) return state.recCache.get(id);
-    const rec = parseRecording(await getJson(`data/rec/${id}.json`), sensors.map((s) => s.sensorId));
-    state.recCache.set(id, rec);
-    return rec;
-  }
-
-  async function loadScenario(id, t0) {
-    try {
-      const rec = await loadRecording(id);
-      state.scenarioId = id;
-      const old = state.player;
-      state.player = new RecordingPlayer(rec, store, { loop: old?.loop ?? true, speed: old?.speed ?? 1 });
-      state.player.playing = old?.playing ?? true; // 일시정지 상태도 이어 간다
-      state.player.seek(t0);
-      state.lastSec = -1;
-      ui.setupTimebar(rec.n, rec.events);
-      const meta = index.find((x) => x.id === id);
-      ui.setScenarioCard(meta?.title ?? id, meta?.note ?? '', rec.events, true);
-      ui.setScenarios(index, id);
-      ui.renderTransport(state.player);
-      refresh();
-    } catch (e) {
-      console.error(e);
-      badge.className = 'badge closed';
-      badge.textContent = `녹화를 열 수 없다: ${e.message}`;
-    }
-  }
-
-  async function startRecording() {
-    if (state.live) {
-      state.live.stop();
-      state.live = null;
-    }
-    state.mode = 'rec';
-    state.server = false;
-    panel.setServerMode(false);
-    panel.show(false);
-    store.clear();
-    ui.setMode('rec', '녹화 재생 · 실시간 아님');
-    dispatch({ type: 'mode', mode: 'rec' });
-    await loadScenario(state.scenarioId, params.t);
-  }
+  const loadScenario = (id, t0) => useSource(recSource, { scenarioId: id, t: t0 });
+  const startRecording = () => useSource(recSource, { scenarioId: state.scenarioId, t: params.t });
 
   // 서버에 조작을 보낸다. 연결이 안 되어 있으면 화면에 알린다.
   function serverControl(c) {
-    if (!state.live?.send({ type: 'control', ...c })) {
+    if (!(source?.kind === 'live' && source.send(c))) {
       badge.textContent = '서버에 연결되어 있지 않아 조작을 보내지 못했다';
       return false;
     }
@@ -413,34 +398,25 @@ async function main() {
   function connectServer(text) {
     const r = checkLiveUrl(text);
     if (!r.ok) return r.reason;
-    state.mode = 'live';
     startLive(r.url, true);
     return true;
   }
 
   function startLive(url, control = false) {
-    if (state.live) state.live.stop();
-    state.player = null;
-    state.server = control;
-    panel.show(control);
-    panel.setServerMode(control);
-    store.clear();
-    resetServerModel();
-    ui.setMode('connecting', control ? '로컬 서버 연결 중' : '라이브 연결 중');
-    dispatch({ type: 'mode', mode: 'connecting', control });
-    ui.setScenarioCard(control ? '로컬 서버' : '라이브', control ? '이 컴퓨터의 계산 서버가 실제 시간으로 계산한 값을 보여 준다. 시나리오와 조작은 서버로 전달된다.' : '게이트웨이가 보내는 센서 값을 그대로 보여 준다.', [], false);
-    if (control) ui.setScenarios(simList, state.simScenario);
-    state.live = new LiveClient(url, store, {
-      onState: (s, c) => {
-        const label = control ? '로컬 서버' : '라이브';
-        const text = { connecting: `${label} 연결 중`, open: `${label} 연결됨`, closed: `연결 끊김, ${Math.round(c.retryInMs / 1000)}초 뒤 다시 시도`, idle: `${label} 중지` }[s];
-        const m = s === 'open' ? 'open' : s === 'closed' ? 'closed' : 'connecting';
-        ui.setMode(m, text);
-        dispatch({ type: 'mode', mode: m, control });
-        ui.setLiveText(`${url}  ${text}`);
+    const src = new LiveSource({
+      store,
+      url,
+      control,
+      simList: simSource.list,
+      current: state.simScenario,
+      onChange: () => {
+        if (source !== src) return; // 이미 다른 출처로 옮겨 갔다
+        const d = src.describe();
+        presentMode(d);
+        ui.setLiveText(`${url}  ${d.badge.text}`);
       },
     });
-    state.live.start();
+    return useSource(src);
   }
 
   let lastRefresh = { version: -1, at: 0 };
@@ -561,19 +537,11 @@ async function main() {
     perfGuard(now);
     const dt = Math.min((now - last) / 1000, 0.25);
     last = now;
-    if ((state.mode === 'rec' || state.mode === 'sim') && state.player) {
-      const before = Math.floor(state.player.time);
-      state.player.advance(dt);
-      if (Math.floor(state.player.time) !== before || state.lastSec < 0) {
-        state.lastSec = Math.floor(state.player.time);
-        refresh();
-      }
-      ui.renderTransport(state.player);
-    } else if (state.live) {
-      if (state.live.flush()) refresh();
-      const age = state.live.lastMessageAt ? Math.round((Date.now() - state.live.lastMessageAt) / 1000) : null;
-      const err = state.live.lastError && Date.now() - state.live.lastError.at < 6000 ? ` / 서버가 거절함: ${state.live.lastError.message}` : '';
-      if (state.live.state === 'open') ui.setLiveText(`${state.live.url}  마지막 수신 ${age === null ? '–' : `${age}초 전`}, 버린 메시지 ${state.live.dropped}건${err}`);
+    if (source) {
+      if (source.advance(dt)) refresh();
+      if (source.player) ui.renderTransport(source.player);
+      const st = source.statusText();
+      if (st) ui.setLiveText(st);
     }
     // 값이 바뀌었는데 아직 반영하지 않았다면(시간 막대 밖의 이동, 라이브 등) 화면 조각을 갱신한다. 라이브는 초당 4번까지만.
     if (store.version !== lastRefresh.version && now - lastRefresh.at > 250) refresh();
@@ -585,13 +553,11 @@ async function main() {
   setView(state.view);
   if (params.liveError) console.warn(`라이브 주소를 쓰지 않는다: ${params.liveError}`);
   if (params.server) {
-    state.mode = 'live';
-    startLive(params.server, true);
+    await startLive(params.server, true);
   } else if (params.live) {
-    state.mode = 'live';
-    startLive(params.live);
+    await startLive(params.live);
   } else if (params.mode === 'sim') {
-    startSim(params.scenario ?? 'normal');
+    await startSim(params.scenario ?? 'normal');
   } else {
     await startRecording();
   }
