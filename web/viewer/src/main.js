@@ -11,6 +11,7 @@ import { SimPanel } from './sim/panel.js';
 import { SimRunner } from './sim/runner.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
 import { checkLiveUrl, parseParams } from './url.js';
+import { Boot, eventFraction } from './boot.js';
 
 const BASE = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
@@ -33,9 +34,11 @@ function webglOk() {
 
 async function main() {
   const badge = $('mode-badge');
+  const boot = new Boot(document, reducedMotion);
   if (!webglOk()) {
     $('webgl-error').hidden = false;
     badge.textContent = 'WebGL 없음';
+    boot.done(); // 안내 문구(#webgl-error)가 보이도록 로딩 화면은 치운다
     return;
   }
   let sensors;
@@ -46,8 +49,10 @@ async function main() {
   } catch (e) {
     badge.textContent = '자료를 못 받음';
     console.error(e);
+    boot.fail('자료를 받지 못했다. 네트워크를 확인하고 다시 시도해 달라.');
     return;
   }
+  boot.set('data', 'done');
 
   const ids = index.map((s) => s.id);
   const params = parseParams(location.search, ids);
@@ -67,13 +72,28 @@ async function main() {
     b.textContent = '낮으로 보기';
   }
   // 건물 모델(glb)도 화면이 뜬 뒤에 받는다. 실패하면 단순 상자 건물로 계속 쓴다.
-  scene.loadExteriorModel(BASE).catch((e) => console.warn('건물 모양을 받지 못해 상자로 보여 준다:', e.message));
+  const modelP = scene
+    .loadExteriorModel(BASE, (e) => {
+      const f = eventFraction(e);
+      if (f !== null) boot.set('model', f * 0.95); // 받기가 끝난 뒤 해석하는 시간을 남겨 둔다
+    })
+    .then(() => boot.set('model', 'done'))
+    .catch((e) => {
+      boot.set('model', 'skip');
+      console.warn('건물 모양을 받지 못해 상자로 보여 준다:', e.message);
+    });
 
   // 공기 흐름 속도장도 화면이 뜬 뒤에 받는다. 실패하면 단추를 숨기고 흐름 없이 쓴다.
-  scene
+  const flowP = scene
     .loadAirflow(BASE)
-    .then(() => (document.getElementById('flow-btn').hidden = false))
-    .catch((e) => console.warn('공기 흐름을 받지 못해 생략한다:', e.message));
+    .then(() => {
+      document.getElementById('flow-btn').hidden = false;
+      boot.set('flow', 'done');
+    })
+    .catch((e) => {
+      boot.set('flow', 'skip');
+      console.warn('공기 흐름을 받지 못해 생략한다:', e.message);
+    });
 
   // 장비 모양(glb)은 화면이 뜬 뒤에 받는다. 실패하면 단순 상자로 계속 쓴다.
   // 낮은 화질(모바일, 저사양)에서는 랙 60기 모델(삼각형 약 27만 개)을 자동으로 받지 않고, 단추를 누르면 받는다.
@@ -508,6 +528,10 @@ async function main() {
   applyStage(true);
   queue.setReady(); // 장면이 준비되기 전에 들어온 명령은 여기서 실행된다
   requestAnimationFrame(frame);
+  // 모델과 기류 데이터가 끝나고 첫 장면이 두 번 그려진 뒤에 로딩 화면을 치운다. 너무 오래 걸리면(25초) 받기는 계속하고 화면만 먼저 보여 준다.
+  const settled = Promise.allSettled([modelP, flowP]);
+  const waitMax = new Promise((r) => setTimeout(r, 25000));
+  Promise.race([settled, waitMax]).then(() => requestAnimationFrame(() => requestAnimationFrame(() => boot.done())));
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
   window.__viewer = { getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, panel, flow, queue, dispatch: (c) => queue.push(c) };

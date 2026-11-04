@@ -455,6 +455,29 @@ await sleep(500);
 ok('SIM 다시 직접 시뮬레이션으로 전환', (await vis5('#sim-panel')) && (await p5.evaluate(() => window.__viewer.state.mode)) === 'sim');
 await p5.screenshot({ path: path.join(OUT, 'sim_mode.png') });
 
+// BOOT 첫 로딩 화면: 처음 HTML에 있고, 장면이 준비되면 사라지며, 자료를 못 받으면 이유와 다시 시도가 보인다
+const pb = await browser.newPage();
+await pb.setViewport({ width: 390, height: 844 });
+await pb.setRequestInterception(true);
+pb.on('request', (r) => (r.url().includes('data/sensors.json') ? r.abort() : r.continue()));
+await pb.goto(base, { waitUntil: 'networkidle0' });
+await sleep(500);
+const bootFail = await pb.evaluate(() => ({ hidden: document.getElementById('boot').hidden, failed: document.getElementById('boot').classList.contains('failed'), act: !document.getElementById('boot-actions').hidden, text: document.getElementById('boot-text').textContent }));
+ok('BOOT 자료를 못 받으면 로딩 화면에 이유와 "다시 시도"가 보임', !bootFail.hidden && bootFail.failed && bootFail.act && bootFail.text.includes('다시'), JSON.stringify(bootFail));
+await pb.screenshot({ path: path.join(OUT, 'boot_fail.png') });
+await pb.close();
+const pc = await browser.newPage();
+await pc.setViewport({ width: 390, height: 844 });
+await pc.setRequestInterception(true);
+let firstHtml = '';
+pc.on('response', async (r) => { if (r.request().resourceType() === 'document' && !firstHtml) firstHtml = await r.text(); });
+pc.on('request', (r) => r.continue());
+await pc.goto(base, { waitUntil: 'domcontentloaded' });
+ok('BOOT 처음 HTML에 로딩 화면이 들어 있음(자바스크립트 전에도 보임)', firstHtml.includes('id="boot"') && firstHtml.includes('aria-busy="true"'));
+await pc.waitForFunction(() => document.getElementById('boot')?.hidden === true, { timeout: 40000 });
+ok('BOOT 장면이 준비되면 로딩 화면이 사라지고 aria-busy도 풀림', !(await pc.evaluate(() => document.body.hasAttribute('aria-busy'))));
+await pc.close();
+
 await browser.close();
 web.close();
 const bad = [...new Set(errors)];

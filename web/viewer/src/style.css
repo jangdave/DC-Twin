@@ -264,3 +264,28 @@ dialog input[type="text"]:focus { border-color: var(--border-dark); }
 #sc-events li.seekable { cursor: pointer; }
 #sc-events li.seekable:hover { color: var(--text-action); }
 #sc-events time { color: var(--text-tertiary); margin-right: var(--p-2); font-variant-numeric: tabular-nums; }
+
+/* ---- 첫 로딩 화면 (docs/27 7장). 자바스크립트가 뜨기 전에도 보이도록 이 CSS만으로 그린다 ---- */
+#boot { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--p-4, 16px);
+  background: var(--surface-container); color: var(--text-primary); transition: opacity 0.3s ease; }
+#boot[hidden] { display: none; }
+#boot.leaving { opacity: 0; pointer-events: none; }
+.boot-card { width: min(420px, 100%); text-align: center; }
+.boot-title { margin: 0 0 var(--p-1-5, 6px); font-size: var(--text-lg, 20px); font-weight: var(--weight-bold, 700); }
+.boot-sub { margin: 0 0 var(--p-5, 24px); font-size: var(--text-sm, 14px); color: var(--text-secondary); }
+.boot-bar { height: 6px; border-radius: var(--radius-max); background: var(--border-disabled); overflow: hidden; --p: 0%; }
+.boot-bar i { display: block; height: 100%; width: var(--p); background: var(--fill-primary); border-radius: inherit; transition: width 0.25s ease; }
+.boot-text { margin: var(--p-2, 8px) 0 var(--p-3, 12px); font-size: var(--text-sm, 14px); font-variant-numeric: tabular-nums; }
+.boot-steps { display: flex; justify-content: center; gap: var(--p-3, 12px); margin: 0 0 var(--p-5, 24px); padding: 0; list-style: none; font-size: var(--text-xs, 12px); }
+.boot-steps li { color: var(--text-tertiary); }
+.boot-steps li[data-state="now"] { color: var(--fill-primary); font-weight: var(--weight-medium, 500); }
+.boot-steps li[data-state="done"] { color: var(--text-secondary); }
+.boot-steps li[data-state="done"]::before { content: "✓ "; }
+.boot-steps li[data-state="skip"] { color: var(--text-tertiary); text-decoration: line-through; }
+.boot-actions { display: flex; justify-content: center; gap: var(--p-2, 8px); margin: 0 0 var(--p-4, 16px); }
+.boot-actions[hidden] { display: none; }
+.boot-actions button { min-height: 40px; padding: 0 var(--p-4, 16px); border-radius: var(--radius-large); border: 1px solid var(--border-disabled); background: transparent; color: var(--text-primary); font: inherit; cursor: pointer; }
+.boot-actions button:first-child { background: var(--fill-primary); border-color: var(--fill-primary); color: var(--text-inverse, #fff); }
+.boot-note { margin: 0; font-size: var(--text-xs, 12px); color: var(--text-tertiary); }
+#boot.failed .boot-bar i { background: var(--emergency, #d92d20); }
+@media (prefers-reduced-motion: reduce) { #boot, .boot-bar i { transition: none; } }
