@@ -1,4 +1,5 @@
 // 화면 단계와 화면 이동 명령 (docs/20 2~3장). 화면과 무관한 순수 로직이다.
+import { countActiveAlarms } from './store.js';
 
 // 명령 번호는 한 번 정하면 바꾸지 않는다(새로 추가만). Unreal과 같은 표를 쓴다.
 export const COMMANDS = {
@@ -82,8 +83,7 @@ export class CommandQueue {
 
 // 외관 화면에 보일 건물 요약. 값이 없으면 null로 둔다.
 export function summarize(store, rackKeys) {
-  let alarms = 0;
-  for (const e of store.latest.values()) if (e.alarm && e.alarm !== 'normal') alarms++;
+  const alarms = countActiveAlarms(store.latest);
   let maxIn = null;
   let maxRack = null;
   for (const k of rackKeys) {
@@ -100,7 +100,7 @@ export function summarize(store, rackKeys) {
     maxTempIn: maxIn,
     maxRack,
     itPower: Number.isFinite(a.it_power) ? a.it_power : null,
-    totalPower: Number.isFinite(a.it_power) && Number.isFinite(a.cooling_power) ? a.it_power + a.cooling_power : null,
+    facilityPower: Number.isFinite(a.facility_power) ? a.facility_power : null, // 건물 전체 = 설비 전력(IT + 냉각 + 손실). 에너지 탭과 같은 값
     pue: Number.isFinite(a.pue) ? a.pue : null,
   };
 }

@@ -1,6 +1,6 @@
 // "에너지·용량" 탭과 "이상 대비" 탭의 화면 (docs/27 14장). 값은 textContent로만 넣는다.
 import { SCENARIOS, SUPPLY_MAX, SUPPLY_MIN } from './core.js';
-import { RATED_KW, capacity, compare, responseFor, rowInlets, snapshot, supplyRoom } from './insight.js';
+import { capacity, compare, responseFor, rowInlets, snapshot, supplyRoom } from './insight.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -80,7 +80,9 @@ export class InsightPanel {
     root.append(el('h3', '', '줄별 입구 온도 여유'));
     r.rows = el('ul', 'rowlist');
     root.append(r.rows);
-    root.append(el('p', 'muted small', `랙 정격 전력은 ${RATED_KW} kW로 가정했다. "과냉각 의심"은 가장 높은 입구 온도가 주의 기준보다 6 °C 이상 낮은 줄이며, 간이 모델 기준의 힌트다.`));
+    this.refs.ratedNote = el('p', 'muted small', '');
+    root.append(this.refs.ratedNote);
+    root.append(el('p', 'muted small', `"과냉각 의심"은 가장 높은 입구 온도가 주의 기준보다 6 °C 이상 낮은 줄이며, 간이 모델 기준의 힌트다.`));
   }
 
   // ---- 이상 대비 탭 ----
@@ -168,8 +170,9 @@ export class InsightPanel {
     const over = supplyWarn !== null && cur !== null && cur > supplyWarn;
     r.room.textContent = over ? `공급 온도 ${cur.toFixed(1)} °C가 냉각 장치 공급 온도 주의 기준(${supplyWarn} °C)을 넘어 냉각 장치마다 알람이 난다. 입구 온도는 아직 여유가 있어도 이 기준이 먼저 걸린다.` : room === null ? '' : room > 0.4 ? `가장 높은 입구 온도가 주의 기준(${this.o.warnIn} °C)보다 ${fmt(now.margin)} °C 낮다. 공급 온도를 약 ${fmt(room)} °C까지 올려 볼 여유가 있다(모델 기준).` : `입구 온도 여유가 ${fmt(now.margin)} °C뿐이라 공급 온도를 더 올릴 여유가 없다.`;
 
-    const cap = capacity(this.o.store, this.o.rackKeys);
+    const cap = capacity(this.o.store, this.o.rackKeys, this.o.rated);
     r.capSum.textContent = cap.racks.length ? `남은 전력 합계 ${fmt(cap.totalHeadroom)} kW. 정격의 90% 이상인 랙 ${cap.near}기${cap.over ? `, 정격 초과 ${cap.over}기` : ''}.` : '랙 전력 값이 아직 없다.';
+    r.ratedNote.textContent = `랙 정격 전력은 ${cap.rated} kW로 본다(센서 정의의 전력 주의 기준).`;
     r.capList.replaceChildren();
     for (const c of cap.racks.slice(0, 5)) {
       const li = el('li', c.pct > 100 ? 'bad' : c.pct >= 90 ? 'warn' : '');

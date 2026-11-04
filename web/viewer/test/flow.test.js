@@ -96,3 +96,16 @@ describe('건물 요약', () => {
     expect(s).toMatchObject({ hasData: true, alarms: 1, maxTempIn: 27.5, maxRack: eq, itPower: 120.5, pue: 1.4 });
   });
 });
+
+describe('summarize의 전력', () => {
+  it('건물 전체 전력은 설비 전력(IT + 냉각 + 손실)이다', () => {
+    const st = new SensorStore(sensors);
+    st.aggregates = { it_power: 400, cooling_power: 30, facility_power: 454, pue: 1.135 };
+    const s = summarize(st, []);
+    expect(s.facilityPower).toBe(454);
+    expect(s.itPower).toBe(400);
+  });
+  it('집계가 없으면 null', () => {
+    expect(summarize(new SensorStore(sensors), []).facilityPower).toBeNull();
+  });
+});

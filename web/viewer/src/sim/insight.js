@@ -1,5 +1,6 @@
 // 에너지, 용량, 이상 대비 화면의 계산(DOM과 무관한 순수 함수). docs/27 14장.
 // 값은 간이 모델의 시각화 목적이다. 줄어드는 방향을 보여 줄 뿐 실제 절감량을 말하지 않는다.
+import { countActiveAlarms } from '../store.js';
 
 export const RATED_KW = 10; // 랙 한 기의 정격 전력(가정: 엔진의 power_ref와 같은 값)
 export const WARN_IN_DEFAULT = 27; // 입구 온도 주의 기준(센서 목록 값이 있으면 그 값을 쓴다)
@@ -19,8 +20,7 @@ export function snapshot(store, rackKeys, warnIn = WARN_IN_DEFAULT) {
       maxRack = k;
     }
   }
-  let alarms = 0;
-  for (const e of store.latest.values()) if (e.alarm && e.alarm !== 'normal') alarms++;
+  const alarms = countActiveAlarms(store.latest);
   return {
     it: num(a.it_power),
     cooling: num(a.cooling_power),

@@ -4,7 +4,8 @@ import { alarmSets, buildCameras } from './cctv.js';
 import { CctvPanel } from './cctv_ui.js';
 import { InsightPanel } from './sim/insight_panel.js';
 import { detectQuality, browserEnv, lowerTier, SETTINGS } from './quality.js';
-import { HallScene, VIEWS } from './scene.js';
+import { HallScene } from './scene.js';
+import { VIEWS } from './views.js';
 import { LiveClient } from './live.js';
 import { parseRecording, RecordingPlayer } from './recording.js';
 import { SensorStore } from './store.js';
@@ -48,8 +49,10 @@ async function main() {
   let sensors;
   let sceneData;
   let index;
+  let simInit = null;
   try {
     [sensors, sceneData, index] = await Promise.all([getJson('data/sensors.json'), getJson('data/scene.json'), getJson('data/index.json')]);
+    simInit = await getJson('data/sim_init.json').catch(() => null); // 없으면 난수로 시작한다(필수 아님)
   } catch (e) {
     badge.textContent = '자료를 못 받음';
     console.error(e);
@@ -197,6 +200,7 @@ async function main() {
     rackKeys,
     rowOf: (k) => rackRow.get(k),
     warnIn: sensors.find((s) => s.metric === 'temp_in')?.warn ?? 27,
+    rated: sensors.find((s) => s.equipmentType === 'rack' && s.metric === 'power')?.warn ?? undefined, // 랙 전력 주의 기준을 정격으로 본다(센서 정의가 기준)
     supplyWarn: sensors.find((s) => s.metric === 'supply_temp')?.warn ?? null,
     pretty: prettyName,
     onSupply: (v) => state.sim?.setSupply(v),
@@ -214,7 +218,7 @@ async function main() {
     panel.setServerMode(false);
     state.simScenario = id;
     if (!state.sim) {
-      const engine = new SimEngine({ sensors, ...layout, seed: 7 });
+      const engine = new SimEngine({ sensors, ...layout, seed: 7, basePower: simInit?.basePower ?? null, phase: simInit?.phase ?? null });
       state.sim = new SimRunner(engine, store, { onEvent: () => panel.syncFromEngine(engine) });
     }
     state.player = state.sim;

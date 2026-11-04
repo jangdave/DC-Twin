@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { buildScene, buildSensors, convertRecording, SCENARIOS } from '../tools/build_data.mjs';
+import { buildScene, buildSensors, buildSimInit, convertRecording, SCENARIOS } from '../tools/build_data.mjs';
 import { parseRecording } from '../src/recording.js';
 
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '../public/data');
@@ -107,5 +107,19 @@ describe('저장소에 올라간 정적 자료(public/data)', () => {
     const codes = Object.values(rec.est).map((e) => e.conf.at(-1));
     expect(codes.filter((c) => c === 1)).toHaveLength(48);
     expect(codes.filter((c) => c === 3)).toHaveLength(12);
+  });
+});
+
+describe('시뮬레이션 시작값 추정', () => {
+  it('기준 전력과 위상을 되찾는다(주기의 정수 배 길이, 잡음 없음)', () => {
+    const amp = 0.6;
+    const period = 150;
+    const base = 7.25;
+    const phase = 1.2;
+    const arr = Array.from({ length: 300 }, (_, t) => base + amp * Math.sin((2 * Math.PI * t) / period + phase));
+    const r = buildSimInit({ n: 300, values: { 'H01-RK07-POWER': arr, 'H01-RK07-TEMP-IN': arr, 'H01-CR01-FAN-SPEED': arr } }, { amplitude: amp, periodS: period });
+    expect(Object.keys(r.basePower)).toEqual(['rack_07']); // 랙 전력 센서만 쓴다
+    expect(r.basePower.rack_07).toBeCloseTo(base, 2);
+    expect(r.phase.rack_07).toBeCloseTo(phase, 2);
   });
 });

@@ -6,7 +6,7 @@ import { createReadStream } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import readline from 'node:readline';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
@@ -33,6 +33,32 @@ export function buildScene(layout) {
     vents: layout.vents.map(box),
     panels: layout.panels.map(box),
   };
+}
+
+// ---- 시뮬레이션 시작값 ----
+// 시뮬레이션 메뉴가 녹화(모니터링)와 같은 상태에서 시작하도록, 정상 녹화에서 랙별 기준 전력과 출렁임 위상을 추정한다.
+// 전력 = 기준 + 진폭 x sin(2 pi t / 주기 + 위상) + 잡음. 녹화 길이가 주기의 정수 배일 때 최소제곱 풀이가 직교해 평균과 두 성분으로 갈린다.
+export function buildSimInit(rec, { amplitude, periodS }) {
+  const basePower = {};
+  const phase = {};
+  const w = (2 * Math.PI) / periodS;
+  for (const [id, arr] of Object.entries(rec.values)) {
+    const m = /^H\d+-RK(\d+)-POWER$/.exec(id);
+    if (!m) continue;
+    const name = `rack_${m[1]}`;
+    const n = arr.length;
+    const mean = arr.reduce((p, q) => p + q, 0) / n;
+    let s = 0;
+    let c = 0;
+    for (let t = 0; t < n; t++) {
+      s += (arr[t] - mean) * Math.sin(w * t);
+      c += (arr[t] - mean) * Math.cos(w * t);
+    }
+    // arr - mean ~ amplitude * (cos(phase) * sin + sin(phase) * cos)
+    basePower[name] = round3(mean);
+    phase[name] = round3(Math.atan2(c, s));
+  }
+  return { version: 1, note: '정상 녹화에서 추정한 랙별 기준 전력(kW)과 출렁임 위상(rad). 시뮬레이션 시작값으로 쓴다.', amplitude, periodS, recSeconds: rec.n, basePower, phase };
 }
 
 // ---- 센서 ----
@@ -132,6 +158,9 @@ async function main() {
     console.log(`${sc.id}: ${rec.n}초, 센서 ${ids.length}개, ${(Buffer.byteLength(text) / 1e6).toFixed(2)} MB, 알람 ${rec.alarms.length}건`);
   }
   await writeFile(path.join(out, 'index.json'), JSON.stringify(index));
+  const { DEFAULT_CONFIG } = await import(pathToFileURL(path.join(HERE, '../src/sim/core.js')).href);
+  const normal = JSON.parse(await readFile(path.join(out, 'rec', 'normal.json'), 'utf8'));
+  await writeFile(path.join(out, 'sim_init.json'), JSON.stringify(buildSimInit(normal, { amplitude: DEFAULT_CONFIG.power_wobble, periodS: DEFAULT_CONFIG.power_period_s })));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
