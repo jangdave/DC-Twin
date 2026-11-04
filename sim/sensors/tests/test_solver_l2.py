@@ -119,3 +119,39 @@ def test_correction_changes_gradually_not_in_one_step(manifest):
     assert abs(b - 5.0) < 0.05                                 # 충분히 지나면 목표에 닿는다
     e = l2.estimates[k]
     assert abs((e["upper"] - e["lower"]) - 1.0) < 1e-6         # 구간 폭은 예측기가 낸 그대로
+
+
+def test_supply_shift_is_removed_for_predictor_and_added_back(manifest):
+    """급기 온도가 기준과 다르면 예측기에는 기준 온도 기준 값을 넣고, 결과에는 같은 폭을 다시 더한다."""
+    cfg = Config(t_supply=22.0)  # 기준(18)보다 4도 높다
+    pred = FakePredictor()
+    l2 = L2Solver(manifest, cfg, base=FakeBase(manifest, cfg), predictor=pred)
+    ctl = Controls({c: 1.0 for c in manifest.cracs}, {n: 7.0 for n in manifest.rack_names})
+    plain = FakeBase(manifest, cfg).step(1.0, ctl)
+    out = l2.step(1.0, ctl)
+    _, seen, _ = pred.calls[-1]
+    for n in manifest.rack_names:
+        assert abs(seen[rack_title(n)] - (plain[f"{n}/temp_in"] - 4.0)) < 1e-9   # 예측기에는 4도를 뺀 값
+        assert abs(out[f"{n}/temp_in"] - (plain[f"{n}/temp_in"] + 1.0)) < 1e-9   # 보정량(+1)은 급기와 무관하게 더해진다
+        e = l2.estimates[f"{n}/temp_in"]
+        assert e["lower"] < out[f"{n}/temp_in"] < e["upper"]
+
+
+def test_cooling_power_follows_supply_temperature_assumption(manifest):
+    """급기 온도를 올리면 냉각 전력이 줄고(가정 3%/도), 기준에서는 그대로이며 IT 전력은 같다."""
+    def agg(t_supply):
+        cfg = Config(t_supply=t_supply)
+        solver = L0Solver(manifest, cfg)
+        gen = Generator(manifest, get("normal"), solver, cfg, seed=1)
+        last = {}
+        for m in gen.run(3):
+            if m["type"] == "aggregate":
+                last[m["name"]] = m["value"]
+        return last
+
+    base, hot, cold, extreme = agg(18.0), agg(22.0), agg(14.0), agg(60.0)
+    assert abs(hot["cooling_power"] / base["cooling_power"] - 0.88) < 0.005
+    assert abs(cold["cooling_power"] / base["cooling_power"] - 1.12) < 0.005
+    assert abs(extreme["cooling_power"] / base["cooling_power"] - 0.6) < 0.005   # 0.6배에서 멈춘다
+    assert abs(hot["it_power"] - base["it_power"]) < 1e-9
+    assert hot["pue"] < base["pue"]

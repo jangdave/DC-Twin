@@ -85,7 +85,9 @@ class L2Solver:
     def step(self, dt: float, controls: Controls) -> dict[str, float]:
         out = self.base.step(dt, controls)
         info = getattr(getattr(self.base, "sim", None), "flow_info", None) or getattr(self.base, "flow_info", None)
-        ours = {rack_title(n): out[f"{n}/temp_in"] for n in self.m.rack_names if f"{n}/temp_in" in out}
+        # 보정 모델은 기준 급기 온도(t_supply_ref)에서 배웠다. 급기가 다르면 L1 값에서 그 차이만큼 빼서 넣고, 결과에 다시 더한다(식이 선형이라는 가정).
+        shift = self.cfg.t_supply - self.cfg.t_supply_ref
+        ours = {rack_title(n): out[f"{n}/temp_in"] - shift for n in self.m.rack_names if f"{n}/temp_in" in out}
         info = {"supply_m3s": float(info["supply_m3s"]), "aisle_leak_m3s": [float(x) for x in info["aisle_leak_m3s"]]}
         r = self.predictor.predict(self.sample_of(controls), ours, info)
         self.last_reason = r.reason
@@ -98,8 +100,8 @@ class L2Solver:
             t = rack_title(n)
             if key not in out or t not in r.corrected:
                 continue
-            base = ours[t]
-            target = float(r.corrected[t]) - base
+            base = ours[t] + shift
+            target = float(r.corrected[t]) - ours[t]
             prev = self._corr.get(key)  # 처음에는 목표 보정량으로 시작한다(예열 구간을 따로 두지 않는다)
             cur = target if prev is None else prev + (target - prev) * alpha
             self._corr[key] = cur

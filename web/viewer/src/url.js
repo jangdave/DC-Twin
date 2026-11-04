@@ -39,7 +39,7 @@ export function parseParams(search, scenarioIds) {
   const stage = p.get('stage');
   if (stage === 'exterior' || stage === 'hall') out.stage = stage;
   const mode = p.get('mode');
-  if (mode === 'rec' || mode === 'sim') out.mode = mode;
+  if (mode === 'rec' || mode === 'lib' || mode === 'sim') out.mode = mode;
   if (p.get('models') === '0') out.models = false;
   if (p.get('sky') === 'dusk') out.sky = 'dusk';
   if (['low', 'mid', 'high'].includes(p.get('q'))) out.q = p.get('q');

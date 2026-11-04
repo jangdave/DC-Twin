@@ -52,6 +52,7 @@ export class InsightPanel {
     root.append(el('h3', '', '공급 온도 (냉각 설정)'));
     r.supplyBox = el('div', 'supply');
     const row = el('label', 'sim-row sim-supply');
+    r.supplyRow = row;
     row.append(el('span', 'sim-name', '공급 온도'));
     r.supply = el('input');
     r.supply.type = 'range';
@@ -146,7 +147,8 @@ export class InsightPanel {
   }
 
   // engine: 직접 시뮬레이션 엔진(없으면 서버 모드), scenario: 지금 시나리오 이름
-  render(engine, scenario) {
+  // kind: 'sim'(브라우저 간이 계산) | 'lib'(미리 계산한 값) | 'live'(서버). 서버와 미리 계산한 값에서는 engine이 없다.
+  render(engine, scenario, kind = 'sim') {
     this._scenario = scenario;
     const r = this.refs;
     const now = snapshot(this.o.store, this.o.rackKeys, this.o.warnIn);
@@ -158,7 +160,9 @@ export class InsightPanel {
     r.maxIn.textContent = now.maxIn === null ? '–' : `${fmt(now.maxIn)} °C (${this.o.pretty(now.maxRack)})`;
     this._renderCmp(now);
 
-    r.supplyBox.hidden = !engine; // 서버 모드에서는 공급 온도를 바꾸지 않는다
+    const lib = kind === 'lib';
+    r.supplyBox.hidden = !engine && !lib; // 서버 모드에서는 공급 온도를 바꾸지 않는다. 미리 계산한 값에서는 슬라이더 대신 안내를 보인다.
+    r.supplyRow.hidden = !engine;
     if (engine && document.activeElement !== r.supply) {
       r.supply.value = String(engine.cfg.t_supply);
       r.supplyVal.textContent = `${engine.cfg.t_supply.toFixed(1)} °C`;
@@ -168,7 +172,9 @@ export class InsightPanel {
     let room = supplyRoom(now.maxIn, this.o.warnIn);
     if (room !== null && supplyWarn !== null && cur !== null) room = Math.min(room, Math.max(0, supplyWarn - cur));
     const over = supplyWarn !== null && cur !== null && cur > supplyWarn;
-    r.room.textContent = over ? `공급 온도 ${cur.toFixed(1)} °C가 냉각 장치 공급 온도 주의 기준(${supplyWarn} °C)을 넘어 냉각 장치마다 알람이 난다. 입구 온도는 아직 여유가 있어도 이 기준이 먼저 걸린다.` : room === null ? '' : room > 0.4 ? `가장 높은 입구 온도가 주의 기준(${this.o.warnIn} °C)보다 ${fmt(now.margin)} °C 낮다. 공급 온도를 약 ${fmt(room)} °C까지 올려 볼 여유가 있다(모델 기준).` : `입구 온도 여유가 ${fmt(now.margin)} °C뿐이라 공급 온도를 더 올릴 여유가 없다.`;
+    if (lib) {
+      r.room.textContent = '급기 온도와 부하는 위쪽 "시나리오" 목록의 "급기 온도", "부하" 항목에서 미리 계산한 값을 골라 비교한다. 직접 바꿔 계산하려면 서버에 연결하거나 간이 계산을 쓴다.';
+    } else r.room.textContent = over ? `공급 온도 ${cur.toFixed(1)} °C가 냉각 장치 공급 온도 주의 기준(${supplyWarn} °C)을 넘어 냉각 장치마다 알람이 난다. 입구 온도는 아직 여유가 있어도 이 기준이 먼저 걸린다.` : room === null ? '' : room > 0.4 ? `가장 높은 입구 온도가 주의 기준(${this.o.warnIn} °C)보다 ${fmt(now.margin)} °C 낮다. 공급 온도를 약 ${fmt(room)} °C까지 올려 볼 여유가 있다(모델 기준).` : `입구 온도 여유가 ${fmt(now.margin)} °C뿐이라 공급 온도를 더 올릴 여유가 없다.`;
 
     const cap = capacity(this.o.store, this.o.rackKeys, this.o.rated);
     r.capSum.textContent = cap.racks.length ? `남은 전력 합계 ${fmt(cap.totalHeadroom)} kW. 정격의 90% 이상인 랙 ${cap.near}기${cap.over ? `, 정격 초과 ${cap.over}기` : ''}.` : '랙 전력 값이 아직 없다.';

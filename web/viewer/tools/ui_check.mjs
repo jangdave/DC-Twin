@@ -486,6 +486,7 @@ let firstHtml = '';
 pc.on('response', async (r) => { if (r.request().resourceType() === 'document' && !firstHtml) firstHtml = await r.text(); });
 pc.on('request', (r) => r.continue());
 await pc.goto(base, { waitUntil: 'domcontentloaded' });
+for (let i = 0; i < 40 && !firstHtml; i++) await sleep(50); // 응답 본문은 비동기로 들어온다
 ok('BOOT 처음 HTML에 로딩 화면이 들어 있음(자바스크립트 전에도 보임)', firstHtml.includes('id="boot"') && firstHtml.includes('aria-busy="true"'));
 await pc.waitForFunction(() => document.getElementById('boot')?.hidden === true, { timeout: 40000 });
 ok('BOOT 장면이 준비되면 로딩 화면이 사라지고 aria-busy도 풀림', !(await pc.evaluate(() => document.body.hasAttribute('aria-busy'))));
@@ -651,15 +652,15 @@ await pc.close();
   const click = (sel) => mp.$eval(sel, (e) => e.click());
   await click('#rail [data-mode="sim"]');
   await sleep(300);
-  ok('MENU 시뮬레이션만 눌림', JSON.stringify(await rail()) === '["시뮬레이션"]');
+  ok('MENU 간이 계산만 눌림', JSON.stringify(await rail()) === '["간이 계산"]');
   await click('#cctv-btn');
   await sleep(500);
   const r1 = await rail();
-  ok('MENU 시뮬레이션 중 CCTV를 열면 CCTV만 눌림(동시에 눌리지 않음)', JSON.stringify(r1) === '["CCTV"]', JSON.stringify(r1));
+  ok('MENU 간이 계산 중 CCTV를 열면 CCTV만 눌림(동시에 눌리지 않음)', JSON.stringify(r1) === '["CCTV"]', JSON.stringify(r1));
   await click('#rail [data-mode="sim"]');
   await sleep(300);
   const r2 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, mode: window.__viewer.state.mode }));
-  ok('MENU CCTV 중 시뮬레이션을 누르면 CCTV가 닫히고 시뮬레이션만 눌림', r2.cctv && r2.mode === 'sim' && JSON.stringify(await rail()) === '["시뮬레이션"]', JSON.stringify(r2));
+  ok('MENU CCTV 중 간이 계산을 누르면 CCTV가 닫히고 간이 계산만 눌림', r2.cctv && r2.mode === 'sim' && JSON.stringify(await rail()) === '["간이 계산"]', JSON.stringify(r2));
   await click('#cctv-btn');
   await sleep(300);
   await click('#rail [data-mode="rec"]');
@@ -703,6 +704,59 @@ await pc.close();
   });
   ok('값 시뮬레이션 시작 IT 전력이 정상 녹화와 1% 안에서 이어짐', Math.abs(z.sim - z.rec) / z.rec < 0.01, JSON.stringify(z));
   await cp.close();
+}
+
+// 시뮬레이션 메뉴 = 미리 계산한 상태와 시나리오 모음(서버 없이 보임). 간이 계산과 서버는 따로다.
+{
+  const lp = await browser.newPage();
+  await lp.setViewport({ width: 1440, height: 860 });
+  await lp.goto(base + '?stage=hall', { waitUntil: 'networkidle0' });
+  await lp.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+  const click = (sel) => lp.$eval(sel, (e) => e.click());
+  await click('#rail [data-mode="lib"]');
+  await lp.waitForFunction(() => window.__viewer.state.mode === 'lib' && window.__viewer.state.player, { timeout: 10000 });
+  await sleep(500);
+  const A = await lp.evaluate(() => {
+    const sel = document.getElementById('scenario-select');
+    const tab = (t) => !document.getElementById(`tab-${t}`).hidden;
+    return {
+      mode: window.__viewer.state.mode,
+      rail: [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()),
+      groups: [...sel.querySelectorAll('optgroup')].map((g) => `${g.label}:${g.children.length}`),
+      options: sel.querySelectorAll('option').length,
+      tabs: { control: tab('control'), energy: tab('energy'), prep: tab('prep') },
+      slider: !document.querySelector('#pane-energy .sim-supply')?.hidden,
+      hint: document.querySelector('#pane-energy .supply .muted')?.textContent.slice(0, 20),
+      transport: !document.getElementById('transport').hidden,
+      badge: document.getElementById('mode-badge').textContent,
+      cta: !document.getElementById('server-cta').hidden,
+      selected: sel.value,
+    };
+  });
+  ok('LIB 시뮬레이션 메뉴: 미리 계산한 값이 열리고 시뮬레이션만 눌림, 재생 막대가 보임', A.mode === 'lib' && JSON.stringify(A.rail) === '["시뮬레이션"]' && A.transport && /미리 계산한 값/.test(A.badge), JSON.stringify(A));
+  ok('LIB 시나리오 목록이 이상 상황 4, 급기 온도 5, 부하 3으로 묶여 보임', JSON.stringify(A.groups) === '["이상 상황:4","급기 온도:5","부하:3"]' && A.options === 12, JSON.stringify(A.groups));
+  ok('LIB 조작 탭은 없고 에너지·용량, 이상 대비 탭은 있으며 공급 온도 슬라이더 대신 안내가 보임', !A.tabs.control && A.tabs.energy && A.tabs.prep && !A.slider && /급기 온도와 부하/.test(A.hint ?? ''), JSON.stringify({ tabs: A.tabs, slider: A.slider, hint: A.hint }));
+  ok('LIB 서버 연결 안내가 보이고 누르면 서버 연결 창이 열림', A.cta && (await (async () => { await click('#server-cta-btn'); await sleep(200); const open = await lp.evaluate(() => document.getElementById('server-dialog').open); await lp.keyboard.press('Escape'); return open; })()), '');
+  await click('#side-tabs [data-tab="energy"]');
+  await click('#pane-energy .btn-row button');
+  await lp.select('#scenario-select', 'supply_24');
+  await lp.waitForFunction(() => window.__viewer.libScenario?.() === 'supply_24' || document.getElementById('scenario-select').value === 'supply_24');
+  await sleep(1200);
+  const B = await lp.evaluate(() => {
+    const rows = [...document.querySelectorAll('#pane-energy .cmp .cmp-row')].map((r) => [...r.children].map((c) => c.textContent));
+    return { rows, cool: window.__viewer.store.aggregates.cooling_power, sel: document.getElementById('scenario-select').value, desc: document.getElementById('sc-desc').textContent.slice(0, 16) };
+  });
+  const coolRow = B.rows.find((r) => r[0] === '냉각 전력');
+  ok('LIB 급기 24도를 고르면 기준(18도) 대비 냉각 전력이 줄고(좋음) 시나리오 설명이 바뀜', B.sel === 'supply_24' && coolRow && /−/.test(coolRow[3]) && B.cool < 28 && /급기/.test(B.desc), JSON.stringify({ sel: B.sel, cool: B.cool, coolRow, desc: B.desc }));
+  await click('#cctv-btn');
+  await sleep(400);
+  const C = await lp.evaluate(() => [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()));
+  ok('LIB 미리 계산한 값 중 CCTV를 열면 CCTV만 눌림', JSON.stringify(C) === '["CCTV"]', JSON.stringify(C));
+  await click('#rail [data-mode="rec"]');
+  await sleep(600);
+  const D = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, tabs: ['control', 'energy', 'prep'].map((t) => !document.getElementById(`tab-${t}`).hidden), opts: document.querySelectorAll('#scenario-select option').length }));
+  ok('LIB 모니터링으로 돌아가면 에너지 탭이 사라지고 목록은 이상 상황 4개', D.mode === 'rec' && D.tabs.every((x) => !x) && D.opts === 4, JSON.stringify(D));
+  await lp.close();
 }
 
 // 출처 전환: 라이브와 로컬 서버가 어댑터를 거쳐 화면까지 이어지는가 (모의 게이트웨이를 띄워 확인)

@@ -71,6 +71,14 @@ describe('대응 순서', () => {
   });
 });
 
+describe('미리 계산한 상태 비교 안내', () => {
+  it('급기와 부하 항목에 비교 순서가 있다', () => {
+    expect(responseFor('supply_22').title).toBe('급기 온도 비교');
+    expect(responseFor('load_130').title).toBe('부하 비교');
+    expect(responseFor('load_70').steps.length).toBeGreaterThan(2);
+  });
+});
+
 describe('공급 온도와 냉각 효율 모델(가정)', () => {
   it('기준(18도)에서는 배수가 1이다', () => {
     expect(chillerFactor(DEFAULT_CONFIG, 18)).toBe(1);

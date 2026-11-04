@@ -2,7 +2,7 @@
 //   node tools/build_data.mjs [--out public/data]
 // 원본: experiments/openfoam_baseline/layout.json(장면 USD에서 뽑은 상자 좌표), sim/out/sensor_manifest.json, sim/out/recordings/*_l2.jsonl
 // 결과: scene.json, sensors.json, index.json, rec/<시나리오>.json (센서별 배열로 줄인 녹화)
-import { createReadStream } from 'node:fs';
+import { createReadStream, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -11,12 +11,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
 
-export const SCENARIOS = [
-  { id: 'normal', file: 'normal_l2.jsonl', title: '정상 가동', note: '랙 온도가 완만하게 움직인다.' },
-  { id: 'cooling_failure', file: 'cooling_failure_l2.jsonl', title: 'CRAC 고장', note: '냉각 장치 한 대가 멈추면 가까운 랙부터 오른다.' },
-  { id: 'fan_fault', file: 'fan_fault_l2.jsonl', title: '팬 이상', note: '냉각 장치 팬이 15%로 떨어진다. 보정 모델이 낮은 신뢰 등급을 보이는 랙이 생긴다.' },
-  { id: 'power_spike', file: 'power_spike_l2.jsonl', title: '전력 급증', note: '일부 랙의 전력이 갑자기 올라간다.' },
-];
+// 미리 계산해 두는 상태와 시나리오 모음의 정의는 sim/library.json 한 곳에 있다(생성 도구 scripts/make_sim_library.py도 같은 파일을 쓴다).
+export const LIBRARY = JSON.parse(readFileSync(path.join(ROOT, 'sim/library.json'), 'utf8'));
+// 녹화 파일이 따로 있는 항목(alias는 다른 항목의 녹화를 가리키므로 제외)
+export const SCENARIOS = LIBRARY.entries
+  .filter((e) => !e.alias)
+  .map((e) => ({ id: e.id, file: `${e.id}_l2.jsonl`, title: e.title, note: e.note, group: e.group, ...(e.value !== undefined ? { value: e.value } : {}) }));
 const CONF_CODE = { ok: 1, caution: 2, low: 3, fallback: 4 };
 const AGGREGATES = ['it_power', 'cooling_power', 'facility_power', 'pue', 'energy_kwh'];
 const round3 = (v) => (Number.isFinite(v) ? Math.round(v * 1000) / 1000 : null);
@@ -154,10 +154,17 @@ async function main() {
     const rec = await convertRecording(path.join(ROOT, 'sim/out/recordings', sc.file), sc.id, ids);
     const text = JSON.stringify(rec);
     await writeFile(path.join(out, 'rec', `${sc.id}.json`), text);
-    index.push({ id: sc.id, title: sc.title, note: sc.note, n: rec.n, bytes: Buffer.byteLength(text) });
+    index.push({ id: sc.id, title: sc.title, note: sc.note, group: sc.group, ...(sc.value !== undefined ? { value: sc.value } : {}), n: rec.n, bytes: Buffer.byteLength(text) });
     console.log(`${sc.id}: ${rec.n}초, 센서 ${ids.length}개, ${(Buffer.byteLength(text) / 1e6).toFixed(2)} MB, 알람 ${rec.alarms.length}건`);
   }
+  // alias 항목(예: 급기 18도 = 정상 가동)은 같은 녹화 파일을 가리킨다. 용량을 두 번 쓰지 않는다.
+  for (const e of LIBRARY.entries.filter((x) => x.alias)) {
+    const target = index.find((x) => x.id === e.alias);
+    if (!target) throw new Error(`alias 대상이 없다: ${e.id} -> ${e.alias}`);
+    index.push({ id: e.id, title: e.title, note: e.note, group: e.group, ...(e.value !== undefined ? { value: e.value } : {}), file: e.alias, n: target.n, bytes: target.bytes });
+  }
   await writeFile(path.join(out, 'index.json'), JSON.stringify(index));
+  await writeFile(path.join(out, 'library.json'), JSON.stringify({ version: LIBRARY.version, groups: LIBRARY.groups }));
   const { DEFAULT_CONFIG } = await import(pathToFileURL(path.join(HERE, '../src/sim/core.js')).href);
   const normal = JSON.parse(await readFile(path.join(out, 'rec', 'normal.json'), 'utf8'));
   await writeFile(path.join(out, 'sim_init.json'), JSON.stringify(buildSimInit(normal, { amplitude: DEFAULT_CONFIG.power_wobble, periodS: DEFAULT_CONFIG.power_period_s })));

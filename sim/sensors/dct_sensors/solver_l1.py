@@ -39,7 +39,7 @@ class L1Solver:
         wp.init()
         hall = hs.read_hall(Path(scene) if scene else REPO / "usd" / "scenes" / "hall01.usda")
         self.lay = hs.Layout(hall)
-        self.sim = hs.Sim(hall, self.lay, cfg.power_ref, slow)
+        self.sim = hs.Sim(hall, self.lay, cfg.power_ref, slow, t_supply=cfg.t_supply)
         self.rack_names = [r["name"].lower() for r in hall["racks"]]
         self.crac_names = [c["name"].lower() for c in hall["cracs"]]
         if set(self.rack_names) != set(manifest.rack_names) or set(self.crac_names) != set(manifest.cracs):

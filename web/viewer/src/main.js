@@ -10,7 +10,7 @@ import { SensorStore } from './store.js';
 import { SCENARIOS } from './sim/core.js';
 import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
-import { LiveSource, RecSource, SimSource } from './sources.js';
+import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
 import { checkLiveUrl, parseParams } from './url.js';
 import { Boot, eventFraction } from './boot.js';
@@ -48,9 +48,11 @@ async function main() {
   let sceneData;
   let index;
   let simInit = null;
+  let libGroups = null;
   try {
     [sensors, sceneData, index] = await Promise.all([getJson('data/sensors.json'), getJson('data/scene.json'), getJson('data/index.json')]);
     simInit = await getJson('data/sim_init.json').catch(() => null); // 없으면 난수로 시작한다(필수 아님)
+    libGroups = (await getJson('data/library.json').catch(() => null))?.groups ?? null; // 없으면 그룹 없이 한 줄로 보인다
   } catch (e) {
     badge.textContent = '자료를 못 받음';
     console.error(e);
@@ -144,18 +146,24 @@ async function main() {
     get live() { return source?.kind === 'live' ? source.client : null; },
     get scenarioId() { return recSource.scenarioId ?? params.scenario ?? 'normal'; },
   };
-  const recSource = new RecSource({ store, sensorIds: sensors.map((s) => s.sensorId), index, loadJson: (id) => getJson(`data/rec/${id}.json`) });
+  // 모니터링은 이상 상황 기록만, 시뮬레이션(미리 계산한 값)은 상태와 시나리오 모음 전체. 같은 파일은 한 번만 받는다.
+  const recCache = new Map();
+  const sensorIds = sensors.map((s) => s.sensorId);
+  const loadRec = (file) => getJson(`data/rec/${file}.json`);
+  const recSource = new RecSource({ store, sensorIds, index: index.filter((i) => !i.group || i.group === 'event'), loadJson: loadRec, cache: recCache });
+  const libSource = new LibSource({ store, sensorIds, index, loadJson: loadRec, cache: recCache, groups: libGroups });
   let simSource = null; // 패널이 만들어진 뒤에 만든다
 
   const ui = new UI(store, {
     onSelect: (eq, focus) => selectEquipment(eq, focus),
     onView: (v) => setView(v),
-    onScenario: (id) => (state.server ? serverControl({ kind: 'scenario', name: ((state.simScenario = id), id) }) : state.mode === 'sim' ? startSim(id) : loadScenario(id, 0)),
+    onScenario: (id) => (state.server ? serverControl({ kind: 'scenario', name: ((state.simScenario = id), id) }) : state.mode === 'sim' ? startSim(id) : state.mode === 'lib' ? startLibrary(id) : loadScenario(id, 0)),
     onMode: (m) => {
       // 왼쪽 메뉴 하나를 고르면 CCTV는 닫힌다. 이미 그 출처이면 출처는 다시 시작하지 않는다.
       dispatch({ type: 'overlay', value: null });
       if (!state.server && state.mode === m) return;
-      if (m !== 'sim') return startRecording();
+      if (m === 'rec') return startRecording();
+      if (m === 'lib') return startLibrary();
       startSim(state.simScenario);
     },
     onCctv: () => dispatch({ type: 'overlay-toggle', value: 'cctv' }),
@@ -228,7 +236,7 @@ async function main() {
     panel.show(d.panel !== 'none');
     if (d.timebar) ui.setupTimebar(d.timebar.n, d.timebar.events);
     ui.setScenarioCard(d.card.title, d.card.desc, d.card.events, d.card.seekable);
-    if (d.scenarios) ui.setScenarios(d.scenarios.list, d.scenarios.current);
+    if (d.scenarios) ui.setScenarios(d.scenarios.list, d.scenarios.current, d.scenarios.groups);
     if (src.engine) {
       panel.syncFromEngine(src.engine);
       panel.setSelected(state.selected, src.engine);
@@ -329,6 +337,7 @@ async function main() {
         break;
       case 'sim.scenario':
         if (state.mode === 'rec' && ids.includes(c.value)) loadScenario(c.value, 0);
+        else if (state.mode === 'lib' && index.some((x) => x.id === c.value)) startLibrary(c.value);
         else if (state.mode === 'sim' && SCENARIOS[c.value]) startSim(c.value);
         break;
     }
@@ -355,6 +364,8 @@ async function main() {
 
   const loadScenario = (id, t0) => useSource(recSource, { scenarioId: id, t: t0 });
   const startRecording = () => useSource(recSource, { scenarioId: state.scenarioId, t: params.t });
+  // 미리 계산한 값: 모니터링에서 보던 시나리오가 목록에 있으면 그대로 이어서 보여 준다
+  const startLibrary = (id) => useSource(libSource, { scenarioId: id ?? libSource.scenarioId ?? state.scenarioId, t: 0 });
 
   // 서버에 조작을 보낸다. 연결이 안 되어 있으면 화면에 알린다.
   function serverControl(c) {
@@ -427,7 +438,7 @@ async function main() {
     ui.renderAlarms(sensorInfo, state.mode);
     if (state.mode === 'sim' && state.sim) panel.renderLog(state.sim.log);
     if (state.server) syncServerPanel();
-    if (state.mode === 'sim' || state.server) insight.render(state.server ? null : state.sim?.engine, state.simScenario);
+    if (state.mode === 'sim' || state.mode === 'lib' || state.server) insight.render(state.server || state.mode === 'lib' ? null : state.sim?.engine, state.mode === 'lib' ? libSource.scenarioId : state.simScenario, state.mode);
     ui.renderDetail(state.view);
     if (flow.stage === 'exterior') ui.renderExterior(summarize(store, rackKeys));
     if (cctv.isOpen) cctv.setAlarms(cctvSets());
@@ -558,6 +569,8 @@ async function main() {
     await startLive(params.live);
   } else if (params.mode === 'sim') {
     await startSim(params.scenario ?? 'normal');
+  } else if (params.mode === 'lib') {
+    await startLibrary(params.scenario ?? undefined);
   } else {
     await startRecording();
   }
@@ -573,7 +586,7 @@ async function main() {
   Promise.race([settled, waitMax]).then(() => requestAnimationFrame(() => requestAnimationFrame(() => boot.done())));
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
-  window.__viewer = { getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, panel, flow, queue, dispatch: (c) => queue.push(c) };
+  window.__viewer = { getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, panel, flow, queue, dispatch: (c) => queue.push(c) };
 }
 
 main().catch((e) => {

@@ -177,11 +177,21 @@ async function suite(width, height, tag) {
   await scan(page, `${tag} 온도 색칠`);
   await click(page, '#timeline-btn');
   await scan(page, `${tag} 기록 재생 막대`);
+  await click(page, '#rail [data-mode="lib"]');
+  await sleep(600);
+  await tab(page, 'summary');
+  await scan(page, `${tag} 시뮬레이션(미리 계산) 요약과 서버 안내`);
+  await page.select('#scenario-select', 'supply_24');
+  await sleep(500);
+  for (const t of ['energy', 'prep']) {
+    await tab(page, t);
+    await scan(page, `${tag} 시뮬레이션(미리 계산) ${t}`);
+  }
   await click(page, '#rail [data-mode="sim"]');
   await sleep(500);
   for (const t of ['control', 'energy', 'prep']) {
     await tab(page, t);
-    await scan(page, `${tag} 시뮬레이션 ${t}`);
+    await scan(page, `${tag} 간이 계산 ${t}`);
   }
   await click(page, '#cctv-btn');
   await sleep(500);
