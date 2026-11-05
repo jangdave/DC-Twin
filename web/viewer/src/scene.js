@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { SKY_PRESETS, displayInverse, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
+import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
 import { Airflow, loadFlow } from './airflow.js';
 import { CITY, buildCity } from './city.js';
 import { prepareShell, shellVisibility } from './hall_shell.js';
@@ -520,7 +520,10 @@ export class HallScene {
     const mini = new THREE.Scene();
     mini.add(new THREE.Mesh(this.sky.geometry, this.sky.material));
     const old = this._envRT;
+    const dec = this.sky.material.uniforms.uDecode.value;
+    this.sky.material.uniforms.uDecode.value = 0; // 반사 지도는 화면 변환을 거치지 않은 선형 값이다
     this._envRT = this._pmrem.fromScene(mini, 0, 0.1, 2500);
+    this.sky.material.uniforms.uDecode.value = dec;
     this._applyEnvMaps();
     old?.dispose();
   }
@@ -565,12 +568,11 @@ export class HallScene {
     this.skyName = SKY_PRESETS[name] ? name : 'day';
     const dir = sunVector(p.elev, p.azim);
     const u = this.sky.material.uniforms;
-    // 후처리 중에는 화면이 톤 매핑과 sRGB 변환을 한 번 더 거치므로 그 변환을 거쳐 원래 색이 되는 값을 쓴다(env.js displayInverse)
-    const skyCol = (c) => (this.fx ? displayInverse(c) : c);
-    u.zenith.value.copy(skyCol(new THREE.Color(p.zenith)));
-    u.horizon.value.copy(skyCol(new THREE.Color(p.horizon)));
-    u.sunColor.value.copy(skyCol(new THREE.Color(p.sun)));
-    u.groundColor.value.copy(skyCol(new THREE.Color(p.grass).multiplyScalar(0.5)));
+    u.zenith.value.set(p.zenith);
+    u.horizon.value.set(p.horizon);
+    u.sunColor.value.set(p.sun);
+    u.groundColor.value.set(p.grass).multiplyScalar(0.5);
+    u.uDecode.value = this.fx ? 1 : 0; // 후처리 중에는 화면 변환을 한 번 더 거치므로 하늘 셰이더가 값을 미리 푼다
     u.sunDir.value.copy(dir);
     this.sunExt.color.set(p.sun);
     this.sunExt.intensity = p.sunI;

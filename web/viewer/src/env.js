@@ -24,7 +24,7 @@ void main() {
 }`;
 
 const SKY_FRAG = `
-uniform vec3 zenith; uniform vec3 horizon; uniform vec3 sunColor; uniform vec3 sunDir; uniform vec3 groundColor; uniform float time;
+uniform vec3 zenith; uniform vec3 horizon; uniform vec3 sunColor; uniform vec3 sunDir; uniform vec3 groundColor; uniform float time; uniform float uDecode;
 varying vec3 vDir;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -46,6 +46,8 @@ void main() {
     vec3 cloud = mix(vec3(1.0), horizon * 0.9 + sunColor * 0.2, 0.25);
     col = mix(col, cloud, c * 0.85);
   }
+  // 후처리 중에는 화면이 sRGB 변환을 한 번 더 거치므로(하늘은 화면 값을 그대로 낸다) 미리 풀어 둔다. 풀지 않으면 하늘이 하얗게 뜬다.
+  if (uDecode > 0.5) col = pow(max(col, vec3(0.0)), vec3(2.2));
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -63,6 +65,7 @@ export function makeSky() {
       sunDir: { value: new THREE.Vector3(0, 1, 0) },
       groundColor: { value: new THREE.Color(0x2a3326) },
       time: { value: 0 },
+      uDecode: { value: 0 },
     },
   });
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(1000, 32, 16), mat);
@@ -125,37 +128,3 @@ export function mergeByMaterial(root, scale) {
   return meshes;
 }
 
-// 후처리를 켜면 화면이 톤 매핑(ACES)과 sRGB 변환을 한 번 더 거친다. 하늘 셰이더는 값을 그대로 화면 값으로 내보내므로 그대로 두면 하늘이 하얗게 떠 보인다.
-// 그래서 후처리 중에는 하늘 색을 "ACES + sRGB를 거쳐 원래 색이 되는 값"으로 미리 바꿔 둔다(뉴턴법). 낮은 단계(후처리 없음)와 같은 하늘이 된다.
-const ACES_IN = [[0.59719, 0.35458, 0.04823], [0.076, 0.90834, 0.01566], [0.0284, 0.13383, 0.83777]];
-const ACES_OUT = [[1.60475, -0.53108, -0.07367], [-0.10208, 1.10813, -0.00605], [-0.00327, -0.07276, 1.07602]];
-const mul = (m, v) => m.map((r) => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
-const fit = (v) => v.map((x) => (x * (x + 0.0245786) - 0.000090537) / (x * (0.983729 * x + 0.432951) + 0.238081));
-const enc = (x) => (x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
-export function displayForward(c) {
-  const t = mul(ACES_OUT, fit(mul(ACES_IN, c.map((x) => (x / 0.6) * 1))));
-  return t.map((x) => enc(Math.min(Math.max(x, 0), 1)));
-}
-export function displayInverse(color) {
-  const target = [color.r, color.g, color.b].map((x) => Math.min(Math.max(x, 0), 0.985));
-  let c = target.map((x) => Math.pow(x, 2.2)); // 시작값
-  for (let it = 0; it < 24; it++) {
-    const f = displayForward(c);
-    const err = f.map((x, i) => x - target[i]);
-    if (Math.max(...err.map(Math.abs)) < 1e-4) break;
-    const h = 1e-4;
-    const J = [0, 1, 2].map((j) => { const cj = c.slice(); cj[j] += h; const fj = displayForward(cj); return f.map((x, i) => (fj[i] - x) / h); }); // J[j][i] = df_i/dc_j
-    // 3x3 풀이: J^T 형태 → 가우스 소거
-    const A = [0, 1, 2].map((i) => [J[0][i], J[1][i], J[2][i], err[i]]);
-    for (let col = 0; col < 3; col++) {
-      let p = col;
-      for (let r = col + 1; r < 3; r++) if (Math.abs(A[r][col]) > Math.abs(A[p][col])) p = r;
-      [A[col], A[p]] = [A[p], A[col]];
-      if (Math.abs(A[col][col]) < 1e-12) continue;
-      for (let r = 0; r < 3; r++) if (r !== col) { const k = A[r][col] / A[col][col]; for (let q = col; q < 4; q++) A[r][q] -= k * A[col][q]; }
-    }
-    const d = [0, 1, 2].map((i) => (Math.abs(A[i][i]) < 1e-12 ? 0 : A[i][3] / A[i][i]));
-    c = c.map((x, i) => Math.max(x - d[i] * 0.9, 0));
-  }
-  return color.clone().setRGB(c[0], c[1], c[2], 'srgb-linear');
-}
