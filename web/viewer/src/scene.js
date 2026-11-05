@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
 import { Airflow, loadFlow } from './airflow.js';
-import { buildCity } from './city.js';
+import { CITY, buildCity } from './city.js';
 import { prepareShell, shellVisibility } from './hall_shell.js';
 import { CCTV_LIMITS } from './cctv.js';
 import { VIEWS } from './views.js';
@@ -89,6 +89,10 @@ export class HallScene {
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.5, 2500);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = !reducedMotion;
+    // 조작: 왼쪽 버튼은 선택(끌어도 카메라가 움직이지 않는다), 오른쪽 버튼 끌기는 회전, 휠은 확대. 자유 이동(팬)은 없고 회전 중심은 항상 데이터센터 중심이다.
+    this.controls.enablePan = false;
+    this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+    this.controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE };
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.minDistance = 2;
     this.controls.maxDistance = 45;
@@ -484,6 +488,7 @@ export class HallScene {
     this.beaconGlow.renderOrder = 6;
     g.add(this.beaconGlow);
     this._extR = Math.max(W, D);
+    this._bldg = { center: new THREE.Vector3(c.x, H / 2, c.z), half: new THREE.Vector3(W / 2, H / 2, D / 2) };
     this._extH = H;
     g.visible = false;
     this.exterior = g;
@@ -647,6 +652,14 @@ export class HallScene {
     const size = box.getSize(new THREE.Vector3());
     const mid = box.getCenter(new THREE.Vector3());
     const c = this.center;
+    // 건물 본체와 옥외 설비(부지 바닥, 울타리, 주차장 제외)의 범위: 확대해도 이 안으로 카메라가 들어가지 못하게 한다
+    const bb = new THREE.Box3();
+    for (const m of meshes) if (/Bldg(?!FloorProxy)|OutdoorEquip/.test(m.material.name || '')) bb.union(m.geometry.boundingBox);
+    if (!bb.isEmpty()) {
+      bb.min.add(new THREE.Vector3(c.x - mid.x, 0, c.z - mid.z));
+      bb.max.add(new THREE.Vector3(c.x - mid.x, 0, c.z - mid.z));
+      this._bldg = { center: bb.getCenter(new THREE.Vector3()), half: bb.getSize(new THREE.Vector3()).multiplyScalar(0.5) };
+    }
     const model = new THREE.Group();
     for (const m of meshes) model.add(m);
     this._applyEnvMaps();
@@ -680,10 +693,38 @@ export class HallScene {
     return ray.intersectObjects(this.building, false).length > 0;
   }
 
+  // 멀리 보기 한계: 도시(블록 배치) 가장자리 밖이 화면에 들어오지 않도록, 도시 반폭의 45%와 건물 크기의 4.5배 중 작은 쪽
+  _extMaxDistance() {
+    const cityHalf = Math.min((this.q.cityRings + 0.5) * CITY.pitchX, (this.q.cityRings + 0.5) * CITY.pitchZ);
+    return Math.min((this._extR ?? 100) * 4.5, cityHalf * 0.45);
+  }
+
+  // 가까이 보기 한계: 카메라가 건물(본체와 옥외 설비)의 안으로 들어가지 못하게, 건물 중심에서 나오는 시선이 건물 범위 밖(여유 4 m)에 닿는 곳까지만 다가간다
+  _keepOutside() {
+    if (this.stage !== 'exterior' || !this._bldg || this._anim) return;
+    const { center, half } = this._bldg;
+    const m = 4;
+    const t = this.controls.target;
+    const p = this.camera.position;
+    const inside = (v) => Math.abs(v.x - center.x) < half.x + m && Math.abs(v.y - center.y) < half.y + m && Math.abs(v.z - center.z) < half.z + m;
+    if (!inside(t) || !inside(p)) return;
+    const dir = p.clone().sub(t);
+    const len = dir.length();
+    if (len < 1e-6) return;
+    dir.divideScalar(len);
+    let exit = Infinity;
+    for (const a of ['x', 'y', 'z']) {
+      if (Math.abs(dir[a]) < 1e-6) continue;
+      const bound = dir[a] > 0 ? center[a] + half[a] + m - t[a] : t[a] - (center[a] - half[a] - m);
+      exit = Math.min(exit, bound / Math.abs(dir[a]));
+    }
+    if (len < exit) p.copy(t).addScaledVector(dir, exit);
+  }
+
   _applyLimits(stage) {
     const ext = stage === 'exterior';
     this.controls.minDistance = ext ? 10 : 2;
-    this.controls.maxDistance = ext ? this._extR * 4.5 : 45;
+    this.controls.maxDistance = ext ? this._extMaxDistance() : 45;
     this.controls.maxPolarAngle = Math.PI * (ext ? 0.48 : 0.49);
   }
 
@@ -703,7 +744,7 @@ export class HallScene {
     const moving = !(instant || this.reducedMotion);
     if (moving) {
       this.controls.minDistance = 2;
-      this.controls.maxDistance = this._extR * 4.5;
+      this.controls.maxDistance = this._extMaxDistance();
     } else {
       this._applyLimits(stage);
     }
@@ -924,7 +965,13 @@ export class HallScene {
         a.onDone?.();
       }
     }
+    if (this.stage === 'exterior' && !this._anim) {
+      // 멀리 볼수록 카메라를 높게 둔다: 낮은 각도로 멀리 가면 도시 건물 안으로 들어가 버린다(거리 60 m까지 0.48 pi, 240 m부터 0.30 pi)
+      const d = this.camera.position.distanceTo(this.controls.target);
+      this.controls.maxPolarAngle = Math.PI * (0.48 - 0.18 * Math.min(Math.max((d - 60) / 180, 0), 1));
+    }
     this.controls.update();
+    this._keepOutside();
     this._updateDepthRange();
     if (!this.cctv) this._updateShell();
     this._stepAirflow(dtSec, timeSec);
