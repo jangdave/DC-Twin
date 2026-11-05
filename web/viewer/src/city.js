@@ -228,7 +228,29 @@ export function planCity({ cx, cz, rings, seed = 11 }) {
     trees.push([cx + t, cz - iz0 + 4], [cx - ix0 + 4, cz + t * (iz0 / ix0)], [cx + ix0 - 4, cz + t * (iz0 / ix0)]);
     if (Math.abs(t) > gw + 6) trees.push([cx + t, cz + iz0 - 4]);
   }
-  return { blocks, buildings, parks, lots, roads, roadSegments, intersections, apron, trees, lamps, crosswalks };
+  return { blocks, buildings, parks, lots, roads, roadSegments, intersections, apron, trees: clearTrees(trees, buildings), lamps, crosswalks };
+}
+
+// 나무 수관의 가장 큰 반지름(m). 이보다 건물 가까이에 있는 나무는 건물을 뚫고 나오므로 뺀다.
+export const TREE_CLEAR = 3.4;
+const TREE_GAP = 3; // 나무끼리 최소 간격(m)
+// 건물(모든 부분 상자)과 수관이 겹치는 나무를 빼고, 너무 붙은 나무는 하나만 남긴다. 건물 배치는 바꾸지 않는다.
+export function clearTrees(trees, buildings, clear = TREE_CLEAR, gap = TREE_GAP) {
+  const boxes = buildings.flatMap((b) => b.parts);
+  const free = trees.filter(([x, z]) => !boxes.some((q) => Math.abs(x - q.x) < q.w / 2 + clear && Math.abs(z - q.z) < q.d / 2 + clear));
+  const cell = new Map();
+  const out = [];
+  for (const t of free) {
+    const kx = Math.floor(t[0] / gap), kz = Math.floor(t[1] / gap);
+    let ok = true;
+    for (let i = -1; i <= 1 && ok; i++) for (let j = -1; j <= 1 && ok; j++) for (const u of cell.get(`${kx + i},${kz + j}`) ?? []) if (Math.hypot(u[0] - t[0], u[1] - t[1]) < gap) { ok = false; break; }
+    if (!ok) continue;
+    out.push(t);
+    const key = `${kx},${kz}`;
+    if (!cell.has(key)) cell.set(key, []);
+    cell.get(key).push(t);
+  }
+  return out;
 }
 
 // ---- 형상 ----
@@ -365,20 +387,55 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   let trees = null;
   if (nTree > 0) {
     const chosen = plan.trees.slice().sort(() => rng() - 0.5).slice(0, nTree);
-    const trunkG = track(new THREE.CylinderGeometry(0.22, 0.3, 3, 6).translate(0, 1.5, 0));
-    const crownG = track(new THREE.IcosahedronGeometry(2.3, 0).translate(0, 4.6, 0));
+    // 활엽수(둥근 덩어리 셋)와 침엽수(원뿔 셋)를 섞는다. 꼭짓점 색을 아래는 어둡게 위는 밝게 칠해 한 덩어리로 보이지 않게 한다.
+    const trunkG = track(new THREE.CylinderGeometry(0.2, 0.32, 3.2, 8).translate(0, 1.6, 0));
+    const shade = (g, lo = 0.6, hi = 1.0) => {
+      g.computeBoundingBox();
+      const { min, max } = g.boundingBox;
+      const pos = g.attributes.position;
+      const col = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) col.fill(lo + (hi - lo) * ((pos.getY(i) - min.y) / (max.y - min.y)), i * 3, i * 3 + 3);
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      return g;
+    };
+    const jr = mulberry32(seed + 9);
+    const lump = (r, x, y, z) => {
+      const g = new THREE.IcosahedronGeometry(r, 1).toNonIndexed();
+      const p = g.attributes.position;
+      const k = new Map(); // 같은 꼭짓점은 같이 움직여 틈이 생기지 않게
+      for (let i = 0; i < p.count; i++) {
+        const key = `${p.getX(i).toFixed(3)},${p.getY(i).toFixed(3)},${p.getZ(i).toFixed(3)}`;
+        if (!k.has(key)) k.set(key, 0.82 + jr() * 0.36);
+        const f = k.get(key);
+        p.setXYZ(i, p.getX(i) * f, p.getY(i) * f * 0.92, p.getZ(i) * f);
+      }
+      return g.translate(x, y, z);
+    };
+    const broadG = track(shade(mergeGeometries([lump(2.0, 0, 4.7, 0), lump(1.5, 1.1, 4.0, 0.5), lump(1.4, -1.0, 4.2, -0.6), lump(1.2, 0.2, 5.9, -0.2)])));
+    const coneG = track(shade(mergeGeometries([new THREE.ConeGeometry(2.2, 3.0, 8).translate(0, 3.9, 0).toNonIndexed(), new THREE.ConeGeometry(1.7, 2.6, 8).translate(0, 5.5, 0).toNonIndexed(), new THREE.ConeGeometry(1.2, 2.3, 8).translate(0, 6.9, 0).toNonIndexed()]), 0.55, 1.1));
+    const species = chosen.map(() => (rng() < 0.3 ? 1 : 0));
+    const nCone = species.reduce((a, v) => a + v, 0);
+    const leaf = () => track(new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, flatShading: true }));
     const trunk = new THREE.InstancedMesh(trunkG, track(new THREE.MeshLambertMaterial({ color: 0x4a3524 })), nTree);
-    const crown = new THREE.InstancedMesh(crownG, track(new THREE.MeshLambertMaterial({ color: 0xffffff })), nTree);
+    const crown = new THREE.InstancedMesh(broadG, leaf(), nTree - nCone);
+    const conifer = new THREE.InstancedMesh(coneG, leaf(), Math.max(nCone, 1));
+    conifer.count = nCone;
     const tm = new THREE.Matrix4(), c = new THREE.Color();
+    let ib = 0, ic = 0;
     chosen.forEach(([x, z], k) => {
       const s = 0.75 + rng() * 0.7;
       tm.compose(new THREE.Vector3(x, 0.25, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rng() * 6), new THREE.Vector3(s, s * (0.9 + rng() * 0.4), s));
       trunk.setMatrixAt(k, tm);
-      crown.setMatrixAt(k, tm);
-      crown.setColorAt(k, c.setHSL(0.22 + rng() * 0.1, 0.4 + rng() * 0.2, 0.17 + rng() * 0.12));
+      if (species[k]) {
+        conifer.setMatrixAt(ic, tm);
+        conifer.setColorAt(ic++, c.setHSL(0.36 + rng() * 0.05, 0.35 + rng() * 0.15, 0.14 + rng() * 0.08));
+      } else {
+        crown.setMatrixAt(ib, tm);
+        crown.setColorAt(ib++, c.setHSL(0.19 + rng() * 0.12, 0.42 + rng() * 0.2, 0.2 + rng() * 0.12));
+      }
     });
     trees = new THREE.Group();
-    trees.add(trunk, crown);
+    trees.add(trunk, crown, conifer);
     group.add(trees);
   }
   let lampHeads = null;
@@ -407,26 +464,67 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   skyline.renderOrder = -0.5;
   group.add(skyline);
 
-  // 차량(인스턴스, 도로를 따라 움직임)
-  let cars = null;
+  // 차량(인스턴스, 도로를 따라 움직임). 승용차와 승합차 두 종류: 차체, 유리창, 바퀴, 앞뒤 등을 한 덩어리로 합친다.
+  // 차체는 차마다 다른 색(인스턴스 색), 유리와 바퀴는 어두운 고정 색(꼭짓점 색). 앞뒤 등은 따로 그려서 저녁에 밝아진다.
+  const cars = [];
+  const lightMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
   const nCar = quality.cars;
   const carState = [];
+  const carType = (spec) => {
+    const part = (g, rgb) => {
+      const n = g.attributes.position.count;
+      g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).map((_, i) => rgb[i % 3]), 3));
+      return g;
+    };
+    const bx = (w, h, d, x, y, z, rgb) => part(new THREE.BoxGeometry(w, h, d).translate(x, y, z), rgb);
+    const taper = (g, k) => { // 윗면을 앞뒤로 좁혀 앞유리, 뒷유리 기울기를 만든다
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) if (p.getY(i) > g.boundingBox.min.y + 0.01 + (g.boundingBox.max.y - g.boundingBox.min.y) / 2) p.setX(i, p.getX(i) * k);
+      return g;
+    };
+    const L = spec.len, W = 1.9, glass = [0.1, 0.14, 0.2], dark = [0.06, 0.06, 0.07], white = [1, 1, 1];
+    const body = [bx(L, 0.62, W, 0, 0.66, 0, white)];
+    const cab = new THREE.BoxGeometry(spec.cabLen, spec.cabH, W - 0.12).translate(spec.cabX, 0.97 + spec.cabH / 2, 0);
+    cab.computeBoundingBox();
+    body.push(part(taper(cab, spec.taper), glass));
+    body.push(bx(spec.cabLen * spec.taper * 0.98, 0.08, W - 0.1, spec.cabX, 0.97 + spec.cabH + 0.02, 0, white)); // 지붕
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) body.push(part(new THREE.CylinderGeometry(0.38, 0.38, 0.26, 10).rotateX(Math.PI / 2).translate(sx * (L / 2 - 0.85), 0.38, sz * (W / 2 - 0.05)), dark));
+    body.push(bx(0.1, 0.18, W - 0.2, L / 2 + 0.02, 0.5, 0, dark), bx(0.1, 0.18, W - 0.2, -L / 2 - 0.02, 0.5, 0, dark)); // 범퍼
+    const lights = [];
+    for (const sz of [-1, 1]) {
+      lights.push(bx(0.08, 0.2, 0.42, L / 2 + 0.06, 0.78, sz * 0.66, [1, 0.95, 0.75])); // 앞등
+      lights.push(bx(0.08, 0.16, 0.4, -L / 2 - 0.06, 0.8, sz * 0.68, [0.9, 0.08, 0.06])); // 뒷등
+    }
+    return { body: track(mergeGeometries(body)), lights: track(mergeGeometries(lights)) };
+  };
+  const TYPES = [carType({ len: 4.3, cabLen: 2.3, cabH: 0.6, cabX: -0.2, taper: 0.72 }), carType({ len: 5.2, cabLen: 4.0, cabH: 0.95, cabX: -0.3, taper: 0.92 })];
+  const bodyMat = track(new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }));
+  const typeOf = [];
+  let carTypeMeshes = [];
   if (nCar > 0) {
     const r2 = mulberry32(seed + 7);
-    const carG = track(new THREE.BoxGeometry(4.2, 1.4, 1.9).translate(0, 0.9, 0));
-    cars = new THREE.InstancedMesh(carG, track(new THREE.MeshLambertMaterial({ color: 0xffffff })), nCar);
+    for (let k = 0; k < nCar; k++) typeOf.push(r2() < 0.78 ? 0 : 1);
+    carTypeMeshes = TYPES.map((t, ti) => {
+      const n = typeOf.filter((v) => v === ti).length;
+      const body = new THREE.InstancedMesh(t.body, bodyMat, Math.max(n, 1));
+      const lamp = new THREE.InstancedMesh(t.lights, lightMat, Math.max(n, 1));
+      body.count = lamp.count = n;
+      body.frustumCulled = lamp.frustumCulled = false;
+      group.add(body, lamp);
+      cars.push(body, lamp);
+      return { body, lamp, n };
+    });
+    const idx = [0, 0];
     const col = new THREE.Color();
     for (let k = 0; k < nCar; k++) {
       const road = plan.roads[Math.floor(r2() * plan.roads.length)];
-      carState.push({ road, sign: r2() < 0.5 ? 1 : -1, t: r2() * road.len, speed: 7 + r2() * 7, lane: 4.2 });
-      cars.setColorAt(k, col.setHSL(r2(), 0.1 + r2() * 0.5, 0.25 + r2() * 0.4));
+      carState.push({ road, sign: r2() < 0.5 ? 1 : -1, t: r2() * road.len, speed: 7 + r2() * 7, lane: 4.2, type: typeOf[k], slot: idx[typeOf[k]]++ });
+      carTypeMeshes[typeOf[k]].body.setColorAt(carState[k].slot, col.setHSL(r2(), 0.1 + r2() * 0.5, 0.25 + r2() * 0.4));
     }
-    cars.frustumCulled = false;
-    group.add(cars);
   }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
   function updateCars(dt) {
-    if (!cars) return;
+    if (!carState.length) return;
     for (let k = 0; k < carState.length; k++) {
       const c = carState[k];
       c.t = (c.t + c.speed * dt) % c.road.len;
@@ -440,9 +538,10 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
         q.setFromAxisAngle(up, c.sign > 0 ? -Math.PI / 2 : Math.PI / 2);
       }
       m4.compose(pos, q, one);
-      cars.setMatrixAt(k, m4);
+      carTypeMeshes[c.type].body.setMatrixAt(c.slot, m4);
+      carTypeMeshes[c.type].lamp.setMatrixAt(c.slot, m4);
     }
-    cars.instanceMatrix.needsUpdate = true;
+    for (const t of carTypeMeshes) t.body.instanceMatrix.needsUpdate = t.lamp.instanceMatrix.needsUpdate = true;
   }
   updateCars(0);
 
@@ -460,13 +559,19 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
       for (const m of emissiveMats) m.emissiveIntensity = dusk ? 1.5 : 0.05;
       if (lampHeads) lampHeads.material.emissiveIntensity = dusk ? 2.5 : 0;
       skyline.material.color.setScalar(dusk ? 0.45 : 1);
+      lightMat.color.setScalar(dusk ? 1.6 : 0.55); // 차량 앞뒤 등: 저녁에 밝아진다
     },
+    carCount: () => carTypeMeshes.reduce((a, t) => a + t.body.count, 0), // 지금 그리는 차량 수(시험용)
     update(dt) {
       updateCars(Math.min(dt, 0.1));
     },
     // 런타임에 차량과 가로수 수를 줄인다(늘리지는 않는다)
     setCounts(nCars, nTrees) {
-      if (cars) cars.count = Math.min(cars.count, nCars);
+      if (carTypeMeshes.length) {
+        const seen = [0, 0];
+        for (let k = 0; k < Math.min(nCars, typeOf.length); k++) seen[typeOf[k]]++;
+        carTypeMeshes.forEach((t, i) => (t.body.count = t.lamp.count = Math.min(t.n, seen[i])));
+      }
       if (trees) for (const m of trees.children) m.count = Math.min(m.count, nTrees);
       if (lampHeads) lampHeads.count = lampPoles.count = Math.min(lampHeads.count, Math.floor(nTrees * 0.6));
     },

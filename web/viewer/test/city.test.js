@@ -151,3 +151,15 @@ describe('planCity', () => {
     expect(plan.intersections.length).toBe(64);
   });
 });
+
+describe('가로수 배치', () => {
+  it('나무가 건물을 뚫거나 수관이 건물에 닿지 않고, 서로 3 m 안에 붙지 않는다', async () => {
+    const { planCity, TREE_CLEAR } = await import('../src/city.js');
+    const plan = planCity({ cx: 0, cz: 0, rings: 3 });
+    const boxes = plan.buildings.flatMap((b) => b.parts);
+    for (const [x, z] of plan.trees) expect(boxes.some((q) => Math.abs(x - q.x) < q.w / 2 + TREE_CLEAR && Math.abs(z - q.z) < q.d / 2 + TREE_CLEAR)).toBe(false);
+    const t = plan.trees.slice(0, 400);
+    for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) expect(Math.hypot(t[i][0] - t[j][0], t[i][1] - t[j][1])).toBeGreaterThanOrEqual(3);
+    expect(plan.trees.length).toBeGreaterThan(1200);
+  });
+});
