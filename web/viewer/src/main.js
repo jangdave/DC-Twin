@@ -193,6 +193,13 @@ async function main() {
       startSim(state.simScenario);
     },
     onCctv: () => dispatch({ type: 'overlay-toggle', value: 'cctv' }),
+    onNextAlarm: () => {
+      // 이상 장비를 차례로 보여 준다: 선택 + 카메라 이동. 지금 선택한 것 다음 장비로 넘어간다.
+      const list = scene.alarmedEquipment();
+      if (!list.length) return;
+      const i = list.indexOf(state.selected);
+      selectEquipment(list[(i + 1) % list.length], true);
+    },
     onTimeline: (on) => dispatch({ type: 'timeline', on }),
     onServer: (url, token) => connectServer(url, token),
     onPlay: () => state.player && ((state.player.playing = !state.player.playing), ui.renderTransport(state.player)),
@@ -348,7 +355,7 @@ async function main() {
     if (flow.stage === 'hall') ensureShell();
     scene.setStage(flow.stage, instant);
     buildingArmed = false;
-    ui.hideBuildingCard();
+    ui.setBuildingState();
     dispatch({ type: 'stage', stage: flow.stage });
     state.stage = flow.stage;
     refresh();
@@ -531,11 +538,11 @@ async function main() {
         return;
       }
       // 터치: 첫 번째 탭은 정보(외곽선과 카드), 카드의 단추나 건물을 한 번 더 누르면 홀로 들어간다
-      if (!hit) { buildingArmed = false; scene.setBuildingHover(false); ui.hideBuildingCard(); return; }
-      if (buildingArmed) { buildingArmed = false; scene.setBuildingHover(false); ui.hideBuildingCard(); queue.push({ name: 'view.goto', value: 'hall' }); return; }
+      if (!hit) { buildingArmed = false; scene.setBuildingHover(false); ui.setBuildingState(); return; }
+      if (buildingArmed) { buildingArmed = false; scene.setBuildingHover(false); ui.setBuildingState(); queue.push({ name: 'view.goto', value: 'hall' }); return; }
       buildingArmed = true;
       scene.setBuildingHover(true);
-      ui.showBuildingCard(e.clientX - r.left, e.clientY - r.top, true);
+      ui.setBuildingState({ pinned: true });
       return;
     }
     const eq = scene.pick((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
@@ -550,8 +557,7 @@ async function main() {
       const hit = scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
       canvas.classList.toggle('over-building', hit);
       scene.setBuildingHover(hit);
-      if (hit) ui.showBuildingCard(e.clientX - r.left, e.clientY - r.top);
-      else ui.hideBuildingCard();
+      ui.setBuildingState({ hot: hit });
       return;
     }
     const eq = scene.pick((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
@@ -565,7 +571,7 @@ async function main() {
   canvas.addEventListener('pointerleave', (e) => {
     scene.hover(null);
     ui.hideTooltip();
-    if (e.pointerType === 'mouse') (scene.setBuildingHover(false), ui.hideBuildingCard());
+    if (e.pointerType === 'mouse') (scene.setBuildingHover(false), ui.setBuildingState());
   });
 
   // 방향키로 랙 이동(FR-34): 줄은 위아래, 같은 줄은 좌우
@@ -652,6 +658,7 @@ async function main() {
     if (store.version !== lastRefresh.version && now - lastRefresh.at > 250) refresh();
     if (cctv.isOpen) cctv.setTime(cctvClock());
     scene.update(dt, now / 1000);
+    ui.placeBuildingTag(scene.buildingTagScreen(canvas));
     requestAnimationFrame(frame);
   }
 

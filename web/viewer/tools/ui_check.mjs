@@ -1014,6 +1014,15 @@ await pc.close();
   await sleep(300);
   const P1 = await hp.evaluate(() => ({ closed: document.getElementById('side').classList.contains('collapsed'), tab: document.querySelector('#side-tabs [aria-selected="true"]')?.dataset.tab }));
   ok('PANEL 랙을 누르면 패널이 펼쳐지며 상세 탭이 열림', !P1.closed && P1.tab === 'detail', JSON.stringify(P1));
+  const A0 = await hp.evaluate(() => ({ chip: !document.getElementById('alarm-chip').hidden, n: Number(document.getElementById('alarm-chip-n').textContent), list: window.__viewer.scene.alarmedEquipment(), rings: !!window.__viewer.scene._rings?.visible, ringN: window.__viewer.scene._rings?.count ?? 0 }));
+  ok('ALARM 이상이 있으면 서버실 화면에 "다음 이상 장비 보기" 단추와 바닥 링이 보임', A0.chip && A0.n >= 1 && A0.list.length >= 1 && A0.rings && A0.ringN === A0.list.length, JSON.stringify(A0));
+  const seen = [];
+  for (let i = 0; i < A0.list.length + 1; i++) {
+    await hp.click('#alarm-chip');
+    await sleep(250);
+    seen.push(await hp.evaluate(() => window.__viewer.state.selected));
+  }
+  ok('ALARM 단추를 누를 때마다 이상 장비를 차례로 선택하고 한 바퀴 돌면 처음으로 돌아옴', seen.slice(0, A0.list.length).every((k) => A0.list.includes(k)) && new Set(seen.slice(0, A0.list.length)).size === A0.list.length && seen.at(-1) === seen[0], JSON.stringify({ list: A0.list, seen }));
   await hp.close();
 
   const bp = await browser.newPage();
@@ -1023,15 +1032,17 @@ await pc.close();
   await bp.evaluate(() => { const s = window.__viewer.scene; s._anim = null; s.setPreset('ext', true); s.update(0.016, 1); });
   await sleep(500);
   const bpt = () => bp.evaluate(() => { const s = window.__viewer.scene; const c = document.getElementById('canvas'); const r = c.getBoundingClientRect(); const v = s._bldg.center.clone().project(s.camera); return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height }; });
+  const TG = await bp.evaluate(() => { const c = document.getElementById('building-card'); const r = c.getBoundingClientRect(); const cv = document.getElementById('canvas').getBoundingClientRect(); return { shown: !c.hidden && getComputedStyle(c).visibility === 'visible', name: c.querySelector('b').textContent, status: document.getElementById('bc-status').textContent, hot: c.classList.contains('hot'), inside: r.left >= cv.left && r.right <= cv.right && r.top >= cv.top && r.bottom <= cv.bottom, box: !!window.__viewer.scene.building && window.__viewer.scene._bldg !== undefined }; });
+  ok('TAG 외관에서는 건물 위에 이름과 상태가 항상 붙어 있고(마우스 없이도), 화면 안에 있음(초록 상자 대체)', TG.shown && TG.name.length > 0 && /정상|주의|없음/.test(TG.status) && !TG.hot && TG.inside, JSON.stringify(TG));
   const bpos = await bpt();
   await bp.mouse.move(bpos.x, bpos.y, { steps: 4 });
   await sleep(300);
-  const H1 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, status: document.getElementById('bc-status').textContent, name: document.querySelector('#building-card b').textContent, outline: !!window.__viewer.scene._bHover?.visible, pinned: document.getElementById('building-card').classList.contains('pinned') }));
-  ok('HOVER 외관에서 건물에 올리면 외곽선과 이름, 상태 카드가 뜸(눌러서 들어가는 안내)', H1.card && H1.outline && !H1.pinned && H1.name.length > 0 && /정상|주의|없음/.test(H1.status), JSON.stringify(H1));
+  const H1 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, hot: document.getElementById('building-card').classList.contains('hot'), status: document.getElementById('bc-status').textContent, name: document.querySelector('#building-card b').textContent, outline: !!window.__viewer.scene._bHover?.visible, silhouette: window.__viewer.scene._hullMeshes?.length > 0 && window.__viewer.scene._bHover?.children[0]?.children?.length === window.__viewer.scene._hullMeshes.length, pinned: document.getElementById('building-card').classList.contains('pinned') }));
+  ok('HOVER 외관에서 건물에 올리면 건물 모양을 따라 외곽 강조선이 생기고 표시에 "눌러서 들어가기" 안내가 붙음', H1.card && H1.hot && H1.outline && !H1.pinned && H1.silhouette, JSON.stringify(H1));
   await bp.mouse.move(8, 700, { steps: 4 });
   await sleep(300);
-  const H2 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, outline: !!window.__viewer.scene._bHover?.visible }));
-  ok('HOVER 건물에서 벗어나면 외곽선과 카드가 사라짐', !H2.card && !H2.outline, JSON.stringify(H2));
+  const H2 = await bp.evaluate(() => ({ card: document.getElementById('building-card').classList.contains('hot'), outline: !!window.__viewer.scene._bHover?.visible }));
+  ok('HOVER 건물에서 벗어나면 외곽선과 안내가 사라지고 이름·상태는 남음', !H2.card && !H2.outline, JSON.stringify(H2));
   await bp.close();
 
   const tp = await browser.newPage();

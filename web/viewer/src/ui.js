@@ -106,6 +106,7 @@ export class UI {
     $('live-back').addEventListener('click', () => this.h.onBackToRec());
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
     $('bc-enter').addEventListener('click', () => this.h.onEnter());
+    $('alarm-chip').addEventListener('click', () => this.h.onNextAlarm());
     $('back-btn').addEventListener('click', () => this.h.onBack());
     $('server-cta-btn').addEventListener('click', () => this.openServerDialog());
     $('sc-max').addEventListener('click', (e) => e.currentTarget.dataset.rack && this.h.onSelect(e.currentTarget.dataset.rack, true));
@@ -221,22 +222,29 @@ export class UI {
     $('side-toggle').setAttribute('aria-pressed', String(open));
   }
 
-  // 외관 건물 카드: 이름, 상태, 안내. pinned이면(휴대폰 첫 터치) 홀 들어가기 단추가 보인다.
-  showBuildingCard(x, y, pinned = false) {
+  // 외관 건물 표시(이름과 상태): 건물 위에 항상 붙어 있고, 마우스를 올리면(hot) 안내가, 휴대폰 첫 터치 뒤(pinned)에는 홀 들어가기 단추가 보인다.
+  setBuildingState({ hot = false, pinned = false } = {}) {
     const c = $('building-card');
-    const ext = $('ext-status');
-    $('bc-status').textContent = ext.textContent;
-    $('bc-status').dataset.state = ext.dataset.state ?? 'none';
-    c.hidden = false;
+    c.classList.toggle('hot', hot || pinned);
     c.classList.toggle('pinned', pinned);
-    const w = $('stage').clientWidth;
-    c.style.left = `${Math.min(Math.max(x, 8), Math.max(w - 190, 8))}px`;
-    c.style.top = `${Math.max(y, 8)}px`;
   }
 
-  hideBuildingCard() {
-    $('building-card').hidden = true;
-    $('building-card').classList.remove('pinned');
+  // pos: 캔버스 안 픽셀(건물 위 점). null이면 화면 밖이라 감춘다.
+  placeBuildingTag(pos) {
+    const c = $('building-card');
+    if (!pos) {
+      c.style.visibility = 'hidden';
+      return;
+    }
+    const w = $('stage').clientWidth;
+    c.style.visibility = 'visible';
+    c.style.left = `${Math.min(Math.max(pos.x, 90), Math.max(w - 90, 90))}px`;
+    c.style.top = `${Math.max(pos.y, 40)}px`;
+  }
+
+  // 이상이 있으면 서버실 화면에서만 '다음 이상 장비 보기' 단추를 보인다(CCTV가 열려 있으면 숨긴다)
+  updateAlarmChip() {
+    $('alarm-chip').hidden = !(this._alarmChipActive && this._chipStage === 'hall' && !this._chipCctv);
   }
 
   openServerDialog() {
@@ -271,6 +279,7 @@ export class UI {
     $('mode-group').querySelector('[data-mode="server"]').classList.toggle('on', vm.serverOn);
     // 3D 위 조각
     $('exterior-card').hidden = !vm.exteriorCard;
+    $('building-card').hidden = !vm.exteriorCard;
     $('stage-tools').hidden = vm.stageToolsHidden;
     $('back-btn').hidden = vm.backHidden;
     $('legend').hidden = vm.legendHidden;
@@ -304,6 +313,9 @@ export class UI {
       if (ext) $('enter-btn').focus({ preventScroll: true });
     }
     $('stage').dataset.overlay = vm.cctvOpen ? 'cctv' : '';
+    this._chipStage = ws.stage;
+    this._chipCctv = vm.cctvOpen;
+    this.updateAlarmChip();
   }
 
   renderExterior(s) {
@@ -312,6 +324,8 @@ export class UI {
     $('ext-status').textContent = !s.hasData ? none : s.alarms > 0 ? '주의 필요' : '정상';
     $('ext-status').dataset.state = !s.hasData ? 'none' : s.alarms > 0 ? 'alarm' : 'ok';
     $('ext-pue').textContent = s.pue === null ? none : fmt(s.pue, 2);
+    $('bc-status').textContent = $('ext-status').textContent;
+    $('bc-status').dataset.state = $('ext-status').dataset.state;
   }
 
   // 시나리오 이름과 설명, 일어나는 일 목록(녹화 재생에서만 눌러서 그 시각으로 이동)
@@ -408,6 +422,9 @@ export class UI {
     $('tab-alarm-count').title = `지금 이상인 센서 ${active}개`;
     $('side-toggle-count').textContent = String(Math.min(active, 99)); // 패널이 접혀 있어도 이상이 있음을 보인다
     $('side-toggle-count').hidden = active === 0;
+    $('alarm-chip-n').textContent = String(Math.min(active, 99));
+    this._alarmChipActive = active > 0;
+    this.updateAlarmChip();
     for (const a of [...log].reverse().slice(0, 60)) {
       const info = sensorInfo.get(a.sensorId);
       if (!info) continue;
