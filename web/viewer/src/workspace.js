@@ -83,9 +83,10 @@ export function derive(ws) {
     liveInfoHidden: own,
     scenarioDisabled: !(own || ws.control),
     // 조작 탭은 슬라이더가 있을 때만, 에너지·용량과 이상 대비 탭은 미리 계산한 값에도 있다
-    tabs: { control: calc, energy: sim, prep: sim },
+    // CCTV 중에는 시뮬레이션 탭을 감춘다(CCTV는 현장 화면이라 계산 결과를 보이지 않는다)
+    tabs: { control: calc && !cctv, energy: sim && !cctv, prep: sim && !cctv },
     homeTab: calc ? 'control' : ws.mode === 'lib' ? 'energy' : 'summary',
     // 상세 시뮬레이션은 서버에 연결해서 한다는 안내(서버에 연결 중이면 숨김)
-    serverCta: !ws.control && (ws.mode === 'rec' || ws.mode === 'lib' || ws.mode === 'sim'),
+    serverCta: !cctv && !ws.control && (ws.mode === 'rec' || ws.mode === 'lib' || ws.mode === 'sim'),
   };
 }

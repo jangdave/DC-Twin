@@ -97,4 +97,15 @@ describe('미리 계산한 값(lib)', () => {
     expect(derive(run(hall, { type: 'mode', mode: 'sim' })).rail.active).toBe('sim');
     expect(derive(run(hall, { type: 'mode', mode: 'lib' })).rail.active).toBe('lib');
   });
+
+  it('CCTV가 열려 있으면 시뮬레이션 탭과 서버 안내를 감춘다', () => {
+    for (const mode of ['rec', 'lib', 'sim']) {
+      const d = derive(run(hall, { type: 'mode', mode }, { type: 'overlay-toggle', value: 'cctv' }));
+      expect(d.cctvOpen).toBe(true);
+      expect(d.tabs).toEqual({ control: false, energy: false, prep: false });
+      expect(d.serverCta).toBe(false);
+    }
+    const lib = derive(run(hall, { type: 'mode', mode: 'lib' }));
+    expect(lib.tabs.energy).toBe(true); // CCTV가 아니면 그대로
+  });
 });
