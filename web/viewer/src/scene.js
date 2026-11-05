@@ -123,6 +123,7 @@ export class HallScene {
     this._buildExterior(data, sx, sy, sz);
     this.setStage(stage, true);
     this._setupFx();
+    this._applyAniso();
   }
 
   // ---- 만들기 ----
@@ -541,6 +542,7 @@ export class HallScene {
     this.q = { ...this.q, ...q, cityRings: this.q.cityRings };
     this._applySize(this.renderer.domElement.clientWidth, this.renderer.domElement.clientHeight);
     this._setupFx();
+    this._applyAniso();
     this.sunExt.castShadow = q.shadow > 0;
     if (q.shadow > 0) {
       this.sunExt.shadow.map?.dispose();
@@ -690,6 +692,7 @@ export class HallScene {
     this.exterior.add(proxy);
     this.building = [proxy];
     this.exteriorModel = model;
+    this._applyAniso();
     this._tagAnchor = new THREE.Vector3(this._main.center.x, this._main.center.y + this._main.half.y + 4, this._main.center.z);
     this.renderer.shadowMap.needsUpdate = true;
     this._extR = Math.max(size.x, size.z) * 0.9;
@@ -963,6 +966,24 @@ export class HallScene {
     v.project(this.camera);
     const r = canvas.getBoundingClientRect();
     return { x: ((v.x + 1) / 2) * r.width, y: ((1 - v.y) / 2) * r.height, behind: v.z > 1 };
+  }
+
+  // 장면의 모든 질감에 단계의 비등방성 필터링을 적용한다(기기가 허용하는 최대값 이하). 도로, 포장, 외벽을 비스듬히 볼 때 선명해진다.
+  _applyAniso() {
+    const n = Math.min(this.q.aniso ?? 4, this.renderer.capabilities.getMaxAnisotropy());
+    const seen = new Set();
+    this.scene.traverse((o) => {
+      const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      for (const m of mats) for (const k of ['map', 'normalMap', 'emissiveMap', 'roughnessMap', 'metalnessMap']) {
+        const t = m[k];
+        if (t && !seen.has(t)) {
+          seen.add(t);
+          if (t.anisotropy !== n) {
+            t.anisotropy = n;
+          }
+        }
+      }
+    });
   }
 
   // 그리는 배율을 화질 단계와 화면 크기로 정한다(일반 기준 FHD 화소 수 상한). 후처리 통로도 같은 크기로 맞춘다.

@@ -1019,6 +1019,31 @@ await pc.close();
   const Q3 = await hp2.evaluate(() => { window.__viewer.scene.applyQuality('low'); return { fx: !!window.__viewer.scene.fx }; });
   ok('높음은 후처리와 접촉 그림자를 켜고, 낮은 단계로 내리면 후처리가 꺼짐', Q2.fx && Q2.ao && !Q3.fx, JSON.stringify({ Q2, Q3 }));
   await hp2.close();
+
+  // 질감 단계: 낮음 256 px 외벽에 법선 지도 없음, 보통 512 px + 법선 지도, 높음 1024 px. 비등방성은 단계 상한과 기기 상한 중 작은 값.
+  const texInfo = async (q) => {
+    const tp2 = await browser.newPage();
+    await tp2.setViewport({ width: 1280, height: 720 });
+    await tp2.goto(`${base}?scenario=fan_fault&t=100&q=${q}&fx=off`, { waitUntil: 'networkidle0' });
+    await tp2.waitForFunction(() => window.__viewer?.scene, { timeout: 20000 });
+    await sleep(800);
+    const r = await tp2.evaluate(() => {
+      const s = window.__viewer.scene;
+      let maxW = 0, normals = 0, minAniso = 99;
+      const seen = new Set();
+      s.city.group.traverse((o) => {
+        const m = o.material;
+        if (!m || Array.isArray(m)) return;
+        if (m.map && m.emissiveMap && m.map.image && !seen.has(m.map)) { seen.add(m.map); maxW = Math.max(maxW, m.map.image.width); if (m.normalMap) normals++; minAniso = Math.min(minAniso, m.map.anisotropy); }
+      });
+      return { maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
+    });
+    await tp2.close();
+    return r;
+  };
+  const T1 = await texInfo('low'), T2 = await texInfo('mid'), T3 = await texInfo('high');
+  ok('TEX 질감 단계: 낮음 256 px(법선 없음), 보통 512 px(법선 있음), 높음 1024 px', T1.maxW === 256 && T1.normals === 0 && T2.maxW === 512 && T2.normals > 0 && T3.maxW === 1024 && T3.normals > 0, JSON.stringify({ T1, T2, T3 }));
+  ok('TEX 비등방성 필터링이 단계 상한(낮음 2, 보통 8, 높음 16)과 기기 상한 중 작은 값으로 적용됨', T1.minAniso === Math.min(2, T1.cap) && T2.minAniso === Math.min(8, T2.cap) && T3.minAniso === Math.min(16, T3.cap), JSON.stringify({ a: [T1.minAniso, T2.minAniso, T3.minAniso], cap: T1.cap }));
 }
 
 // 인터랙션 개편: 오른쪽 패널 기본 접힘, 건물 호버(외곽선+카드), 휴대폰 첫 터치는 정보

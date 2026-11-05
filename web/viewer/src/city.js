@@ -322,13 +322,16 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   };
 
   // 건물: 외벽 5종 x 재질 하나씩, 한 종류당 한 덩어리
-  const tex = facadeTextures();
+  const ks = quality.texScale ?? 1; // 그림 배율(낮음 1, 보통 2, 높음 4)
+  const tex = facadeTextures(5, ks);
   const mats = {};
   const byFacade = Object.fromEntries(FACADES.map((f) => [f, []]));
   for (const f of FACADES) {
     track(tex[f].map);
     track(tex[f].glow);
+    if (tex[f].normal) track(tex[f].normal);
     const base = { map: tex[f].map, emissiveMap: tex[f].glow, emissive: new THREE.Color(0xffffff), emissiveIntensity: 0.05, vertexColors: true };
+    if (tex[f].normal) Object.assign(base, { normalMap: tex[f].normal, normalScale: new THREE.Vector2(0.7, 0.7) });
     const glassy = baseFacade(f) === 'glass';
     const metal = baseFacade(f) === 'metal';
     // 유리는 반사가 강한 짙은 유리, 금속은 반사가 중간. 콘크리트, 벽돌, 띠창은 반사하지 않는 면(보는 각도에 따라 색이 변하지 않음)
@@ -346,7 +349,9 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
   const emissiveMats = Object.values(mats);
 
   // 인도 판(블록마다), 공원(잔디), 주차장
-  const sw = track(sidewalkTexture());
+  const gt = (t) => { track(t); if (t.userData.normalMap) track(t.userData.normalMap); return t; }; // 바닥 그림과 법선 지도를 함께 정리 대상으로
+  const mat = (t, extra = {}) => new THREE.MeshLambertMaterial({ map: t, ...(t.userData.normalMap ? { normalMap: t.userData.normalMap, normalScale: new THREE.Vector2(0.8, 0.8) } : {}), ...extra });
+  const sw = gt(sidewalkTexture(ks));
   const slabs = [...plan.blocks.filter(() => true), ...plan.apron.sidewalks].map((b) => {
     const g = new THREE.BoxGeometry(b.w, 0.25, b.d);
     const uv = g.attributes.uv;
@@ -354,14 +359,14 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     g.translate(b.x, 0.125, b.z);
     return g;
   });
-  mesh(mergeGeometries(slabs, false), new THREE.MeshLambertMaterial({ map: sw }), true);
-  mesh(flatRects(plan.apron.lawns, 0.12, 6), new THREE.MeshLambertMaterial({ map: track(grassTexture()) }), true);
+  mesh(mergeGeometries(slabs, false), mat(sw), true);
+  mesh(flatRects(plan.apron.lawns, 0.12, 6), mat(gt(grassTexture(ks))), true);
   mesh(flatRects([plan.apron.drive], 0.14, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }), true);
-  if (plan.parks.length) mesh(flatRects(plan.parks, 0.4, 6), new THREE.MeshLambertMaterial({ map: track(grassTexture()) }), true);
-  if (plan.lots.length) mesh(flatRects(plan.lots, 0.4, 16), new THREE.MeshLambertMaterial({ map: track(lotTexture()) }), true);
+  if (plan.parks.length) mesh(flatRects(plan.parks, 0.4, 6), mat(gt(grassTexture(ks))), true);
+  if (plan.lots.length) mesh(flatRects(plan.lots, 0.4, 16), mat(gt(lotTexture(ks))), true);
 
   // 도로와 횡단보도
-  const rt = track(roadTexture());
+  const rt = gt(roadTexture(ks));
   const strips = plan.roadSegments.map((r) => {
     const g = new THREE.PlaneGeometry(CITY.road, r.len);
     g.rotateX(-Math.PI / 2);
@@ -371,7 +376,7 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     g.translate(r.x, 0.1, r.z); // 모든 도로 조각은 같은 높이이고 서로 겹치지 않는다
     return g;
   });
-  mesh(mergeGeometries(strips, false), new THREE.MeshLambertMaterial({ map: rt }));
+  mesh(mergeGeometries(strips, false), mat(rt));
   mesh(flatRects(plan.intersections.map((i) => ({ x: i.x, z: i.z, w: CITY.road, d: CITY.road })), 0.1, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }));
   const zebra = plan.crosswalks.map((r) => {
     const g = new THREE.PlaneGeometry(r.w, r.d);
