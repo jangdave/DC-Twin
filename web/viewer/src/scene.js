@@ -621,14 +621,29 @@ export class HallScene {
         .replace('#include <common>', `#include <common>
         varying vec3 vWp;
         uniform float uNight;
-        float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`)
+        float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        vec2 wCell() { return vec2(floor((vWp.x + vWp.z) / 2.5), floor(vWp.y / 3.6)); }`)
+        // 낮: 창마다 색 농도가 조금씩 다르고(±12%), 위로 갈수록 하늘이 더 비쳐 밝으며, 층 사이 띠(바닥 슬래브)는 어둡다
+        .replace('#include <color_fragment>', `#include <color_fragment>
+        {
+          vec2 c0 = wCell();
+          float hv = h21(c0);
+          float up = clamp(vWp.y / 16.0, 0.0, 1.0);
+          float slab = 1.0 - smoothstep(0.0, 0.32, abs(mod(vWp.y, 3.6) - 0.25));
+          diffuseColor.rgb *= (0.88 + 0.24 * hv) * (0.9 + 0.3 * up);
+          diffuseColor.rgb *= 1.0 - 0.45 * slab;
+          diffuseColor.rgb += vec3(0.0, 0.02, 0.025) * h21(c0 + 5.0); // 일부 창은 약간 청록
+        }`)
+        // 창마다 반사가 부드러운 정도가 다르다(0.04~0.16): 어떤 창은 하늘이 또렷하고 어떤 창은 번진다
+        .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+        roughnessFactor = mix(0.04, 0.16, h21(wCell() + 3.0));`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        vec2 cell = vec2(floor((vWp.x + vWp.z) / 1.3), floor(vWp.y / 3.6));
+        vec2 cell = wCell();
         float lit = step(0.6, h21(cell)) * (0.45 + 0.55 * h21(cell + 7.0));
         float onFloor = step(0.4, vWp.y);
         totalEmissiveRadiance += vec3(1.0, 0.74, 0.4) * lit * onFloor * uNight * 0.75;`);
     };
-    mat.customProgramCacheKey = () => 'dc-night-windows';
+    mat.customProgramCacheKey = () => 'dc-glass-windows-v2';
     mat.needsUpdate = true;
   }
 

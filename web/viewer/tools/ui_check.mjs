@@ -1029,21 +1029,22 @@ await pc.close();
     await sleep(800);
     const r = await tp2.evaluate(() => {
       const s = window.__viewer.scene;
-      let maxW = 0, normals = 0, minAniso = 99, detail = 0;
-      s.exteriorModel.traverse((o) => { if (o.material && !Array.isArray(o.material) && o.material.customProgramCacheKey().includes('dc-detail')) detail++; });
+      let maxW = 0, normals = 0, minAniso = 99, detail = 0, glass = 0;
+      s.exteriorModel.traverse((o) => { if (o.material && !Array.isArray(o.material)) { const k = o.material.customProgramCacheKey(); if (k.includes('dc-detail')) detail++; if (k.includes('dc-glass-windows')) glass++; } });
       const seen = new Set();
       s.city.group.traverse((o) => {
         const m = o.material;
         if (!m || Array.isArray(m)) return;
         if (m.map && m.emissiveMap && m.map.image && !seen.has(m.map)) { seen.add(m.map); maxW = Math.max(maxW, m.map.image.width); if (m.normalMap) normals++; minAniso = Math.min(minAniso, m.map.anisotropy); }
       });
-      return { detail, maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
+      return { glass, detail, maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
     });
     await tp2.close();
     return r;
   };
   const T1 = await texInfo('low'), T2 = await texInfo('mid'), T3 = await texInfo('high');
   ok('TEX 질감 단계: 낮음 256 px(법선 없음), 보통 512 px(법선 있음), 높음 1024 px', T1.maxW === 256 && T1.normals === 0 && T2.maxW === 512 && T2.normals > 0 && T3.maxW === 1024 && T3.normals > 0, JSON.stringify({ T1, T2, T3 }));
+  ok('GLASS 본 건물 유리에 창마다 농도, 반사, 층 띠 변화가 모든 단계에서 적용됨', T1.glass >= 1 && T2.glass >= 1 && T3.glass >= 1, JSON.stringify({ low: T1.glass, mid: T2.glass, high: T3.glass }));
   ok('DETAIL 건물 모델의 단조로운 면(콘크리트, 지붕, 아스팔트, 금속 패널, 벽 안쪽)에 미세 디테일이 높음과 보통에서만 겹쳐짐', T1.detail === 0 && T2.detail >= 4 && T3.detail >= 4, JSON.stringify({ low: T1.detail, mid: T2.detail, high: T3.detail }));
   ok('TEX 비등방성 필터링이 단계 상한(낮음 2, 보통 8, 높음 16)과 기기 상한 중 작은 값으로 적용됨', T1.minAniso === Math.min(2, T1.cap) && T2.minAniso === Math.min(8, T2.cap) && T3.minAniso === Math.min(16, T3.cap), JSON.stringify({ a: [T1.minAniso, T2.minAniso, T3.minAniso], cap: T1.cap }));
 }
