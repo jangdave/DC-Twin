@@ -756,6 +756,58 @@ export class HallScene {
     return meshes.length;
   }
 
+  // ---- 화면 나눠 비교: 왼쪽은 저장한 기준의 랙 색, 오른쪽은 지금 색을 같은 카메라로 그린다 ----
+  // 보는 값 3종(입구 온도, 배기 온도, 전력) 각각의 랙 색을 저장해 두므로 나눠 비교 중에 보는 값을 바꿔도 맞는다.
+  saveBaselineColors() {
+    const { store } = this;
+    this._base = {};
+    for (const [key, view] of Object.entries(VIEWS)) {
+      const arr = new Float32Array(this.rackKeys.length * 3);
+      this.rackKeys.forEach((rk, i) => {
+        const [r, g, b] = sampleColor(store.metric(rk, view.metric), view.cold, view.hot);
+        arr[i * 3] = r; arr[i * 3 + 1] = g; arr[i * 3 + 2] = b;
+      });
+      this._base[key] = arr;
+    }
+  }
+
+  get splitFraction() {
+    return this._splitF ?? 0.5;
+  }
+
+  setSplit(on) {
+    this._split = on && this._base ? this.splitFraction : 0;
+    this._dirty = true;
+  }
+
+  setSplitFraction(f) {
+    this._splitF = Math.min(Math.max(f, 0.08), 0.92);
+    if (this._split) this._split = this._splitF;
+    this._dirty = true;
+  }
+
+  _renderSplit() {
+    const r = this.renderer;
+    const c = r.domElement;
+    const W = c.clientWidth, H = c.clientHeight;
+    const arrs = [this.rackFront.instanceColor, this.rackTop.instanceColor];
+    const cur = arrs.map((a) => a.array.slice());
+    const base = this._base[this.view];
+    let diff = 0;
+    for (let i = 0; i < base.length; i++) diff += Math.abs(base[i] - cur[0][i]);
+    this._splitDiff = diff / base.length; // 기준과 지금의 평균 색 차이(시험과 점검용)
+    const x = Math.round(W * this._split);
+    r.setScissorTest(true);
+    r.setViewport(0, 0, W, H);
+    arrs.forEach((a) => { a.array.set(base); a.needsUpdate = true; });
+    r.setScissor(0, 0, x, H);
+    r.render(this.scene, this.camera);
+    arrs.forEach((a, i) => { a.array.set(cur[i]); a.needsUpdate = true; });
+    r.setScissor(x, 0, W - x, H);
+    r.render(this.scene, this.camera);
+    r.setScissorTest(false);
+  }
+
   // 외관에서 데이터센터 건물 한 동의 모서리를 따라 하늘색 외곽 강조선을 낸다(홀 안 선택 상자와 같은 색).
   // 건물 모델 전체가 아니라 건물 본체 상자(_main)의 12개 모서리를 굵은 선(LineSegments2, 화면 3px)으로 그린다. 가려진 쪽은 건물에 가려진다.
   setBuildingHover(on) {
@@ -1387,6 +1439,7 @@ export class HallScene {
       }
     }
     if (this.cctv && this.stage === 'hall') this._renderCctv(timeSec);
+    else if (this._split > 0 && this.stage === 'hall' && this._base && this.rackFront.visible) this._renderSplit();
     else if (this.fx && !this.cctv) this.fx.render();
     else this.renderer.render(this.scene, this.camera);
   }

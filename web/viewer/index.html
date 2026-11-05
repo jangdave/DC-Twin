@@ -49,6 +49,9 @@
       <canvas id="canvas" tabindex="0" aria-label="데이터센터 3D 장면. 방향키로 랙을 선택할 수 있다"></canvas>
       <div id="labels"></div>
       <div id="tooltip" role="tooltip" hidden></div>
+      <div id="split-bar" hidden role="slider" aria-label="기준과 지금을 나누는 선" aria-valuemin="8" aria-valuemax="92" aria-valuenow="50" tabindex="0">
+        <span id="split-l" class="split-chip">기준</span><span id="split-grip" aria-hidden="true"></span><span id="split-r" class="split-chip">지금</span>
+      </div>
       <button id="alarm-chip" type="button" hidden title="이상이 있는 장비로 카메라를 옮기고 상세를 엽니다. 누를 때마다 다음 장비로 넘어갑니다.">이상 <b id="alarm-chip-n">0</b>건 · 다음 이상 장비 보기</button>
       <div id="building-card" hidden aria-live="polite">
         <b>가상 데이터센터</b>
@@ -255,6 +258,7 @@ uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ../out
       <li><b>왼쪽 메뉴</b>(서버실 안에서만 보임)는 하나만 눌린다. <b>모니터링</b>은 현장 센서 값과 알람(지금은 미리 만든 기록 값), <b>시뮬레이션</b>은 미리 계산해 둔 상태와 시나리오(이상 상황, 급기 온도, 부하)를 골라 보고 비교, <b>간이 계산</b>은 이 브라우저가 간단한 모델로 바로 계산하며 슬라이더로 조작, <b>CCTV</b>는 구역마다 설치한 가상 카메라 7대다. 팬, 전력, 공급 온도를 직접 바꿔 자세히 계산하려면 <b>서버에 연결</b>한다.</li>
       <li><b>오른쪽 패널</b>은 탭으로 나뉜다. <b>요약</b>(시나리오와 상황), <b>장비</b>(고른 랙이나 CRAC), <b>알람</b>(숫자는 지금 이상인 센서 수, 목록은 지나간 변화까지 포함, 누르면 그 장비로 이동). 시뮬레이션에서는 <b>에너지·용량</b>(전력, 기준 비교)과 <b>이상 대비</b>(대응 순서)가, 간이 계산과 서버에서는 <b>조작</b>(슬라이더)도 더 나온다.</li>
       <li><b>외관</b>에서 건물을 누르거나 Enter를 누르면 홀로 들어간다. 홀에서 Esc나 "외관으로" 단추로 돌아온다.</li>
+      <li><b>화면 나눠 비교</b>: 시뮬레이션 메뉴의 에너지·용량 탭에서 "지금을 기준으로 저장"을 누르고 시나리오를 바꾼 뒤 "화면 나눠 비교"를 누르면, 3D 화면의 왼쪽은 저장한 기준 색, 오른쪽은 지금 색으로 나뉜다. 가운데 선을 끌어 경계를 옮긴다(랙 색만 비교하며 알람 표시는 지금 값이다).</li>
       <li><b>조작</b>: 왼쪽 버튼 하나로 한다. 끌면 데이터센터 중심을 기준으로 돌고, 짧게 누르면 랙을 선택해 상세를 본다. 휠로 확대한다(자유 이동은 없다. 휴대폰은 한 손가락 끌기로 돌고 두 손가락으로 확대한다). 스페이스바는 재생과 정지, 좌우 화살표는 5초 이동(Shift는 30초), 캔버스에서 방향키는 랙 이동이다.</li>
     </ul>
     <h3>화질</h3>

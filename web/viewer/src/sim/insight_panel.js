@@ -40,11 +40,16 @@ export class InsightPanel {
     const bar = el('div', 'btn-row');
     r.save = el('button', '', '지금을 기준으로 저장');
     r.clear = el('button', '', '기준 지우기');
-    r.save.type = r.clear.type = 'button';
+    r.split = el('button', '', '화면 나눠 비교');
+    r.split.title = '3D 화면을 반으로 나눠 왼쪽은 저장한 기준, 오른쪽은 지금 상태를 같은 각도로 보여 줍니다(랙 색 기준).';
+    r.save.type = r.clear.type = r.split.type = 'button';
     r.clear.hidden = true;
+    r.split.hidden = true;
+    r.split.setAttribute('aria-pressed', 'false');
+    r.split.addEventListener('click', () => this.o.onSplit?.(r.split.getAttribute('aria-pressed') !== 'true'));
     r.save.addEventListener('click', () => this.saveBase());
     r.clear.addEventListener('click', () => this.clearBase());
-    bar.append(r.save, r.clear);
+    bar.append(r.save, r.clear, r.split);
     root.append(bar);
     r.cmp = el('div', 'cmp');
     root.append(r.cmp);
@@ -116,13 +121,24 @@ export class InsightPanel {
   saveBase() {
     this.base = { snap: snapshot(this.o.store, this.o.rackKeys, this.o.warnIn), scenario: this._scenario };
     this.refs.clear.hidden = false;
+    this.refs.split.hidden = false;
+    this.o.onBase?.(true);
     this._renderCmp(snapshot(this.o.store, this.o.rackKeys, this.o.warnIn));
   }
 
   clearBase() {
     this.base = null;
     this.refs.clear.hidden = true;
+    this.refs.split.hidden = true;
+    this.syncSplit(false);
+    this.o.onBase?.(false);
     this._renderCmp(snapshot(this.o.store, this.o.rackKeys, this.o.warnIn));
+  }
+
+  // 화면 나눠 비교 단추의 눌림 표시(바깥에서 끝났을 때도 맞춘다)
+  syncSplit(on) {
+    this.refs.split.setAttribute('aria-pressed', String(on));
+    this.refs.split.textContent = on ? '나눠 비교 끄기' : '화면 나눠 비교';
   }
 
   _renderCmp(now) {

@@ -1000,6 +1000,39 @@ await pc.close();
   bare.http.close();
 }
 
+// 화면 나눠 비교: 기준 저장 -> 시나리오 변경 -> 나눠 비교 켜기, 선 끌기, 메뉴를 떠나면 꺼짐
+{
+  const sp = await browser.newPage();
+  await sp.setViewport({ width: 1440, height: 860 });
+  await sp.goto(`${base}?scenario=normal&t=100&stage=hall&panel=open&q=mid&fx=off`, { waitUntil: 'networkidle0' });
+  await sp.waitForFunction(() => window.__viewer?.state.player, { timeout: 20000 });
+  await sp.evaluate(() => window.__viewer.startLibrary('normal'));
+  await sp.waitForFunction(() => window.__viewer.state.mode === 'lib' && window.__viewer.state.player, { timeout: 15000 });
+  await sleep(1000);
+  await sp.click('#side-tabs [data-tab="energy"]');
+  const btn = (t) => sp.evaluate((tt) => [...document.querySelectorAll('#pane-energy button')].find((b) => b.textContent === tt), t);
+  const before = await sp.evaluate(() => { const b = [...document.querySelectorAll('#pane-energy button')].find((x) => x.textContent === '화면 나눠 비교'); return b.hidden; });
+  await sp.evaluate(() => [...document.querySelectorAll('#pane-energy button')].find((b) => b.textContent === '지금을 기준으로 저장').click());
+  await sp.select('#scenario-select', 'supply_24');
+  await sleep(1300);
+  await sp.evaluate(() => [...document.querySelectorAll('#pane-energy button')].find((b) => b.textContent === '화면 나눠 비교').click());
+  await sleep(700);
+  const S1 = await sp.evaluate(() => ({ split: window.__viewer.scene._split, diff: window.__viewer.scene._splitDiff, bar: !document.getElementById('split-bar').hidden, btnHiddenBefore: null }));
+  ok('SPLIT 기준을 저장하기 전에는 나눠 비교 단추가 없고, 저장 후 시나리오를 바꿔 켜면 기준과 지금의 색이 다른 채 반으로 나뉨', before === true && S1.split === 0.5 && S1.diff > 0.02 && S1.bar, JSON.stringify({ before, S1 }));
+  await sp.mouse.move(720, 430);
+  await sp.mouse.down();
+  await sp.mouse.move(420, 430, { steps: 6 });
+  await sp.mouse.up();
+  await sleep(400);
+  const S2 = await sp.evaluate(() => ({ f: window.__viewer.scene._split, left: document.getElementById('split-bar').style.left }));
+  ok('SPLIT 가운데 선을 끌면 경계가 옮겨짐(8~92% 안)', S2.f > 0.2 && S2.f < 0.4 && Math.abs(parseFloat(S2.left) / 100 - S2.f) < 0.001, JSON.stringify(S2));
+  await sp.evaluate(() => document.querySelector('#rail [data-mode="rec"]').click());
+  await sleep(800);
+  const S3 = await sp.evaluate(() => ({ split: window.__viewer.scene._split, bar: !document.getElementById('split-bar').hidden }));
+  ok('SPLIT 모니터링 메뉴로 가면 나눠 비교가 꺼짐', S3.split === 0 && !S3.bar, JSON.stringify(S3));
+  await sp.close();
+}
+
 // 화질: FHD 화소 수 상한과 후처리 켜기
 {
   const qp = await browser.newPage();
