@@ -108,6 +108,21 @@ input[type="radio"], input[type="checkbox"], input[type="range"] { accent-color:
   background: var(--gray-95); color: var(--text-inverse); transform: translate(-50%, -120%); white-space: nowrap;
 }
 
+/* 외관에서 건물에 마우스를 올리거나(휴대폰은 한 번 누르면) 뜨는 이름과 상태 카드 */
+#building-card { position: absolute; z-index: 3; display: grid; gap: 2px; min-width: 150px; padding: var(--p-2) var(--p-3); border-radius: var(--radius-large); background: var(--surface-page); backdrop-filter: blur(6px); box-shadow: var(--shadow-md); border: 1px solid var(--border-disabled); transform: translate(14px, 14px); pointer-events: none; }
+#building-card b { font-size: var(--text-sm); }
+#building-card small { color: var(--text-tertiary); font-size: var(--text-xs); }
+#building-card #bc-enter { display: none; margin-top: var(--p-1); }
+#building-card.pinned { pointer-events: auto; }
+#building-card.pinned #bc-enter { display: block; }
+#building-card.pinned small { display: none; }
+#bc-status::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--gray-40); }
+#bc-status[data-state="ok"]::before { background: var(--success, #2e9f5b); }
+#bc-status[data-state="alarm"]::before { background: var(--emergency); }
+#bc-status[data-state="alarm"] { color: var(--tag-danger-text); font-weight: var(--weight-semibold); }
+canvas.over-building { cursor: pointer; }
+#side-toggle .count { margin-left: 2px; }
+
 /* 3D 화면 위에 뜨는 카드: 반투명 흰 면, 모서리 8, 그림자 md (Select menu, Popover와 같은 규칙) */
 #stage-tools { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: var(--p-2); align-items: flex-start; max-width: calc(100% - 20px); }
 #view-group, #exterior-card, .tool-group, #legend {

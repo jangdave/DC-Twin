@@ -178,6 +178,7 @@ async function main() {
   staticLib.index = libSource.index;
   staticLib.groups = libSource.groups;
   let simSource = null; // 패널이 만들어진 뒤에 만든다
+  let buildingArmed = false; // 터치: 건물을 한 번 눌러 정보를 보여 준 상태
 
   const ui = new UI(store, {
     onSelect: (eq, focus) => selectEquipment(eq, focus),
@@ -212,6 +213,8 @@ async function main() {
     onBack: () => queue.push({ name: 'view.back' }),
   });
   ui.setScenarios(index, state.scenarioId);
+  // 3D가 주인공: 넓은 화면에서는 오른쪽 정보 패널을 접고 시작한다. 장비를 고르거나, 시뮬레이션 메뉴를 열거나, 위쪽 '정보 패널' 단추를 누르면 펼쳐진다.
+  if (params.panel !== 'open' && window.matchMedia('(min-width: 901px)').matches) ui.setSideOpen(false);
 
   // ---- 직접 시뮬레이션(브라우저 간이 모델, docs/21) ----
   const simRows = [...new Set(sceneData.racks.map((r) => r.row))].sort((a, b) => a - b);
@@ -344,6 +347,8 @@ async function main() {
   function applyStage(instant = false) {
     if (flow.stage === 'hall') ensureShell();
     scene.setStage(flow.stage, instant);
+    buildingArmed = false;
+    ui.hideBuildingCard();
     dispatch({ type: 'stage', stage: flow.stage });
     state.stage = flow.stage;
     refresh();
@@ -520,7 +525,17 @@ async function main() {
     if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) return; // 끌기는 선택이 아니다
     const r = rect();
     if (flow.stage === 'exterior') {
-      if (scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) queue.push({ name: 'view.goto', value: 'hall' });
+      const hit = scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+      if (e.pointerType === 'mouse') {
+        if (hit) queue.push({ name: 'view.goto', value: 'hall' });
+        return;
+      }
+      // 터치: 첫 번째 탭은 정보(외곽선과 카드), 카드의 단추나 건물을 한 번 더 누르면 홀로 들어간다
+      if (!hit) { buildingArmed = false; scene.setBuildingHover(false); ui.hideBuildingCard(); return; }
+      if (buildingArmed) { buildingArmed = false; scene.setBuildingHover(false); ui.hideBuildingCard(); queue.push({ name: 'view.goto', value: 'hall' }); return; }
+      buildingArmed = true;
+      scene.setBuildingHover(true);
+      ui.showBuildingCard(e.clientX - r.left, e.clientY - r.top, true);
       return;
     }
     const eq = scene.pick((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
@@ -530,7 +545,15 @@ async function main() {
   canvas.addEventListener('pointermove', (e) => {
     if (e.buttons) return ui.hideTooltip();
     const r = rect();
-    if (flow.stage === 'exterior') return canvas.classList.toggle('over-building', scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height));
+    if (flow.stage === 'exterior') {
+      if (e.pointerType !== 'mouse') return;
+      const hit = scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+      canvas.classList.toggle('over-building', hit);
+      scene.setBuildingHover(hit);
+      if (hit) ui.showBuildingCard(e.clientX - r.left, e.clientY - r.top);
+      else ui.hideBuildingCard();
+      return;
+    }
     const eq = scene.pick((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
     scene.hover(eq);
     if (!eq) return ui.hideTooltip();
@@ -539,7 +562,11 @@ async function main() {
     const label = eq.startsWith('rack') ? VIEWS[state.view].label : METRIC_LABEL.fan_speed;
     ui.showTooltip(`${prettyName(eq)}  ${label} ${m && Number.isFinite(m.value) ? m.value.toFixed(1) : '–'} ${unit}`, e.clientX - r.left, e.clientY - r.top);
   });
-  canvas.addEventListener('pointerleave', () => (scene.hover(null), ui.hideTooltip()));
+  canvas.addEventListener('pointerleave', (e) => {
+    scene.hover(null);
+    ui.hideTooltip();
+    if (e.pointerType === 'mouse') (scene.setBuildingHover(false), ui.hideBuildingCard());
+  });
 
   // 방향키로 랙 이동(FR-34): 줄은 위아래, 같은 줄은 좌우
   const racks = sceneData.racks;

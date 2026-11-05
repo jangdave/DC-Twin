@@ -113,6 +113,17 @@ const AUDIT = (only) => {
 
 const AUDIT_SRC = AUDIT.toString();
 const browser = await puppeteer.launch({ executablePath: exe, headless: true, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+
+// 오른쪽 패널을 기본으로 접는 새 동작과 상관없이 기존 시험이 같은 조건에서 돌도록 주소에 panel=open을 붙인다(주소에 panel=이 있으면 그대로 둔다)
+{
+  const newPage = browser.newPage.bind(browser);
+  browser.newPage = async (...a) => {
+    const pg = await newPage(...a);
+    const go = pg.goto.bind(pg);
+    pg.goto = (u, o) => go(String(u).includes('panel=') ? u : u + (String(u).includes('?') ? '&' : '?') + 'panel=open', o);
+    return pg;
+  };
+}
 const findings = [];
 let scanned = 0;
 async function scan(page, label) {
