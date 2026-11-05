@@ -81,4 +81,36 @@ describe('Airflow', () => {
     for (let i = 0; i < 400; i++) a.step(0.05, i * 0.05);
     expect([...a.heat].some((h) => h === 0)).toBe(true);
   });
+
+  it('급기의 일부(약 10%)는 랙을 거치지 않고 위로 새며, 천장 높이를 넘으면 사라진다', () => {
+    const a = fake();
+    // 입자 50개로는 비율이 흔들리므로 많이 뽑아 본다
+    let leaks = 0;
+    const N = 4000;
+    for (let i = 0; i < N; i++) {
+      a._spawn(i % a.count);
+      leaks += a.mode[i % a.count];
+    }
+    expect(leaks / N).toBeGreaterThan(0.07);
+    expect(leaks / N).toBeLessThan(0.13);
+    // 새는 입자는 속도장 대신 위로 오른다
+    const b = fake();
+    b.leak = 1;
+    for (let p = 0; p < b.count; p++) b._spawn(p);
+    const z0 = Array.from({ length: b.count }, (_, p) => b.pos[p * 3 + 2]);
+    b.step(0.1, 0);
+    let rose = 0;
+    for (let p = 0; p < b.count; p++) if (b.pos[p * 3 + 2] > z0[p]) rose++;
+    expect(rose).toBe(b.count);
+    for (let i = 0; i < 80; i++) b.step(0.1, i * 0.1);
+    for (let p = 0; p < b.count; p++) expect(b.pos[p * 3 + 2]).toBeLessThanOrEqual(3.65);
+    expect(Number.isFinite(b.pos[0])).toBe(true);
+  });
+
+  it('새는 입자가 없으면(leak=0) 모두 속도장을 따른다', () => {
+    const a = fake();
+    a.leak = 0;
+    for (let p = 0; p < a.count; p++) a._spawn(p);
+    expect(a.mode.every((m) => m === 0)).toBe(true);
+  });
 });

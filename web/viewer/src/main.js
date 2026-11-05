@@ -105,7 +105,7 @@ async function main() {
 
   // 장비 모양(glb)은 화면이 뜬 뒤에 받는다. 실패하면 단순 상자로 계속 쓴다.
   // 낮은 화질(모바일, 저사양)에서는 랙 60기 모델(삼각형 약 27만 개)을 자동으로 받지 않고, 단추를 누르면 받는다.
-  const autoModels = params.models && SETTINGS[tier].hallModels;
+  const autoModels = params.models; // 모든 화질 단계에서 기본으로 받는다(주소에 models=0이면 상자만)
   scene.useModels = autoModels;
   let modelsState = autoModels ? 'loading' : 'off';
   let modelsPromise = null;

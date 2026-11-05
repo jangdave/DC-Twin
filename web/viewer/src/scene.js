@@ -721,6 +721,8 @@ export class HallScene {
     } else {
       this._main = this._bldg;
     }
+    // 설비 보강: 냉각탑 김, 발전기 상태 표시등, 울타리 윗줄의 가시철사
+    const extras = this._buildEquipmentExtras(gltf.scene);
     // 저녁 조명: 모델의 가로등(LightPole_*) 위치에 빛 번짐과 바닥 빛 웅덩이를 둔다(저녁에만 보임)
     const siteLights = this._buildSiteLights(gltf.scene);
     // 부지 나무 교체: 줄기 위치를 찾아 모델의 나무(줄기와 수관)를 지우고 상세 나무를 같은 자리에 세운다. 생울타리 같은 낮은 식재는 남긴다.
@@ -739,6 +741,10 @@ export class HallScene {
     const model = new THREE.Group();
     for (const m of meshes) model.add(m);
     if (siteTrees) model.add(siteTrees);
+    if (extras) {
+      model.add(extras);
+      this._extras = extras;
+    }
     if (siteLights) {
       model.add(siteLights);
       this._siteLights = siteLights;
@@ -964,10 +970,11 @@ export class HallScene {
     });
     [...cold.values()]
       .sort((a, b) => a.y - b.y)
-      .forEach((e, i) => items.push({ text: `차가운 통로 ${i + 1}`, pos: toThree(e.xs.reduce((a, b) => a + b, 0) / e.xs.length, e.y, 5), cls: 'cold' }));
+      // 이름은 통로 가운데(랙 위에 겹쳐 보인다)가 아니라 통로 끝에 둔다: 차가운 통로는 동쪽 끝, 뜨거운 통로는 서쪽 끝, 바닥에서 3 m 위
+      .forEach((e, i) => items.push({ text: `차가운 통로 ${i + 1}`, pos: toThree(Math.max(...e.xs) + 120, e.y, 300), cls: 'cold' }));
     data.panels
       .filter((p) => p.name.endsWith('_Roof'))
-      .forEach((p) => items.push({ text: `뜨거운 통로 ${Number(/HotAisle_(\d+)/.exec(p.name)?.[1])}`, pos: toThree((p.min[0] + p.max[0]) / 2, (p.min[1] + p.max[1]) / 2, 215), cls: 'hot' }));
+      .forEach((p) => items.push({ text: `뜨거운 통로 ${Number(/HotAisle_(\d+)/.exec(p.name)?.[1])}`, pos: toThree(p.min[0] - 60, (p.min[1] + p.max[1]) / 2, 300), cls: 'hot' }));
     for (const it of items) {
       const el = document.createElement('div');
       el.className = `aisle-label ${it.cls}`;
@@ -1190,6 +1197,143 @@ export class HallScene {
     mat.needsUpdate = true;
   }
 
+  // 모델 노드(이름으로 찾음)의 월드 경계 상자를 m 단위로 모은다.
+  _boxesOf(root, re) {
+    root.updateMatrixWorld(true);
+    const out = [];
+    const box = new THREE.Box3();
+    root.traverse((o) => {
+      if (!re.test(o.name)) return;
+      box.setFromObject(o);
+      if (box.isEmpty()) return;
+      out.push({ name: o.name, min: box.min.clone().multiplyScalar(CM), max: box.max.clone().multiplyScalar(CM) });
+    });
+    return out;
+  }
+
+  // 설비 보강(원본 모델은 그대로 두고 위에 얹는다):
+  // - 냉각탑 위로 오르는 김: 냉각 전력이 클수록 많이, 빠르게(store.aggregates.cooling_power를 기준 32 kW로 나눈 값)
+  // - 발전기 상태 표시등: 대기 중이라 초록
+  // - 울타리 위 가시철사: 윗줄 두 가닥과 가시
+  _buildEquipmentExtras(root) {
+    const towers = this._boxesOf(root, /^CoolingTower_\d+$/);
+    const gens = this._boxesOf(root, /^Generator_\d+$/);
+    const fences = this._boxesOf(root, /^Fence_(East|North|South_East|South_West|West)$/);
+    if (!towers.length && !gens.length && !fences.length) return null;
+    const grp = new THREE.Group();
+    grp.name = 'siteExtras';
+    const tex = (this._glowTex ??= glowTexture());
+    const rng = mulberry32(77);
+    const PER = 36;
+    if (towers.length) {
+      const n = towers.length * PER;
+      const base = new Float32Array(n * 3);
+      const seed = new Float32Array(n * 2);
+      towers.forEach((t, k) => {
+        for (let i = 0; i < PER; i++) {
+          const j = k * PER + i;
+          base.set([(t.min.x + t.max.x) / 2 + (rng() - 0.5) * (t.max.x - t.min.x) * 0.5, t.max.y, (t.min.z + t.max.z) / 2 + (rng() - 0.5) * (t.max.z - t.min.z) * 0.5], j * 3);
+          seed.set([rng(), 0.6 + rng() * 0.8], j * 2);
+        }
+      });
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(base.slice(), 3));
+      g.setAttribute('aA', new THREE.BufferAttribute(new Float32Array(n), 1)); // 입자마다 투명도
+      g.setAttribute('aS', new THREE.BufferAttribute(new Float32Array(n).fill(4), 1)); // 입자마다 크기(m)
+      const mat = new THREE.ShaderMaterial({
+        uniforms: { map: { value: tex }, tint: { value: new THREE.Color(0.93, 0.95, 0.98) }, uScale: { value: 430 } },
+        vertexShader: `attribute float aA; attribute float aS; varying float vA; uniform float uScale;
+          void main() { vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = aS * uScale / max(-mv.z, 0.1); gl_Position = projectionMatrix * mv; }`,
+        fragmentShader: `uniform sampler2D map; uniform vec3 tint; varying float vA;
+          void main() { float a = texture2D(map, gl_PointCoord).a * vA; if (a < 0.004) discard; gl_FragColor = vec4(tint, a); }`,
+        transparent: true,
+        depthWrite: false,
+      });
+      const pts = new THREE.Points(g, mat);
+      pts.frustumCulled = false;
+      pts.renderOrder = 4;
+      pts.userData = { base, seed, per: PER, n };
+      pts.name = 'plume';
+      grp.add(pts);
+    }
+    if (gens.length) {
+      const led = new THREE.InstancedMesh(new THREE.BoxGeometry(0.4, 0.22, 0.4), new THREE.MeshBasicMaterial({ color: 0x2ee66b, fog: false }), gens.length);
+      const m = new THREE.Matrix4();
+      const gp = new Float32Array(gens.length * 3);
+      gens.forEach((e, i) => {
+        const p = new THREE.Vector3((e.min.x + e.max.x) / 2, e.max.y + 0.12, e.max.z - 0.5);
+        m.makeTranslation(p.x, p.y, p.z);
+        led.setMatrixAt(i, m);
+        gp.set([p.x, p.y + 0.1, p.z], i * 3);
+      });
+      led.frustumCulled = false;
+      led.name = 'genLeds';
+      const gg = new THREE.BufferGeometry();
+      gg.setAttribute('position', new THREE.BufferAttribute(gp, 3));
+      const glow = new THREE.Points(gg, new THREE.PointsMaterial({ map: tex, color: 0x38ff7a, size: 2.6, sizeAttenuation: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+      glow.frustumCulled = false;
+      glow.name = 'genGlow';
+      grp.add(led, glow);
+    }
+    if (fences.length) {
+      const seg = [];
+      for (const f of fences) {
+        const alongX = f.max.x - f.min.x >= f.max.z - f.min.z;
+        const len = alongX ? f.max.x - f.min.x : f.max.z - f.min.z;
+        const c = alongX ? (f.min.z + f.max.z) / 2 : (f.min.x + f.max.x) / 2;
+        const lo = alongX ? f.min.x : f.min.z;
+        const top = f.max.y;
+        const P = (s, y, off = 0) => (alongX ? [lo + s, y, c + off] : [c + off, y, lo + s]);
+        for (const y of [top + 0.12, top + 0.34]) {
+          seg.push(...P(0, y), ...P(len, y));
+          for (let s = 0.3; s < len; s += 0.55) seg.push(...P(s, y - 0.05, 0.0), ...P(s + 0.1, y + 0.07, 0.04));
+        }
+      }
+      const geo = new LineSegmentsGeometry();
+      geo.setPositions(seg);
+      const mat = new LineMaterial({ color: 0x2f3236, linewidth: 1.4 * (this.pixelRatio ?? 1), worldUnits: false });
+      const c = this.renderer.domElement;
+      mat.resolution.set((c.clientWidth || 1) * (this.pixelRatio ?? 1), (c.clientHeight || 1) * (this.pixelRatio ?? 1));
+      const lines = new LineSegments2(geo, mat);
+      lines.frustumCulled = false;
+      lines.name = 'fenceWire';
+      this._wireMat = mat;
+      grp.add(lines);
+    }
+    grp.userData = { towers: towers.length, gens: gens.length, fenceSegments: fences.length };
+    return grp;
+  }
+
+  // 냉각탑 김 갱신(매 프레임). 냉각 전력(기준 32 kW)이 클수록 입자가 많이, 빠르게 오른다.
+  _updatePlume(timeSec) {
+    const pts = this._extras?.getObjectByName('plume');
+    if (!pts) return;
+    const { base, seed, per, n } = pts.userData;
+    const cool = Number.isFinite(this.store.aggregates?.cooling_power) ? this.store.aggregates.cooling_power : 32;
+    const level = Math.min(Math.max(cool / 32, 0.15), 1.6);
+    this._plumeLevel = level;
+    const active = Math.round(Math.min(per * level, per));
+    const pos = pts.geometry.attributes.position;
+    const aA = pts.geometry.attributes.aA;
+    const aS = pts.geometry.attributes.aS;
+    const wind = Math.sin(timeSec * 0.05) * 0.5 + 1.5;
+    const night = this._nightU.value > 0.5;
+    pts.material.uniforms.tint.value.setRGB(night ? 0.62 : 0.93, night ? 0.6 : 0.95, night ? 0.68 : 0.98); // 저녁에는 어둡게
+    pts.material.uniforms.uScale.value = this.renderer.domElement.clientHeight * 0.5 || 430;
+    for (let i = 0; i < n; i++) {
+      const k = i % per;
+      if (k >= active) { aA.setX(i, 0); continue; }
+      const t = ((timeSec * 0.07 * level * seed[i * 2 + 1] + seed[i * 2]) % 1 + 1) % 1;
+      pos.setXYZ(i, base[i * 3] + wind * t * 7 + Math.sin(t * 9 + i) * 0.6 * t, base[i * 3 + 1] + t * 9.5, base[i * 3 + 2] + t * 2.5);
+      aA.setX(i, 0.6 * Math.min(t * 6, 1) * (1 - t)); // 아래에서 서서히 나타나 위로 갈수록 옅어진다
+      aS.setX(i, 5 + 9 * t); // 올라가며 퍼진다
+    }
+    pos.needsUpdate = true;
+    aA.needsUpdate = true;
+    aS.needsUpdate = true;
+    if (!this.reducedMotion) this._dirty = true;
+  }
+
   // 부지 가로등 조명: root(glb 장면)에서 LightPole_* 노드의 월드 위치를 읽어 m 단위로 바꾼다.
   _buildSiteLights(root) {
     root.updateMatrixWorld(true);
@@ -1319,6 +1463,10 @@ export class HallScene {
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.fx?.setSize(w, h, pr);
+    if (this._wireMat) {
+      this._wireMat.resolution.set(w * pr, h * pr);
+      this._wireMat.linewidth = 1.4 * pr;
+    }
     if (this._bHover) {
       this._bHover.material.resolution.set(w * pr, h * pr);
       this._bHover.material.linewidth = 3 * pr;
@@ -1470,6 +1618,7 @@ export class HallScene {
     if (!this.cctv) this._updateShell();
     this._stepAirflow(dtSec, timeSec);
     if (this.stage === 'exterior') {
+      this._updatePlume(timeSec);
       this.city?.update(this.reducedMotion ? 0 : dtSec);
       this.sky.material.uniforms.time.value = timeSec;
     }
@@ -1479,6 +1628,8 @@ export class HallScene {
       this._lastVersion = this.store.version;
       this._dirty = false;
     }
+    // 통로 이름은 서버실 화면에서 켜 둔 때만 보인다. 외관이나 CCTV에서는 어떤 경로로든 남지 않게 층 전체를 숨긴다.
+    this.labelLayer.style.visibility = this.cctv || this.stage !== 'hall' || !this.showLabels ? 'hidden' : '';
     if (this.showLabels && this.stage === 'hall' && !this.cctv) {
       const r = this.renderer.domElement.getBoundingClientRect();
       for (const l of this.labels) {

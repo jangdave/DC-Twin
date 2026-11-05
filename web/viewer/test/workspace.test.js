@@ -104,6 +104,7 @@ describe('미리 계산한 값(lib)', () => {
       expect(d.cctvOpen).toBe(true);
       expect(d.tabs).toEqual({ control: false, energy: false, prep: false });
       expect(d.serverCta).toBe(false);
+      expect(d.transportHidden).toBe(true); // 재생 막대도 숨김
     }
     const lib = derive(run(hall, { type: 'mode', mode: 'lib' }));
     expect(lib.tabs.energy).toBe(true); // CCTV가 아니면 그대로

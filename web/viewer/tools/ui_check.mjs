@@ -300,10 +300,8 @@ const lowInfo = await pq.evaluate(() => {
   const v = window.__viewer;
   return { tier: v.scene.tier, models: v.getModelsState(), btnHidden: document.getElementById('model-btn').hidden, pressed: document.getElementById('model-btn').getAttribute('aria-pressed'), particles: v.scene.airflow.active, shadow: v.scene.sunExt.castShadow, sel: document.getElementById('quality-sel').value };
 });
-ok('Q 낮음: 랙 모델은 자동으로 받지 않고 단추만 보임, 입자 2500, 그림자 없음', lowInfo.tier === 'low' && lowInfo.models === 'deferred' && !lowInfo.btnHidden && lowInfo.pressed === 'false' && lowInfo.particles === 2500 && !lowInfo.shadow && lowInfo.sel === 'low', JSON.stringify(lowInfo));
-await pq.evaluate(() => document.getElementById('model-btn').click());
 await pq.waitForFunction(() => window.__viewer.scene.modelsReady, { timeout: 30000 }).catch(() => {});
-ok('Q 낮음: 단추를 누르면 랙 모델을 받아 보여 줌', await pq.evaluate(() => window.__viewer.scene.modelsReady && window.__viewer.scene.modelMeshes.every((m) => m.visible)));
+ok('Q 낮음: 랙 모델(장비 모양)도 기본으로 받아 보이고, 입자 2500, 그림자 없음', lowInfo.tier === 'low' && lowInfo.models !== 'deferred' && lowInfo.models !== 'off' && lowInfo.particles === 2500 && !lowInfo.shadow && lowInfo.sel === 'low' && (await pq.evaluate(() => window.__viewer.scene.modelsReady && window.__viewer.scene.modelMeshes.every((m) => m.visible))), JSON.stringify(lowInfo));
 await pq.close();
 const pm = await browser.newPage();
 await pm.goto(`${base}?stage=exterior`, { waitUntil: 'networkidle0' });
@@ -1000,6 +998,27 @@ await pc.close();
   bare.http.close();
 }
 
+// 통로 이름을 켠 채 외관으로 가도 이름이 남지 않고, 돌아오면 다시 보임
+{
+  const lp = await browser.newPage();
+  await lp.setViewport({ width: 1440, height: 860 });
+  await lp.goto(`${base}?scenario=fan_fault&t=100&stage=hall&panel=open&q=mid&fx=off`, { waitUntil: 'networkidle0' });
+  await lp.waitForFunction(() => window.__viewer?.state.player, { timeout: 20000 });
+  await sleep(500);
+  await lp.click('#labels-btn');
+  await sleep(500);
+  const vis = () => lp.evaluate(() => ({ layer: getComputedStyle(document.getElementById('labels')).visibility, shown: [...document.querySelectorAll('.aisle-label')].filter((e) => !e.hidden && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(document.getElementById('labels')).visibility !== 'hidden').length }));
+  const L1 = await vis();
+  await lp.click('#back-btn');
+  await sleep(1500);
+  const L2 = await vis();
+  await lp.click('#enter-btn');
+  await sleep(1800);
+  const L3 = await vis();
+  ok('LABEL 통로 이름을 켜고 외관으로 나가면 보이지 않고, 서버실로 돌아오면 다시 보임', L1.shown >= 6 && L2.shown === 0 && L3.shown >= 6, JSON.stringify({ L1, L2, L3 }));
+  await lp.close();
+}
+
 // CCTV에서는 시뮬레이션 표현(온도 색칠, 공기 흐름, 알람 링, 시뮬레이션 탭)이 보이지 않는다
 {
   const cp2 = await browser.newPage();
@@ -1018,12 +1037,14 @@ await pc.close();
     document.getElementById('cctv-btn').click();
     await new Promise((r) => setTimeout(r, 1500));
     const open = !!s.cctv;
+    const labelsHidden = getComputedStyle(document.getElementById('labels')).visibility === 'hidden';
+    const transportHidden = document.getElementById('transport').hidden;
     s.renderer.render = orig;
     const after = { front: s.rackFront.visible, air: s.airflow.points.visible };
-    return { open, n: rec.length, anySim: rec.some((x) => x.front || x.top || x.hull || x.air || x.rings), after, tabEnergy: !document.getElementById('tab-energy').offsetParent === false };
+    return { transportHidden, labelsHidden, open, n: rec.length, anySim: rec.some((x) => x.front || x.top || x.hull || x.air || x.rings), after, tabEnergy: !document.getElementById('tab-energy').offsetParent === false };
   });
   const tabs = await cp2.evaluate(() => ({ energy: !!document.getElementById('tab-energy').offsetParent, prep: !!document.getElementById('tab-prep').offsetParent }));
-  ok('CCTV 화면을 그릴 때 온도 색칠, 신뢰 막대, 알람 테두리, 공기 흐름이 꺼져 있고 끝난 뒤 원래대로 돌아오며, 시뮬레이션 탭은 보이지 않음', seen.open && seen.n > 0 && !seen.anySim && seen.after.front && seen.after.air && !tabs.energy && !tabs.prep, JSON.stringify({ seen, tabs }));
+  ok('CCTV 화면을 그릴 때 온도 색칠, 신뢰 막대, 알람 테두리, 공기 흐름, 통로 이름, 아래 재생 막대가 꺼져 있고 끝난 뒤 원래대로 돌아오며, 시뮬레이션 탭은 보이지 않음', seen.open && seen.labelsHidden && seen.transportHidden && seen.n > 0 && !seen.anySim && seen.after.front && seen.after.air && !tabs.energy && !tabs.prep, JSON.stringify({ seen, tabs }));
   await cp2.close();
 }
 
@@ -1091,6 +1112,7 @@ await pc.close();
       const s = window.__viewer.scene;
       let maxW = 0, normals = 0, minAniso = 99, detail = 0, glass = 0, roof = 0, asphalt = 0;
       s.exteriorModel.traverse((o) => { if (o.material && !Array.isArray(o.material)) { const k = o.material.customProgramCacheKey(); if (k.includes('dc-detail')) detail++; if (k.includes('dc-glass-windows')) glass++; if (k.includes('dc-roof')) roof++; if (k.includes('dc-asphalt')) asphalt++; } });
+      const extras = s.exteriorModel.children.find((o) => o.name === 'siteExtras');
       const lights = s.exteriorModel.children.find((o) => o.name === 'siteLights');
       const trees = s.exteriorModel.children.find((o) => o.name === 'siteTrees');
       const treeN = trees ? trees.children[0].count : 0;
@@ -1101,7 +1123,7 @@ await pc.close();
         if (!m || Array.isArray(m)) return;
         if (m.map && m.emissiveMap && m.map.image && !seen.has(m.map)) { seen.add(m.map); maxW = Math.max(maxW, m.map.image.width); if (m.normalMap) normals++; minAniso = Math.min(minAniso, m.map.anisotropy); }
       });
-      return { lightN: lights?.userData.count ?? 0, lightVisible: !!lights?.visible, asphalt, treeN, oldTrunk: names.some((x) => /Trunk/.test(x)), roof, glass, detail, maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
+      return { extra: extras ? { ...extras.userData, plume: !!extras.getObjectByName('plume'), leds: extras.getObjectByName('genLeds')?.count ?? 0, wire: !!extras.getObjectByName('fenceWire') } : null, lightN: lights?.userData.count ?? 0, lightVisible: !!lights?.visible, asphalt, treeN, oldTrunk: names.some((x) => /Trunk/.test(x)), roof, glass, detail, maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
     });
     await tp2.close();
     return r;
@@ -1110,6 +1132,7 @@ await pc.close();
   ok('TEX 질감 단계: 낮음 256 px(법선 없음), 보통 512 px(법선 있음), 높음 1024 px', T1.maxW === 256 && T1.normals === 0 && T2.maxW === 512 && T2.normals > 0 && T3.maxW === 1024 && T3.normals > 0, JSON.stringify({ T1, T2, T3 }));
   ok('GLASS 본 건물 유리에 창마다 농도, 반사, 층 띠 변화가 모든 단계에서 적용됨', T1.glass >= 1 && T2.glass >= 1 && T3.glass >= 1, JSON.stringify({ low: T1.glass, mid: T2.glass, high: T3.glass }));
   ok('SITE 주차장 아스팔트에 균열, 기름 얼룩, 보수 흔적이 그려지고 부지 나무가 상세 나무로 바뀜(모델의 줄기 없음, 나무 10그루)', T1.asphalt === 1 && T2.asphalt === 1 && T3.asphalt === 1 && T1.treeN === 10 && T3.treeN === 10 && !T1.oldTrunk, JSON.stringify({ a: [T1.asphalt, T2.asphalt, T3.asphalt], trees: [T1.treeN, T3.treeN], old: T1.oldTrunk }));
+  ok('EQUIP 냉각탑 4기에 김, 발전기 8기에 상태 표시등, 울타리 5구간에 가시철사가 모든 단계에서 얹힘', [T1, T2, T3].every((t) => t.extra && t.extra.towers === 4 && t.extra.gens === 8 && t.extra.fenceSegments === 5 && t.extra.plume && t.extra.leds === 8 && t.extra.wire), JSON.stringify({ t1: T1.extra, t3: T3.extra }));
   ok('NIGHT 부지 가로등 12개에 저녁 조명(빛 번짐과 바닥 웅덩이)이 있고 낮에는 보이지 않음', T1.lightN === 12 && !T1.lightVisible && !T3.lightVisible, JSON.stringify({ n: T1.lightN, day: [T1.lightVisible, T3.lightVisible] }));
   ok('ROOF 본 건물 지붕에 이음선, 가장자리 띠, 얼룩, 배수구가 모든 단계에서 그려짐(재질 1개)', T1.roof === 1 && T2.roof === 1 && T3.roof === 1, JSON.stringify({ low: T1.roof, mid: T2.roof, high: T3.roof }));
   ok('DETAIL 건물 모델의 단조로운 면(콘크리트, 지붕, 아스팔트, 금속 패널, 벽 안쪽)에 미세 디테일이 높음과 보통에서만 겹쳐짐', T1.detail === 0 && T2.detail >= 4 && T3.detail >= 4, JSON.stringify({ low: T1.detail, mid: T2.detail, high: T3.detail }));

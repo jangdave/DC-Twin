@@ -7,7 +7,7 @@ export const TIERS = ['low', 'mid', 'high'];
 // bloom: 빛 번짐 세기(0이면 끔, 표시등, 알람, 저녁 창이 번진다), ao: 접촉 그림자(SSAO). 후처리는 화면을 한 번 더 그리므로 낮은 단계는 끈다.
 export const FHD = 1920 * 1080;
 export const SETTINGS = {
-  low: { pixelRatio: 1, maxPixels: 1280 * 720, shadow: 0, particles: 2500, cityRings: 2, cars: 0, trees: 200, reflection: false, hallModels: false, bloom: 0, ao: false, texScale: 1, aniso: 2, detail: 0 },
+  low: { pixelRatio: 1, maxPixels: 1280 * 720, shadow: 0, particles: 2500, cityRings: 2, cars: 0, trees: 200, reflection: false, hallModels: true, bloom: 0, ao: false, texScale: 1, aniso: 2, detail: 0 },
   mid: { pixelRatio: 1.5, maxPixels: FHD, shadow: 2048, particles: 5000, cityRings: 3, cars: 60, trees: 600, reflection: false, hallModels: true, bloom: 0.3, ao: false, texScale: 2, aniso: 8, detail: 0.6 },
   high: { pixelRatio: 2, maxPixels: 2560 * 1440, shadow: 4096, particles: 7000, cityRings: 3, cars: 120, trees: 1200, reflection: true, hallModels: true, bloom: 0.4, ao: true, texScale: 4, aniso: 16, detail: 1 },
 };
