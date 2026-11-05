@@ -456,6 +456,49 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     group.add(lampPoles, lampHeads);
   }
 
+  // 먼 도시: 정밀한 도시 블록 바깥(바닥 원판 반지름 1100 m 안)을 단순한 상자 건물로 채워, 낮은 각도로 멀리 볼 때
+  // 도시가 끝나고 빈 회색 바닥이 보이는 어색함을 없앤다. 한 덩어리 메시이고 창 그림이 없으며 안개에 묻힌다.
+  {
+    const far = [];
+    const fr = mulberry32(seed + 21);
+    const maxRing = 5;
+    const bwid = CITY.pitchX - CITY.road, bdep = CITY.pitchZ - CITY.road;
+    const farCol = new THREE.Color();
+    for (let i = -maxRing; i <= maxRing; i++) {
+      for (let j = -maxRing; j <= maxRing; j++) {
+        const ring = Math.max(Math.abs(i), Math.abs(j));
+        if (ring <= quality.cityRings) continue;
+        const bx = cx + i * CITY.pitchX, bz = cz + j * CITY.pitchZ;
+        const nx = 3, nz = 2; // 블록 하나를 3 x 2 필지로
+        for (let a = 0; a < nx; a++) {
+          for (let b = 0; b < nz; b++) {
+            if (fr() < 0.12) continue;
+            const w = (bwid / nx) * (0.6 + fr() * 0.3), d = (bdep / nz) * (0.6 + fr() * 0.3);
+            const h = (ring < 5 ? 18 : 12) + fr() * (fr() < 0.2 ? 90 : 38);
+            const g = new THREE.BoxGeometry(w, h, d);
+            g.translate(bx - bwid / 2 + (a + 0.5) * (bwid / nx), h / 2, bz - bdep / 2 + (b + 0.5) * (bdep / nz));
+            const n = g.attributes.position.count;
+            const col = new Float32Array(n * 3);
+            const tone = 0.42 + fr() * 0.3;
+            farCol.setRGB(tone * (0.92 + fr() * 0.1), tone, tone * (1.0 + fr() * 0.12));
+            for (let k = 0; k < n; k++) { // 윗면은 조금 밝게
+              const up = g.attributes.normal.getY(k) > 0.5 ? 1.18 : 1;
+              col[k * 3] = farCol.r * up; col[k * 3 + 1] = farCol.g * up; col[k * 3 + 2] = farCol.b * up;
+            }
+            g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+            g.deleteAttribute('uv');
+            far.push(g);
+          }
+        }
+      }
+    }
+    if (far.length) {
+      const m = new THREE.Mesh(track(mergeGeometries(far)), track(new THREE.MeshLambertMaterial({ vertexColors: true })));
+      far.forEach((g) => g.dispose());
+      group.add(m);
+    }
+  }
+
   // 먼 도시 윤곽(원통 안쪽에 두른 그림). 안개에 묻혀 멀리 보인다.
   const sk = track(skylineTexture());
   const skyline = new THREE.Mesh(track(new THREE.CylinderGeometry(1250, 1250, 256, 64, 1, true)), track(new THREE.MeshBasicMaterial({ map: sk, transparent: true, alphaTest: 0.5, side: THREE.BackSide, depthWrite: false })));

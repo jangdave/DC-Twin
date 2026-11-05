@@ -481,15 +481,9 @@ export class HallScene {
     this.building.push(add(W + 0.02, 1.0, D + 0.02, c.x, H * 0.55, c.z, mat(0x1d3a52, { roughness: 0.3, metalness: 0.4 }))); // 창 띠
     this.building.push(add(3.2, 3.4, 0.5, c.x, 1.7, c.z + D / 2 + 0.2, mat(0x2f6f9f))); // 출입구
     for (let i = -1; i <= 1; i++) this.building.push(add(2.4, 1.4, 2.4, c.x + i * (W / 4), H + 1.2, c.z - D / 4, mat(0x5b6675))); // 지붕 설비
-    this.beacon = add(1.0, 1.0, 1.0, c.x, H + 1.5, c.z + D / 4, new THREE.MeshBasicMaterial({ color: 0x19cc4d }));
-    this.building.push(this.beacon);
-    // 메인 건물이 눈에 띄도록 옥상 표시등에 빛 번짐을 붙인다(상태 색을 따라간다)
-    this.beaconGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0x19cc4d, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
-    this.beaconGlow.scale.set(26, 26, 1);
-    this.beaconGlow.renderOrder = 6;
-    g.add(this.beaconGlow);
     this._extR = Math.max(W, D);
     this._bldg = { center: new THREE.Vector3(c.x, H / 2, c.z), half: new THREE.Vector3(W / 2, H / 2, D / 2) };
+    this._tagAnchor = new THREE.Vector3(c.x, H + 4, c.z); // 이름·상태 표시가 붙는 점(건물 위)
     this._extH = H;
     g.visible = false;
     this.exterior = g;
@@ -641,7 +635,10 @@ export class HallScene {
       if (k > 0) {
         // 유리와 금속만 반사하는 재질로 둔다. 유리는 짙은 색에 반사가 강하고 거의 불투명하게 해서 안쪽 벽이 비치지 않게 한다.
         if (/Glass/i.test(n)) Object.assign(m.material, { color: new THREE.Color(0x35506a), metalness: 0.3, roughness: 0.05, opacity: 0.9, transparent: true });
-        if (/Glass/i.test(n)) this._lightWindows(m.material);
+        if (/Glass/i.test(n)) {
+          this._lightWindows(m.material);
+          m.material.depthWrite = true; // 유리가 깊이를 써야 건물 뒤쪽 외곽 강조선이 유리를 뚫고 비치지 않는다
+        }
         (this._reflective ??= []).push({ mat: m.material, k });
       } else {
         m.material = toLambert(m.material); // 바닥, 콘크리트, 지붕, 울타리, 식재: 보는 각도에 따라 색이 변하지 않는 재질
@@ -671,10 +668,10 @@ export class HallScene {
     proxy.position.set(c.x, size.y / 2, c.z);
     this.exterior.add(proxy);
     this.building = [proxy];
-    this.beacon.visible = true;
-    this.beacon.position.set(c.x, size.y + 2, c.z);
-    this.beaconGlow.position.copy(this.beacon.position);
     this.exteriorModel = model;
+    this._hullMeshes = meshes.filter((m) => /Bldg(Concrete|WallCore|Roof|PanelMetal)/.test(m.material.name || ''));
+    this._hullOffset = new THREE.Vector3(c.x - mid.x, 0, c.z - mid.z);
+    this._tagAnchor = new THREE.Vector3(this._bldg.center.x, this._bldg.center.y + this._bldg.half.y + 4, this._bldg.center.z);
     this.renderer.shadowMap.needsUpdate = true;
     this._extR = Math.max(size.x, size.z) * 0.9;
     this._extH = size.y;
@@ -686,7 +683,9 @@ export class HallScene {
     return meshes.length;
   }
 
-  // 외관에서 데이터센터 건물을 하늘색 외곽선과 옅은 면으로 강조한다(홀 안 선택 상자와 같은 색)
+  // 외관에서 데이터센터 건물의 실루엣을 따라 하늘색 외곽 강조선을 낸다(홀 안 선택 상자와 같은 색).
+  // 건물 모델을 조금(2.5%) 키워 뒷면만 하늘색으로 한 번 더 그리는 방식이라, 상자가 아니라 건물 모양 그대로 윤곽이 생긴다.
+  // 모델이 없으면(받기 실패) 상자 건물의 모서리 선을 쓴다.
   setBuildingHover(on) {
     if (!on) {
       if (this._bHover?.visible) {
@@ -699,22 +698,49 @@ export class HallScene {
     if (!this._bHover || this._bHoverFor !== this._bldg) {
       if (this._bHover) {
         this.exterior.remove(this._bHover);
-        this._bHover.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
+        this._bHover.traverse((o) => o.material?.dispose());
       }
       const { center, half } = this._bldg;
-      const g = new THREE.BoxGeometry(half.x * 2 + 1, half.y * 2 + 1, half.z * 2 + 1);
       const grp = new THREE.Group();
-      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0x4fd8ff, transparent: true, depthTest: false }));
-      const fill = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x4fd8ff, transparent: true, opacity: 0.12, depthWrite: false, depthTest: false }));
-      edges.renderOrder = fill.renderOrder = 7;
-      grp.add(fill, edges);
       grp.position.copy(center);
+      if (this._hullMeshes?.length) {
+        // 면을 법선 방향으로 1.4 m 밀어낸 뒷면만 그린다. 얇은 벽도 안쪽 면이 건물 밖으로 나오지 않아 윤곽만 남는다.
+        const mat = new THREE.MeshBasicMaterial({ color: 0x4fd8ff, side: THREE.BackSide, transparent: true });
+        mat.onBeforeCompile = (sh) => {
+          sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+          transformed += normalize(normal) * 1.4;`);
+        };
+        mat.customProgramCacheKey = () => 'dc-hover-hull';
+        const inner = new THREE.Group();
+        inner.position.copy(this._hullOffset).sub(center);
+        for (const m of this._hullMeshes) {
+          const h = new THREE.Mesh(m.geometry, mat); // 지오메트리는 건물과 공유한다(복사하지 않음)
+          h.renderOrder = 7;
+          inner.add(h);
+        }
+        grp.add(inner);
+      } else {
+        const g = new THREE.BoxGeometry(half.x * 2 + 1, half.y * 2 + 1, half.z * 2 + 1);
+        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0x4fd8ff }));
+        g.dispose();
+        edges.renderOrder = 7;
+        grp.add(edges);
+      }
       this.exterior.add(grp);
       this._bHover = grp;
       this._bHoverFor = this._bldg;
     }
     if (!this._bHover.visible) this._dirty = true;
     this._bHover.visible = true;
+  }
+
+  // 이름·상태 표시를 붙일 점의 화면 위치(캔버스 안 픽셀). 외관이 아니면 null
+  buildingTagScreen(canvas) {
+    if (this.stage !== 'exterior' || !this._tagAnchor) return null;
+    const v = this._tagAnchor.clone().project(this.camera);
+    if (v.z > 1) return null;
+    const r = canvas.getBoundingClientRect();
+    return { x: ((v.x + 1) / 2) * r.width, y: ((1 - v.y) / 2) * r.height };
   }
 
   // 건물을 가리키는지(외관 단계에서 클릭과 손모양 표시에 쓴다)
@@ -950,6 +976,7 @@ export class HallScene {
     const c = new THREE.Color();
     let anyCritical = false;
     let worst = 'normal';
+    this._alarmed = []; // 바닥 맥박 링을 그릴 장비: { x, z, r, rgb }
     for (let i = 0; i < this.rackKeys.length; i++) {
       const key = this.rackKeys[i];
       const sample = store.metric(key, view.metric);
@@ -971,6 +998,8 @@ export class HallScene {
         this.rackHull.setColorAt(i, c.setRGB(ar * f, ag * f, ab * f));
         const m = this._boxMatrix(this.data.racks[i], 0.1);
         this.rackHull.setMatrixAt(i, m);
+        const rc0 = this._rackCenter[i];
+        this._alarmed.push({ x: rc0.x, z: rc0.z, r: 0.9, rgb: ALARM_COLOR[alarm] });
       }
 
       // 신뢰 막대(입구 온도 보기에서만)
@@ -996,15 +1025,51 @@ export class HallScene {
       if (alarm === 'critical' || (alarm === 'warn' && worst === 'normal')) worst = alarm;
       const [r, g, b] = alarm === 'normal' ? CRAC_OK : ALARM_COLOR[alarm];
       this.cracFront.setColorAt(i, c.setRGB(r, g, b));
+      if (alarm !== 'normal') {
+        const cc = this._worldCenter(this.data.cracs[i]);
+        this._alarmed.push({ x: cc.x, z: cc.z, r: 1.3, rgb: ALARM_COLOR[alarm] });
+      }
     }
     for (const m of [this.rackFront, this.rackTop, this.rackHull, this.bar, this.cracFront]) m.instanceColor.needsUpdate = true;
     for (const m of [this.rackHull, this.barTrack, this.bar]) m.instanceMatrix.needsUpdate = true;
-    if (this.beacon) {
-      const rgb = worst === 'normal' ? [0.1, 0.8, 0.3] : ALARM_COLOR[worst];
-      this.beacon.material.color.setRGB(...rgb);
-      this.beaconGlow?.material.color.setRGB(...rgb);
-    }
     this._blink = anyCritical && !this.reducedMotion;
+  }
+
+  // 이상이 있는 장비 키(심각한 것이 앞). 화면 위쪽 '다음 이상 장비 보기' 단추가 차례로 돈다.
+  alarmedEquipment() {
+    const rank = { critical: 0, warn: 1, normal: 2 };
+    return [...this.rackKeys, ...this.cracKeys].map((k) => [k, this.store.worstAlarm(k)]).filter(([, a]) => a !== 'normal').sort((a, b) => rank[a[1]] - rank[b[1]]).map(([k]) => k);
+  }
+
+  // 이상 장비 바닥에 퍼지는 링(1.2초마다 한 번). 동작 줄이기에서는 퍼지지 않고 고정된 링만 보인다.
+  _updateRings(timeSec) {
+    const list = this._alarmed ?? [];
+    if (!this._rings) {
+      const geo = new THREE.RingGeometry(0.5, 0.58, 40).rotateX(-Math.PI / 2);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      this._rings = new THREE.InstancedMesh(geo, mat, this.rackKeys.length + this.cracKeys.length);
+      this._rings.frustumCulled = false;
+      this._rings.renderOrder = 4;
+      this._rings.setColorAt(0, new THREE.Color(1, 1, 1));
+      this.hall.add(this._rings);
+    }
+    const m = new THREE.Matrix4(), col = new THREE.Color(), pos = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
+    const p = this.reducedMotion ? 0.4 : (timeSec / 1.2) % 1;
+    const n = Math.min(list.length, this._rings.instanceMatrix.count);
+    for (let i = 0; i < n; i++) {
+      const a = list[i];
+      const s = a.r * (1 + 1.1 * p) * 2;
+      pos.set(a.x, 0.05, a.z);
+      sc.set(s, 1, s);
+      this._rings.setMatrixAt(i, m.compose(pos, q, sc));
+      const f = this.reducedMotion ? 0.8 : 1 - p;
+      this._rings.setColorAt(i, col.setRGB(a.rgb[0] * f, a.rgb[1] * f, a.rgb[2] * f));
+    }
+    this._rings.count = n;
+    this._rings.visible = n > 0 && this.stage === 'hall';
+    this._rings.instanceMatrix.needsUpdate = true;
+    if (this._rings.instanceColor) this._rings.instanceColor.needsUpdate = true;
+    if (n > 0 && !this.reducedMotion) this._dirty = true; // 링이 움직이는 동안 계속 그린다
   }
 
   update(dtSec, timeSec) {
@@ -1031,6 +1096,7 @@ export class HallScene {
     }
     if (this._dirty || this.store.version !== this._lastVersion || this._blink) {
       this._paint(timeSec);
+      this._updateRings(timeSec);
       this._lastVersion = this.store.version;
       this._dirty = false;
     }

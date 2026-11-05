@@ -109,10 +109,13 @@ input[type="radio"], input[type="checkbox"], input[type="range"] { accent-color:
 }
 
 /* 외관에서 건물에 마우스를 올리거나(휴대폰은 한 번 누르면) 뜨는 이름과 상태 카드 */
-#building-card { position: absolute; z-index: 3; display: grid; gap: 2px; min-width: 150px; padding: var(--p-2) var(--p-3); border-radius: var(--radius-large); background: var(--surface-page); backdrop-filter: blur(6px); box-shadow: var(--shadow-md); border: 1px solid var(--border-disabled); transform: translate(14px, 14px); pointer-events: none; }
+#building-card { position: absolute; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px var(--p-2); max-width: 240px; padding: var(--p-1-5) var(--p-3); border-radius: var(--radius-large); background: var(--surface-page); backdrop-filter: blur(6px); box-shadow: var(--shadow-md); border: 1px solid var(--border-disabled); transform: translate(-50%, calc(-100% - 8px)); pointer-events: none; white-space: nowrap; }
+#building-card::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; background: var(--surface-page); border-right: 1px solid var(--border-disabled); border-bottom: 1px solid var(--border-disabled); transform: translateX(-50%) rotate(45deg); }
 #building-card b { font-size: var(--text-sm); }
-#building-card small { color: var(--text-tertiary); font-size: var(--text-xs); }
-#building-card #bc-enter { display: none; margin-top: var(--p-1); }
+#building-card small { display: none; flex-basis: 100%; text-align: center; color: var(--text-tertiary); font-size: var(--text-xs); }
+#building-card.hot { border-color: #4fd8ff; }
+#building-card.hot small { display: block; }
+#building-card #bc-enter { display: none; flex-basis: 100%; margin-top: var(--p-1); }
 #building-card.pinned { pointer-events: auto; }
 #building-card.pinned #bc-enter { display: block; }
 #building-card.pinned small { display: none; }
@@ -122,6 +125,9 @@ input[type="radio"], input[type="checkbox"], input[type="range"] { accent-color:
 #bc-status[data-state="alarm"] { color: var(--tag-danger-text); font-weight: var(--weight-semibold); }
 canvas.over-building { cursor: pointer; }
 #side-toggle .count { margin-left: 2px; }
+#alarm-chip { position: absolute; z-index: 3; left: 50%; bottom: 18px; transform: translateX(-50%); padding: 0 var(--p-4); min-height: 36px; border-radius: var(--radius-max); border: 1px solid var(--emergency); background: var(--surface-page); color: var(--tag-danger-text); font-weight: var(--weight-semibold); box-shadow: var(--shadow-md); backdrop-filter: blur(6px); }
+#alarm-chip b { margin: 0 2px; }
+@media (max-width: 900px) { #alarm-chip { bottom: 112px; } } /* 아래 시트(접힘 66px)와 범례, 모드 표시 위 */
 
 /* 3D 화면 위에 뜨는 카드: 반투명 흰 면, 모서리 8, 그림자 md (Select menu, Popover와 같은 규칙) */
 #stage-tools { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: var(--p-2); align-items: flex-start; max-width: calc(100% - 20px); }
