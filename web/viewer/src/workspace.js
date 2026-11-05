@@ -78,7 +78,8 @@ export function derive(ws) {
     viewGroupHidden: !ws.heat,
     heat: ws.heat,
     timelineBtnHidden: ws.mode !== 'rec',
-    transportHidden: !own || (ws.mode === 'rec' && !ws.timeline),
+    // CCTV는 현장 화면이라 재생 막대(재생, 배속, 시간 이동)를 보이지 않는다
+    transportHidden: cctv || !own || (ws.mode === 'rec' && !ws.timeline),
     timebarHidden: ws.mode === 'sim',
     liveInfoHidden: own,
     scenarioDisabled: !(own || ws.control),

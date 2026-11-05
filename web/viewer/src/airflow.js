@@ -8,6 +8,11 @@ const CM = 0.01;
 const COLD = [0.2, 0.6, 1.0];
 const TAIL = 0.4; // 꼬리 길이(초). 흐름 방향이 보이도록 입자를 짧은 선으로 그린다
 const MAX_VISUAL_SPEED = 2.2; // m/s. 급기구 가까이의 큰 값은 화면에서 잘라 낸다
+// 시각화 가정(실측 아님): 차가운 통로 급기의 일부는 랙 틈, 랙 위, 통로 끝으로 새어 랙을 거치지 않고 위로 오른다.
+// 퍼텐셜 흐름은 질량이 모두 랙을 지나므로 그대로 두면 새는 공기가 하나도 없어 비현실적이다. 새는 입자는 속도장 대신 천천히 떠오른다.
+export const LEAK_FRACTION = 0.1;
+const LEAK_CEILING = 3.6; // m. 이 높이를 넘으면 사라진다(천장 근처에서 되돌아가는 공기에 섞인다고 본다)
+const LEAK_WARM = [1.0, 0.72, 0.38]; // 올라가며 뜨거운 공기와 섞여 따뜻해지는 색
 
 export async function loadFlow(baseUrl) {
   const [meta, buf] = await Promise.all([
@@ -57,6 +62,8 @@ export class Airflow {
     this.age = new Float32Array(count);
     this.life = new Float32Array(count);
     this.heat = new Int16Array(count).fill(-1); // -1: 차가운 공기, 0 이상: 지나온 랙 번호
+    this.leak = LEAK_FRACTION; // 새는 입자 비율(0~1)
+    this.mode = new Uint8Array(count); // 0: 속도장을 따름, 1: 새는 공기(위로 떠오름)
     this.geo = new THREE.BufferGeometry();
     this.vel = new Float32Array(count * 3);
     this.geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 6), 3));
@@ -161,8 +168,9 @@ export class Airflow {
     this.pos[o + 2] = 0.15 + this.rng() * 0.3;
     this.vel[o] = this.vel[o + 1] = this.vel[o + 2] = 0;
     this.age[p] = 0;
-    this.life[p] = 12 + this.rng() * 18;
     this.heat[p] = -1;
+    this.mode[p] = this.rng() < this.leak ? 1 : 0;
+    this.life[p] = this.mode[p] ? 6 + this.rng() * 5 : 12 + this.rng() * 18;
   }
 
   _refreshColors() {
@@ -190,6 +198,18 @@ export class Airflow {
     for (let p = 0; p < this.active; p++) {
       const o = p * 3;
       this.age[p] += dt;
+      if (this.mode[p] === 1) {
+        // 새는 공기: 속도장을 쓰지 않고 위로 0.5~0.9 m/s로 떠오르며 옆으로 조금 흔들린다
+        const vz = 0.5 + 0.4 * this.rng();
+        this.vel[o] = (this.rng() - 0.5) * 0.3;
+        this.vel[o + 1] = (this.rng() - 0.5) * 0.3;
+        this.vel[o + 2] = vz;
+        this.pos[o] += this.vel[o] * dt;
+        this.pos[o + 1] += this.vel[o + 1] * dt;
+        this.pos[o + 2] += vz * dt;
+        if (this.pos[o + 2] > LEAK_CEILING || this.age[p] > this.life[p]) this._spawn(p);
+        continue;
+      }
       const sp = this.sample(this.pos[o], this.pos[o + 1], this.pos[o + 2], u);
       const k = sp > MAX_VISUAL_SPEED ? MAX_VISUAL_SPEED / sp : 1;
       this.vel[o] = u[0] * k;
@@ -238,6 +258,10 @@ export class Airflow {
           c[1] += w * k[1];
           c[2] += w * k[2];
         }
+      }
+      if (this.mode[p] === 1) {
+        const t = Math.min(Math.max((this.pos[o + 2] - 0.4) / 3, 0), 1) * 0.85; // 높이 올라갈수록 따뜻한 색
+        c = [c[0] + (LEAK_WARM[0] - c[0]) * t, c[1] + (LEAK_WARM[1] - c[1]) * t, c[2] + (LEAK_WARM[2] - c[2]) * t];
       }
       const fade = Math.min(1, this.age[p] / 0.6, (this.life[p] - this.age[p]) / 1.5);
       color[q] = c[0] * fade;
