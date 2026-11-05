@@ -98,7 +98,9 @@ function finish(wall, glow, rng) {
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     return t;
   };
-  const out = { map: tex(wall, true), glow: tex(glow, true) };
+  const cols = new Set(CELLS.map((c) => c[0])).size || 4;
+  const rows = new Set(CELLS.map((c) => c[1])).size || 4;
+  const out = { map: tex(wall, true), glow: tex(glow, true), grid: { cols, rows } };
   if (K >= 2) out.normal = normalFromCanvas(wall, 1.6); // 보통 이상에서만(메모리 절약)
   return out;
 }
@@ -106,7 +108,9 @@ function finish(wall, glow, rng) {
 const GLASS = ['#2b5a78', '#3a7392', '#1f4560', '#4b86a3', '#335f7a'];
 
 // 창 한 칸: 낮에는 하늘이 비치는 어두운 유리. 켜진 창은 발광 그림(glow)에만 그리고, 낮 그림에는 살짝 밝은 푸른 빛만 준다.
+let CELLS = []; // 지금 그리는 그림의 창 위치(격자 수를 알아내는 데 쓴다)
 function windowCell(a, g, rng, x, y, w, h, lit) {
+  CELLS.push([Math.round(x / 4), Math.round(y / 4)]);
   const grad = a.createLinearGradient(x, y, x + w, y + h);
   grad.addColorStop(0, GLASS[Math.floor(rng() * GLASS.length)]);
   grad.addColorStop(1, '#16303f');
@@ -126,15 +130,18 @@ function windowCell(a, g, rng, x, y, w, h, lit) {
   a.fillStyle = 'rgba(0,0,0,0.28)';
   a.fillRect(x, y + h - 1, w, 1);
   a.fillRect(x + w - 1, y, 1, h);
+  // 낮 그림에서는 일부 창만 살짝 밝게(lit). 저녁 불빛은 모든 창을 발광 그림에 칠해 두고 셰이더가 창마다 켤지 정한다:
+  // 그림 하나가 건물 전체에 타일처럼 반복되므로 그림에 켜질 창을 고정해 두면 같은 무늬가 격자로 되풀이된다.
   if (lit) {
     a.fillStyle = 'rgba(150,185,215,0.28)';
     a.fillRect(x, y, w, h);
-    g.fillStyle = '#ffd28a';
-    g.fillRect(x, y, w, h);
   }
+  g.fillStyle = '#ffd28a';
+  g.fillRect(x, y, w, h);
 }
 
 function newPair() {
+  CELLS = [];
   const gk = Math.max(1, K / 2); // 발광 그림은 절반 해상도로 충분하다
   const wall = canvas(S * K, S * K), glow = canvas(S * gk, S * gk);
   const g = glow.getContext('2d');

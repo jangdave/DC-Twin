@@ -1,4 +1,5 @@
 // 화면 조각들(상단 집계, 상세 패널, 알람 목록, 시간 막대, 범례, 추이 그래프). 값은 textContent로만 넣는다(6.4장).
+import { todayUsage } from './daily.js';
 import { ALARM_LABEL, CONFIDENCE_HELP, CONFIDENCE_LABEL, barFraction, confidenceColor, tempColor, toCss } from './colors.js';
 import { VIEWS } from './views.js';
 
@@ -340,7 +341,7 @@ export class UI {
     }
     $('stage').dataset.overlay = vm.cctvOpen ? 'cctv' : '';
     // 나눠 비교는 서버실의 시뮬레이션 계열 화면(에너지·용량 탭이 있는 곳)에서만 쓴다
-    if (this._split && (ws.stage !== 'hall' || vm.cctvOpen || !vm.tabs.energy)) this.h.onSplitOff();
+    if (this._split && (ws.stage !== 'hall' || vm.cctvOpen || !vm.tabs.energy || !vm.heat)) this.h.onSplitOff();
     this._chipStage = ws.stage;
     this._chipCctv = vm.cctvOpen;
     this.updateAlarmChip();
@@ -350,7 +351,7 @@ export class UI {
     const none = '데이터 없음';
     const power = s.facilityPower === null ? none : `${fmt(s.facilityPower, 1)} kW`;
     $('ext-total').textContent = power;
-    $('ext-kwh').textContent = s.kwh === null ? none : `${fmt(s.kwh, 2)} kWh`;
+    $('ext-kwh').textContent = `${Math.round(todayUsage().kwh).toLocaleString('ko-KR')} kWh`; // 오늘 사용량(더미 데이터, 시계 기준)
     $('ext-pue').textContent = s.pue === null ? none : fmt(s.pue, 2);
     // 정상, 비정상은 기준이 없어 판정하지 않는다. 센서가 기준을 넘은 알람 수만 보인다.
     $('ext-status').textContent = !s.hasData ? none : s.alarms > 0 ? `${s.alarms}건` : '없음';

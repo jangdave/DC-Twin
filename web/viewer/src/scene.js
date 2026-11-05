@@ -721,7 +721,7 @@ export class HallScene {
     } else {
       this._main = this._bldg;
     }
-    // 설비 보강: 냉각탑 김, 발전기 상태 표시등, 울타리 윗줄의 가시철사
+    // 설비 보강: 냉각탑 김, 울타리 윗줄의 가시철사
     const extras = this._buildEquipmentExtras(gltf.scene);
     // 저녁 조명: 모델의 가로등(LightPole_*) 위치에 빛 번짐과 바닥 빛 웅덩이를 둔다(저녁에만 보임)
     const siteLights = this._buildSiteLights(gltf.scene);
@@ -816,11 +816,12 @@ export class HallScene {
     r.setScissorTest(true);
     r.setViewport(0, 0, W, H);
     arrs.forEach((a) => { a.array.set(base); a.needsUpdate = true; });
+    const draw = () => (this.fx ? this.fx.render() : r.render(this.scene, this.camera));
     r.setScissor(0, 0, x, H);
-    r.render(this.scene, this.camera);
+    draw();
     arrs.forEach((a, i) => { a.array.set(cur[i]); a.needsUpdate = true; });
     r.setScissor(x, 0, W - x, H);
-    r.render(this.scene, this.camera);
+    draw();
     r.setScissorTest(false);
   }
 
@@ -912,6 +913,9 @@ export class HallScene {
     const t = this.controls.target;
     const p = this.camera.position;
     if (p.y > 140) return; // 가장 높은 건물보다 위
+    const key = `${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)},${t.x.toFixed(2)},${t.y.toFixed(2)},${t.z.toFixed(2)}`;
+    if (key === this._cityKey) return; // 카메라가 그대로면 다시 검사하지 않는다
+    this._cityKey = key;
     const dir = p.clone().sub(t);
     const len = dir.length();
     if (len < 1) return;
@@ -1213,13 +1217,11 @@ export class HallScene {
 
   // 설비 보강(원본 모델은 그대로 두고 위에 얹는다):
   // - 냉각탑 위로 오르는 김: 냉각 전력이 클수록 많이, 빠르게(store.aggregates.cooling_power를 기준 32 kW로 나눈 값)
-  // - 발전기 상태 표시등: 대기 중이라 초록
   // - 울타리 위 가시철사: 윗줄 두 가닥과 가시
   _buildEquipmentExtras(root) {
     const towers = this._boxesOf(root, /^CoolingTower_\d+$/);
-    const gens = this._boxesOf(root, /^Generator_\d+$/);
     const fences = this._boxesOf(root, /^Fence_(East|North|South_East|South_West|West)$/);
-    if (!towers.length && !gens.length && !fences.length) return null;
+    if (!towers.length && !fences.length) return null;
     const grp = new THREE.Group();
     grp.name = 'siteExtras';
     const tex = (this._glowTex ??= glowTexture());
@@ -1256,25 +1258,6 @@ export class HallScene {
       pts.name = 'plume';
       grp.add(pts);
     }
-    if (gens.length) {
-      const led = new THREE.InstancedMesh(new THREE.BoxGeometry(0.4, 0.22, 0.4), new THREE.MeshBasicMaterial({ color: 0x2ee66b, fog: false }), gens.length);
-      const m = new THREE.Matrix4();
-      const gp = new Float32Array(gens.length * 3);
-      gens.forEach((e, i) => {
-        const p = new THREE.Vector3((e.min.x + e.max.x) / 2, e.max.y + 0.12, e.max.z - 0.5);
-        m.makeTranslation(p.x, p.y, p.z);
-        led.setMatrixAt(i, m);
-        gp.set([p.x, p.y + 0.1, p.z], i * 3);
-      });
-      led.frustumCulled = false;
-      led.name = 'genLeds';
-      const gg = new THREE.BufferGeometry();
-      gg.setAttribute('position', new THREE.BufferAttribute(gp, 3));
-      const glow = new THREE.Points(gg, new THREE.PointsMaterial({ map: tex, color: 0x38ff7a, size: 2.6, sizeAttenuation: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
-      glow.frustumCulled = false;
-      glow.name = 'genGlow';
-      grp.add(led, glow);
-    }
     if (fences.length) {
       const seg = [];
       for (const f of fences) {
@@ -1300,7 +1283,7 @@ export class HallScene {
       this._wireMat = mat;
       grp.add(lines);
     }
-    grp.userData = { towers: towers.length, gens: gens.length, fenceSegments: fences.length };
+    grp.userData = { towers: towers.length, fenceSegments: fences.length };
     return grp;
   }
 

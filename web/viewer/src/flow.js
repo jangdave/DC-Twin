@@ -101,7 +101,6 @@ export function summarize(store, rackKeys) {
     maxRack,
     itPower: Number.isFinite(a.it_power) ? a.it_power : null,
     facilityPower: Number.isFinite(a.facility_power) ? a.facility_power : null, // 건물 전체 = 설비 전력(IT + 냉각 + 손실). 에너지 탭과 같은 값
-    kwh: Number.isFinite(a.energy_kwh) ? a.energy_kwh : null, // 지금까지 쓴 전력량
     pue: Number.isFinite(a.pue) ? a.pue : null,
   };
 }
