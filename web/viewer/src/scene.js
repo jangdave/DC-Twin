@@ -12,6 +12,7 @@ import { CCTV_LIMITS } from './cctv.js';
 import { VIEWS } from './views.js';
 import { SETTINGS, pixelRatioFor } from './quality.js';
 import { Fx } from './fx.js';
+import { detailTexture } from './citytex.js';
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
@@ -652,6 +653,12 @@ export class HallScene {
       } else {
         m.material = toLambert(m.material); // 바닥, 콘크리트, 지붕, 울타리, 식재: 보는 각도에 따라 색이 변하지 않는 재질
       }
+      // 건물 모델의 단조로운 면에 미세 디테일: 콘크리트, 지붕, 아스팔트, 금속 패널, 벽 안쪽
+      if (/Concrete/i.test(n)) this._addDetail(m.material, { scale: 0.45, amt: 0.3, bump: 0.025 });
+      else if (/Roof/i.test(n)) this._addDetail(m.material, { scale: 0.6, amt: 0.4, bump: 0.03 });
+      else if (/Asphalt/i.test(n)) this._addDetail(m.material, { scale: 0.9, amt: 0.65, bump: 0.05 });
+      else if (/PanelMetal/i.test(n)) this._addDetail(m.material, { scale: 1.2, amt: 0.25, bump: 0.015 });
+      else if (/WallCore/i.test(n)) this._addDetail(m.material, { scale: 0.5, amt: 0.35, bump: 0.03 });
       if (/Paint|Crosswalk/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -6 });
     }
     const box = new THREE.Box3();
@@ -966,6 +973,63 @@ export class HallScene {
     v.project(this.camera);
     const r = canvas.getBoundingClientRect();
     return { x: ((v.x + 1) / 2) * r.width, y: ((1 - v.y) / 2) * r.height, behind: v.z > 1 };
+  }
+
+  // 건물 모델 재질 위에 미세 디테일을 겹친다(질감 해상도가 아니라 면의 단조로움을 줄이는 방법).
+  // 월드 좌표를 면의 방향(위, 옆)에 맞춰 평면으로 투영해 두 크기로 읽는다: 밝기 곱하기 + 요철(화면 기울기 방식). 25 m까지 전부, 90 m에서 사라진다.
+  // opts: { scale: 1 m당 반복 횟수, amt: 밝기 변화 세기, bump: 요철 세기 }
+  _addDetail(mat, { scale = 0.5, amt = 0.4, bump = 0.03 } = {}) {
+    const k = this.q.detail ?? 0;
+    if (!(k > 0)) return;
+    this._detailTex ??= detailTexture(this.q.detail >= 1 ? 512 : 256);
+    const uniforms = { uDetail: { value: this._detailTex }, uDScale: { value: scale }, uDAmt: { value: amt * k }, uDBump: { value: bump * k } };
+    mat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, uniforms);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', `#include <common>
+        varying vec3 vDWp;
+        varying vec3 vDWn;`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vDWp = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        vDWn = normalize(mat3(modelMatrix) * normal);`);
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', `#include <common>
+        varying vec3 vDWp;
+        varying vec3 vDWn;
+        uniform sampler2D uDetail;
+        uniform float uDScale;
+        uniform float uDAmt;
+        uniform float uDBump;
+        float dFade;
+        vec2 dUv(vec3 p, vec3 n) {
+          vec3 a = abs(n);
+          if (a.y >= a.x && a.y >= a.z) return p.xz;
+          if (a.x >= a.z) return p.zy;
+          return p.xy;
+        }
+        float dHeight(vec3 p, vec3 n) {
+          vec2 uv = dUv(p, n) * uDScale;
+          return texture2D(uDetail, uv).r * 0.62 + texture2D(uDetail, uv * 5.3 + 0.37).r * 0.38;
+        }`)
+        .replace('#include <map_fragment>', `#include <map_fragment>
+        dFade = 1.0 - smoothstep(25.0, 90.0, distance(cameraPosition, vDWp));
+        float dH = dHeight(vDWp, normalize(vDWn));
+        diffuseColor.rgb *= mix(1.0, clamp(dH * 2.0, 0.35, 1.7), uDAmt * dFade);`)
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        {
+          vec3 dpdx = dFdx(-vViewPosition);
+          vec3 dpdy = dFdy(-vViewPosition);
+          float dhx = dFdx(dH);
+          float dhy = dFdy(dH);
+          vec3 r1 = cross(dpdy, normal);
+          vec3 r2 = cross(normal, dpdx);
+          float det = dot(dpdx, r1);
+          vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
+          normal = normalize(abs(det) * normal - uDBump * dFade * grad);
+        }`);
+    };
+    mat.customProgramCacheKey = () => `dc-detail-${scale}-${amt}-${bump}`;
+    mat.needsUpdate = true;
   }
 
   // 장면의 모든 질감에 단계의 비등방성 필터링을 적용한다(기기가 허용하는 최대값 이하). 도로, 포장, 외벽을 비스듬히 볼 때 선명해진다.

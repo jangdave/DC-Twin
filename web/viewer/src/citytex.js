@@ -459,3 +459,44 @@ export function skylineTexture(seed = 77) {
   t.wrapS = THREE.RepeatWrapping;
   return t;
 }
+
+// 가까이 볼 때만 겹치는 미세 디테일(입자, 얼룩, 작은 구멍). 이어 붙여도 티가 나지 않는 회색 그림이고 평균 밝기가 0.5다.
+// 건물 모델 질감(해상도는 충분하지만 면이 단조로움) 위에 곱하고 요철로 쓴다(scene.js _addDetail).
+export function detailTexture(size = 256, seed = 51) {
+  const rng = mulberry32(seed);
+  const N = size * size;
+  const v = new Float32Array(N);
+  let wsum = 0;
+  for (const [cells, w] of [[4, 0.34], [8, 0.26], [16, 0.18], [32, 0.12], [64, 0.1]]) {
+    const g = new Float32Array(cells * cells).map(() => rng());
+    const f = cells / size;
+    for (let y = 0; y < size; y++) {
+      const fy = y * f, y0 = Math.floor(fy), ty = fy - y0, sy = ty * ty * (3 - 2 * ty);
+      for (let x = 0; x < size; x++) {
+        const fx = x * f, x0 = Math.floor(fx), tx = fx - x0, sx = tx * tx * (3 - 2 * tx);
+        const a = g[(y0 % cells) * cells + (x0 % cells)], b = g[(y0 % cells) * cells + ((x0 + 1) % cells)];
+        const c = g[((y0 + 1) % cells) * cells + (x0 % cells)], d = g[((y0 + 1) % cells) * cells + ((x0 + 1) % cells)];
+        v[y * size + x] += w * ((a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy);
+      }
+    }
+    wsum += w;
+  }
+  for (let i = 0; i < N; i++) v[i] = v[i] / wsum * 0.78 + (rng() - 0.5) * 0.18 + 0.11; // 미세 입자
+  for (let i = 0; i < N / 90; i++) { // 작은 구멍(어둡게)
+    const cx = Math.floor(rng() * size), cy = Math.floor(rng() * size), r = 1 + Math.floor(rng() * 2);
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r) v[((cy + dy + size) % size) * size + ((cx + dx + size) % size)] -= 0.22;
+  }
+  const c = canvas(size, size);
+  const g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  for (let i = 0; i < N; i++) {
+    const b = Math.max(0, Math.min(255, v[i] * 255));
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = b;
+    img.data[i * 4 + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
+  return t; // 색 공간 없음(선형 값으로 쓴다)
+}
