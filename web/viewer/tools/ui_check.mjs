@@ -1000,6 +1000,27 @@ await pc.close();
   bare.http.close();
 }
 
+// 화질: FHD 화소 수 상한과 후처리 켜기
+{
+  const qp = await browser.newPage();
+  await qp.setViewport({ width: 2560, height: 1440 }); // QHD 크기, 배율 1
+  await qp.goto(`${base}?scenario=fan_fault&t=100&q=mid&fx=on`, { waitUntil: 'networkidle0' });
+  await qp.waitForFunction(() => window.__viewer?.scene, { timeout: 20000 });
+  await sleep(1500);
+  const Q = await qp.evaluate(() => { const s = window.__viewer.scene; const c = document.getElementById('canvas'); return { fx: !!s.fx, ao: !!s.fx?.ao, pr: +s.pixelRatio.toFixed(3), px: c.width * c.height, css: [c.clientWidth, c.clientHeight] }; });
+  ok('FHD 보통 단계는 QHD 화면에서도 FHD 화소 수 이하로 그리고(후처리 켬, 접촉 그림자는 높음만)', Q.fx && !Q.ao && Q.px <= 1920 * 1080 * 1.02 && Q.pr < 1, JSON.stringify(Q));
+  await qp.close();
+  const hp2 = await browser.newPage();
+  await hp2.setViewport({ width: 1280, height: 720 });
+  await hp2.goto(`${base}?scenario=fan_fault&t=100&q=high&fx=on`, { waitUntil: 'networkidle0' });
+  await hp2.waitForFunction(() => window.__viewer?.scene, { timeout: 20000 });
+  await sleep(1500);
+  const Q2 = await hp2.evaluate(() => ({ fx: !!window.__viewer.scene.fx, ao: !!window.__viewer.scene.fx?.ao }));
+  const Q3 = await hp2.evaluate(() => { window.__viewer.scene.applyQuality('low'); return { fx: !!window.__viewer.scene.fx }; });
+  ok('높음은 후처리와 접촉 그림자를 켜고, 낮은 단계로 내리면 후처리가 꺼짐', Q2.fx && Q2.ao && !Q3.fx, JSON.stringify({ Q2, Q3 }));
+  await hp2.close();
+}
+
 // 인터랙션 개편: 오른쪽 패널 기본 접힘, 건물 호버(외곽선+카드), 휴대폰 첫 터치는 정보
 {
   const hp = await browser.newPage();

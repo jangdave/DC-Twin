@@ -1,11 +1,20 @@
 // 화질 단계 (docs/23). 저사양 노트북과 모바일에서도 돌도록 단계마다 그림자, 해상도, 입자 수, 도시 규모를 줄인다.
 export const TIERS = ['low', 'mid', 'high'];
 
+// maxPixels: 한 장면을 그리는 화소 수 상한. 일반(보통) 기준은 FHD(1920 x 1080)이다. 화면이 더 크면(QHD, 4K) 그리는 해상도를 낮춰 상한에 맞춘다.
+// bloom: 빛 번짐 세기(0이면 끔, 표시등, 알람, 저녁 창이 번진다), ao: 접촉 그림자(SSAO). 후처리는 화면을 한 번 더 그리므로 낮은 단계는 끈다.
+export const FHD = 1920 * 1080;
 export const SETTINGS = {
-  low: { pixelRatio: 1, shadow: 0, particles: 2500, cityRings: 2, cars: 0, trees: 200, reflection: false, hallModels: false },
-  mid: { pixelRatio: 1.5, shadow: 2048, particles: 5000, cityRings: 3, cars: 60, trees: 600, reflection: false, hallModels: true },
-  high: { pixelRatio: 2, shadow: 4096, particles: 7000, cityRings: 3, cars: 120, trees: 1200, reflection: true, hallModels: true },
+  low: { pixelRatio: 1, maxPixels: 1280 * 720, shadow: 0, particles: 2500, cityRings: 2, cars: 0, trees: 200, reflection: false, hallModels: false, bloom: 0, ao: false },
+  mid: { pixelRatio: 1.5, maxPixels: FHD, shadow: 2048, particles: 5000, cityRings: 3, cars: 60, trees: 600, reflection: false, hallModels: true, bloom: 0.3, ao: false },
+  high: { pixelRatio: 2, maxPixels: 2560 * 1440, shadow: 4096, particles: 7000, cityRings: 3, cars: 120, trees: 1200, reflection: true, hallModels: true, bloom: 0.4, ao: true },
 };
+
+// 화면(CSS 크기 w x h)에서 실제로 그릴 배율: 기기 배율, 단계의 배율 상한, 화소 수 상한 중 가장 작은 값(0.5 아래로는 내리지 않는다).
+export function pixelRatioFor(setting, w, h, dpr = 1) {
+  const area = Math.max(w * h, 1);
+  return Math.max(Math.min(dpr, setting.pixelRatio, Math.sqrt(setting.maxPixels / area)), 0.5);
+}
 
 // 환경 정보(env)로 단계를 고른다. 주소에 q가 있으면 그것을 쓴다.
 //   env: { width, coarsePointer, deviceMemory, cores, automated }  (모르는 값은 undefined)
