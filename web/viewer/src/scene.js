@@ -310,7 +310,9 @@ export class HallScene {
     const r = this.renderer;
     const cv = r.domElement;
     const cr = cv.getBoundingClientRect();
-    const hiddenHelpers = [this.selBox, this.hoverBox].map((o) => [o, o.visible]);
+    // CCTV는 실제 카메라처럼 장비만 보인다: 선택 상자, 온도 색칠, 신뢰 막대, 알람 테두리와 링, 공기 흐름 입자(시뮬레이션 표현)를 잠시 끈다.
+    const sim = [this.selBox, this.hoverBox, this.rackFront, this.rackTop, this.cracFront, this.barTrack, this.bar, this.rackHull, this._rings, this.airflow?.points].filter(Boolean);
+    const hiddenHelpers = sim.map((o) => [o, o.visible]);
     for (const [o] of hiddenHelpers) o.visible = false;
     r.setScissorTest(false);
     r.setViewport(0, 0, cr.width, cr.height);
@@ -583,6 +585,7 @@ export class HallScene {
     this.hemi.intensity = p.hemiI;
     this.hills.material.color.set(p.grass).multiplyScalar(0.8);
     this.city?.setSky(this.skyName);
+    if (this._siteLights) this._siteLights.visible = this.skyName === 'dusk';
     this._nightU.value = this.skyName === 'dusk' ? 1 : 0; // 데이터센터 창에 불이 켜진다
     this._updateReflection();
     this.fogColor = new THREE.Color(p.fog);
@@ -718,6 +721,8 @@ export class HallScene {
     } else {
       this._main = this._bldg;
     }
+    // 저녁 조명: 모델의 가로등(LightPole_*) 위치에 빛 번짐과 바닥 빛 웅덩이를 둔다(저녁에만 보임)
+    const siteLights = this._buildSiteLights(gltf.scene);
     // 부지 나무 교체: 줄기 위치를 찾아 모델의 나무(줄기와 수관)를 지우고 상세 나무를 같은 자리에 세운다. 생울타리 같은 낮은 식재는 남긴다.
     let siteTrees = null;
     const trunkM = meshes.find((m) => /Trunk/.test(m.material.name || ''));
@@ -734,6 +739,11 @@ export class HallScene {
     const model = new THREE.Group();
     for (const m of meshes) model.add(m);
     if (siteTrees) model.add(siteTrees);
+    if (siteLights) {
+      model.add(siteLights);
+      this._siteLights = siteLights;
+      siteLights.visible = this.skyName === 'dusk';
+    }
     this._applyEnvMaps();
     model.position.set(c.x - mid.x, 0, c.z - mid.z); // 건물 가운데를 홀 가운데에 맞춘다
     this.exterior.add(model);
@@ -1178,6 +1188,46 @@ export class HallScene {
     };
     mat.customProgramCacheKey = () => `${prevKey}-dc-roof-v1`;
     mat.needsUpdate = true;
+  }
+
+  // 부지 가로등 조명: root(glb 장면)에서 LightPole_* 노드의 월드 위치를 읽어 m 단위로 바꾼다.
+  _buildSiteLights(root) {
+    root.updateMatrixWorld(true);
+    const poles = [];
+    const box = new THREE.Box3();
+    root.traverse((o) => {
+      if (!/^LightPole_\d+$/.test(o.name)) return;
+      box.setFromObject(o);
+      if (box.isEmpty()) return;
+      poles.push({ x: ((box.min.x + box.max.x) / 2) * CM, z: ((box.min.z + box.max.z) / 2) * CM, top: box.max.y * CM });
+    });
+    if (!poles.length) return null;
+    const tex = (this._glowTex ??= glowTexture());
+    const warm = 0xffc880;
+    const pools = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ map: tex, color: warm, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
+      poles.length,
+    );
+    const m = new THREE.Matrix4();
+    const pts = new Float32Array(poles.length * 3);
+    poles.forEach((p, i) => {
+      m.compose(new THREE.Vector3(p.x, 0.09, p.z), new THREE.Quaternion(), new THREE.Vector3(13, 1, 13));
+      pools.setMatrixAt(i, m);
+      pts.set([p.x, p.top, p.z], i * 3);
+    });
+    pools.frustumCulled = false;
+    pools.renderOrder = 5;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+    const heads = new THREE.Points(g, new THREE.PointsMaterial({ map: tex, color: warm, size: 5, sizeAttenuation: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    heads.frustumCulled = false;
+    heads.renderOrder = 6;
+    const grp = new THREE.Group();
+    grp.name = 'siteLights';
+    grp.userData.count = poles.length;
+    grp.add(pools, heads);
+    return grp;
   }
 
   // 부지 나무(줄기 + 수관) 인스턴스. spots: 모델 좌표의 [{ x, z, y0 }]

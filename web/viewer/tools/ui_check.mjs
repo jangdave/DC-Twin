@@ -1000,6 +1000,33 @@ await pc.close();
   bare.http.close();
 }
 
+// CCTV에서는 시뮬레이션 표현(온도 색칠, 공기 흐름, 알람 링, 시뮬레이션 탭)이 보이지 않는다
+{
+  const cp2 = await browser.newPage();
+  await cp2.setViewport({ width: 1440, height: 860 });
+  await cp2.goto(`${base}?scenario=fan_fault&t=100&stage=hall&panel=open&q=mid&fx=off`, { waitUntil: 'networkidle0' });
+  await cp2.waitForFunction(() => window.__viewer?.state.player, { timeout: 20000 });
+  await cp2.evaluate(() => window.__viewer.startLibrary('normal'));
+  await cp2.waitForFunction(() => window.__viewer.state.mode === 'lib' && window.__viewer.state.player, { timeout: 15000 });
+  await sleep(800);
+  await cp2.evaluate(() => { window.__viewer.scene.setAirflow(true); });
+  const seen = await cp2.evaluate(async () => {
+    const s = window.__viewer.scene;
+    const rec = [];
+    const orig = s.renderer.render.bind(s.renderer);
+    s.renderer.render = (...a) => { rec.push({ front: s.rackFront.visible, top: s.rackTop.visible, hull: s.rackHull.visible, air: !!s.airflow?.points.visible, rings: !!s._rings?.visible }); return orig(...a); };
+    document.getElementById('cctv-btn').click();
+    await new Promise((r) => setTimeout(r, 1500));
+    const open = !!s.cctv;
+    s.renderer.render = orig;
+    const after = { front: s.rackFront.visible, air: s.airflow.points.visible };
+    return { open, n: rec.length, anySim: rec.some((x) => x.front || x.top || x.hull || x.air || x.rings), after, tabEnergy: !document.getElementById('tab-energy').offsetParent === false };
+  });
+  const tabs = await cp2.evaluate(() => ({ energy: !!document.getElementById('tab-energy').offsetParent, prep: !!document.getElementById('tab-prep').offsetParent }));
+  ok('CCTV 화면을 그릴 때 온도 색칠, 신뢰 막대, 알람 테두리, 공기 흐름이 꺼져 있고 끝난 뒤 원래대로 돌아오며, 시뮬레이션 탭은 보이지 않음', seen.open && seen.n > 0 && !seen.anySim && seen.after.front && seen.after.air && !tabs.energy && !tabs.prep, JSON.stringify({ seen, tabs }));
+  await cp2.close();
+}
+
 // 화면 나눠 비교: 기준 저장 -> 시나리오 변경 -> 나눠 비교 켜기, 선 끌기, 메뉴를 떠나면 꺼짐
 {
   const sp = await browser.newPage();
@@ -1064,6 +1091,7 @@ await pc.close();
       const s = window.__viewer.scene;
       let maxW = 0, normals = 0, minAniso = 99, detail = 0, glass = 0, roof = 0, asphalt = 0;
       s.exteriorModel.traverse((o) => { if (o.material && !Array.isArray(o.material)) { const k = o.material.customProgramCacheKey(); if (k.includes('dc-detail')) detail++; if (k.includes('dc-glass-windows')) glass++; if (k.includes('dc-roof')) roof++; if (k.includes('dc-asphalt')) asphalt++; } });
+      const lights = s.exteriorModel.children.find((o) => o.name === 'siteLights');
       const trees = s.exteriorModel.children.find((o) => o.name === 'siteTrees');
       const treeN = trees ? trees.children[0].count : 0;
       const names = s.exteriorModel.children.map((o) => o.material?.name || '');
@@ -1073,7 +1101,7 @@ await pc.close();
         if (!m || Array.isArray(m)) return;
         if (m.map && m.emissiveMap && m.map.image && !seen.has(m.map)) { seen.add(m.map); maxW = Math.max(maxW, m.map.image.width); if (m.normalMap) normals++; minAniso = Math.min(minAniso, m.map.anisotropy); }
       });
-      return { asphalt, treeN, oldTrunk: names.some((x) => /Trunk/.test(x)), roof, glass, detail, maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
+      return { lightN: lights?.userData.count ?? 0, lightVisible: !!lights?.visible, asphalt, treeN, oldTrunk: names.some((x) => /Trunk/.test(x)), roof, glass, detail, maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
     });
     await tp2.close();
     return r;
@@ -1082,6 +1110,7 @@ await pc.close();
   ok('TEX 질감 단계: 낮음 256 px(법선 없음), 보통 512 px(법선 있음), 높음 1024 px', T1.maxW === 256 && T1.normals === 0 && T2.maxW === 512 && T2.normals > 0 && T3.maxW === 1024 && T3.normals > 0, JSON.stringify({ T1, T2, T3 }));
   ok('GLASS 본 건물 유리에 창마다 농도, 반사, 층 띠 변화가 모든 단계에서 적용됨', T1.glass >= 1 && T2.glass >= 1 && T3.glass >= 1, JSON.stringify({ low: T1.glass, mid: T2.glass, high: T3.glass }));
   ok('SITE 주차장 아스팔트에 균열, 기름 얼룩, 보수 흔적이 그려지고 부지 나무가 상세 나무로 바뀜(모델의 줄기 없음, 나무 10그루)', T1.asphalt === 1 && T2.asphalt === 1 && T3.asphalt === 1 && T1.treeN === 10 && T3.treeN === 10 && !T1.oldTrunk, JSON.stringify({ a: [T1.asphalt, T2.asphalt, T3.asphalt], trees: [T1.treeN, T3.treeN], old: T1.oldTrunk }));
+  ok('NIGHT 부지 가로등 12개에 저녁 조명(빛 번짐과 바닥 웅덩이)이 있고 낮에는 보이지 않음', T1.lightN === 12 && !T1.lightVisible && !T3.lightVisible, JSON.stringify({ n: T1.lightN, day: [T1.lightVisible, T3.lightVisible] }));
   ok('ROOF 본 건물 지붕에 이음선, 가장자리 띠, 얼룩, 배수구가 모든 단계에서 그려짐(재질 1개)', T1.roof === 1 && T2.roof === 1 && T3.roof === 1, JSON.stringify({ low: T1.roof, mid: T2.roof, high: T3.roof }));
   ok('DETAIL 건물 모델의 단조로운 면(콘크리트, 지붕, 아스팔트, 금속 패널, 벽 안쪽)에 미세 디테일이 높음과 보통에서만 겹쳐짐', T1.detail === 0 && T2.detail >= 4 && T3.detail >= 4, JSON.stringify({ low: T1.detail, mid: T2.detail, high: T3.detail }));
   ok('TEX 비등방성 필터링이 단계 상한(낮음 2, 보통 8, 높음 16)과 기기 상한 중 작은 값으로 적용됨', T1.minAniso === Math.min(2, T1.cap) && T2.minAniso === Math.min(8, T2.cap) && T3.minAniso === Math.min(16, T3.cap), JSON.stringify({ a: [T1.minAniso, T2.minAniso, T3.minAniso], cap: T1.cap }));
