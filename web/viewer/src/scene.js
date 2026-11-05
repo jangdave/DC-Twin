@@ -10,7 +10,8 @@ import { CITY, buildCity } from './city.js';
 import { prepareShell, shellVisibility } from './hall_shell.js';
 import { CCTV_LIMITS } from './cctv.js';
 import { VIEWS } from './views.js';
-import { SETTINGS } from './quality.js';
+import { SETTINGS, pixelRatioFor } from './quality.js';
+import { Fx } from './fx.js';
 import { ALARM_COLOR, barFraction, confidenceColor, sampleColor } from './colors.js';
 
 const CM = 0.01;
@@ -60,8 +61,9 @@ const CRAC_OK = [0.08, 0.4, 0.55];
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 
 export class HallScene {
-  constructor(canvas, labelLayer, data, store, { reducedMotion = false, stage = 'hall', tier = 'high' } = {}) {
+  constructor(canvas, labelLayer, data, store, { reducedMotion = false, stage = 'hall', tier = 'high', fx = null } = {}) {
     this.tier = tier;
+    this.fxMode = fx; // 'on' | 'off' | null(자동)
     this.q = { ...SETTINGS[tier] };
     this.store = store;
     this.data = data;
@@ -78,7 +80,7 @@ export class HallScene {
     this.stage = stage;
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.q.pixelRatio));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.q.pixelRatio)); // 크기가 정해지면 resize에서 화소 수 상한에 맞춘다
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = false; // 해와 건물이 움직이지 않으니 그림자 지도는 필요할 때만 다시 그린다
@@ -117,6 +119,7 @@ export class HallScene {
     this._buildLabels(data);
     this._buildExterior(data, sx, sy, sz);
     this.setStage(stage, true);
+    this._setupFx();
   }
 
   // ---- 만들기 ----
@@ -532,8 +535,8 @@ export class HallScene {
     if (!q) return;
     this.tier = tier;
     this.q = { ...this.q, ...q, cityRings: this.q.cityRings };
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatio));
-    this.renderer.setSize(this.renderer.domElement.clientWidth, this.renderer.domElement.clientHeight, false);
+    this._applySize(this.renderer.domElement.clientWidth, this.renderer.domElement.clientHeight);
+    this._setupFx();
     this.sunExt.castShadow = q.shadow > 0;
     if (q.shadow > 0) {
       this.sunExt.shadow.map?.dispose();
@@ -962,8 +965,29 @@ export class HallScene {
     return { x: ((v.x + 1) / 2) * r.width, y: ((1 - v.y) / 2) * r.height, behind: v.z > 1 };
   }
 
-  resize(w, h) {
+  // 그리는 배율을 화질 단계와 화면 크기로 정한다(일반 기준 FHD 화소 수 상한). 후처리 통로도 같은 크기로 맞춘다.
+  _applySize(w, h) {
+    const pr = pixelRatioFor(this.q, w, h, window.devicePixelRatio || 1);
+    this.pixelRatio = pr;
+    this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
+    this.fx?.setSize(w, h, pr);
+  }
+
+  // 후처리(빛 번짐, 접촉 그림자). 단계가 켜고(q.bloom > 0), 주소의 fx=off가 아니며, 자동 시험 브라우저가 아니면(fx=on으로만) 켠다.
+  _setupFx() {
+    this.fx?.dispose();
+    this.fx = null;
+    const want = this.fxMode === 'on' || (this.fxMode !== 'off' && !navigator.webdriver);
+    if (!want || !(this.q.bloom > 0)) return;
+    const c = this.renderer.domElement;
+    this.fx = new Fx(this.renderer, this.scene, this.camera, { bloom: this.q.bloom, ao: !!this.q.ao });
+    this.fx.setSize(c.clientWidth || 1, c.clientHeight || 1, this.pixelRatio ?? 1);
+    this._dirty = true;
+  }
+
+  resize(w, h) {
+    this._applySize(w, h);
     this.camera.aspect = w / Math.max(h, 1);
     this.camera.updateProjectionMatrix();
     this._dirty = true;
@@ -1110,6 +1134,7 @@ export class HallScene {
       }
     }
     if (this.cctv && this.stage === 'hall') this._renderCctv(timeSec);
+    else if (this.fx && !this.cctv) this.fx.render();
     else this.renderer.render(this.scene, this.camera);
   }
 

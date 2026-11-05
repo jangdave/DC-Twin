@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectQuality, lowerTier, SETTINGS } from '../src/quality.js';
+import { FHD, detectQuality, lowerTier, pixelRatioFor, SETTINGS } from '../src/quality.js';
 
 describe('detectQuality', () => {
   it('주소의 q가 있으면 그대로 쓴다', () => {
@@ -30,5 +30,37 @@ describe('detectQuality', () => {
     expect(SETTINGS.low.particles).toBeLessThan(SETTINGS.mid.particles);
     expect(SETTINGS.mid.shadow).toBeLessThan(SETTINGS.high.shadow);
     expect(SETTINGS.low.cars).toBe(0);
+  });
+});
+
+describe('해상도 상한(일반 기준 FHD)', () => {
+  it('보통 단계의 상한은 FHD 화소 수다', () => {
+    expect(SETTINGS.mid.maxPixels).toBe(FHD);
+    expect(SETTINGS.low.maxPixels).toBeLessThan(FHD);
+    expect(SETTINGS.high.maxPixels).toBeGreaterThan(FHD);
+  });
+  it('FHD 화면(배율 1)은 보통 단계에서 그대로 그린다', () => {
+    expect(pixelRatioFor(SETTINGS.mid, 1920, 1080, 1)).toBe(1);
+  });
+  it('FHD보다 큰 화면은 보통 단계에서 FHD 화소 수에 맞춰 낮춘다', () => {
+    const pr = pixelRatioFor(SETTINGS.mid, 3840, 2160, 1); // 4K, 배율 1
+    expect(pr).toBeCloseTo(0.5, 5);
+    expect(3840 * 2160 * pr * pr).toBeLessThanOrEqual(FHD + 1);
+    const pr2 = pixelRatioFor(SETTINGS.mid, 1920, 1080, 2); // FHD 크기에 배율 2(고밀도 화면)는 화소 수 상한 때문에 1.5가 아니라 1
+    expect(pr2).toBe(1);
+  });
+  it('작은 화면은 기기 배율과 단계 배율 상한 중 작은 값을 쓴다', () => {
+    expect(pixelRatioFor(SETTINGS.mid, 800, 600, 3)).toBe(1.5);
+    expect(pixelRatioFor(SETTINGS.high, 800, 600, 3)).toBe(2);
+    expect(pixelRatioFor(SETTINGS.low, 800, 600, 3)).toBe(1);
+  });
+  it('0.5 아래로는 내리지 않는다', () => {
+    expect(pixelRatioFor(SETTINGS.low, 7680, 4320, 1)).toBe(0.5);
+  });
+  it('낮은 단계는 후처리를 끄고 높음 단계만 접촉 그림자를 쓴다', () => {
+    expect(SETTINGS.low.bloom).toBe(0);
+    expect(SETTINGS.mid.bloom).toBeGreaterThan(0);
+    expect(SETTINGS.mid.ao).toBe(false);
+    expect(SETTINGS.high.ao).toBe(true);
   });
 });

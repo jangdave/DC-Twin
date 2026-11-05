@@ -17,7 +17,7 @@ export function checkLiveUrl(text) {
 // ?scenario=fan_fault&t=60&live=ws://127.0.0.1:8080/ws
 export function parseParams(search, scenarioIds) {
   const p = new URLSearchParams(search);
-  const out = { scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null, sky: 'day', q: null, panel: 'default' };
+  const out = { scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null, sky: 'day', q: null, panel: 'default', fx: null };
   const sc = p.get('scenario');
   if (sc && scenarioIds.includes(sc)) out.scenario = sc;
   const t = Number(p.get('t'));
@@ -35,6 +35,7 @@ export function parseParams(search, scenarioIds) {
     else out.liveError = r.reason;
   }
   if (p.get('panel') === 'open') out.panel = 'open'; // 시험용: 오른쪽 패널을 처음부터 펼친다(기본은 PC 폭에서 접힘)
+  if (p.get('fx') === 'on' || p.get('fx') === 'off') out.fx = p.get('fx'); // 후처리를 강제로 켜거나 끈다(기본은 단계가 정하고 자동 시험 브라우저에서는 끔)
   const view = p.get('view');
   if (view === 'temp_in' || view === 'temp_out' || view === 'power') out.view = view;
   const stage = p.get('stage');

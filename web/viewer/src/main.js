@@ -69,7 +69,7 @@ async function main() {
   const flow = new FlowState(params.stage ?? 'exterior');
   const rackKeys = sceneData.racks.map((r) => r.name.toLowerCase());
   const tier = detectQuality(params.q, browserEnv());
-  const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage, tier });
+  const scene = new HallScene($('canvas'), $('labels'), sceneData, store, { reducedMotion, stage: flow.stage, tier, fx: params.fx });
   const qsel = document.getElementById('quality-sel');
   if (qsel) qsel.value = params.q ?? 'auto';
 
