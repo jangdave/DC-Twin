@@ -12,6 +12,9 @@ import { CCTV_LIMITS } from './cctv.js';
 import { VIEWS } from './views.js';
 import { SETTINGS, pixelRatioFor } from './quality.js';
 import { Fx } from './fx.js';
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { ALARM_COLOR, barFraction, confidenceColor, sampleColor } from './colors.js';
 
 const CM = 0.01;
@@ -486,6 +489,7 @@ export class HallScene {
     for (let i = -1; i <= 1; i++) this.building.push(add(2.4, 1.4, 2.4, c.x + i * (W / 4), H + 1.2, c.z - D / 4, mat(0x5b6675))); // 지붕 설비
     this._extR = Math.max(W, D);
     this._bldg = { center: new THREE.Vector3(c.x, H / 2, c.z), half: new THREE.Vector3(W / 2, H / 2, D / 2) };
+    this._main = this._bldg; // 데이터센터 건물 한 동(호버, 선택, 외곽선 기준). 모델을 받으면 지붕 면적으로 다시 정한다
     this._tagAnchor = new THREE.Vector3(c.x, H + 4, c.z); // 이름·상태 표시가 붙는 점(건물 위)
     this._extH = H;
     g.visible = false;
@@ -661,20 +665,32 @@ export class HallScene {
       bb.max.add(new THREE.Vector3(c.x - mid.x, 0, c.z - mid.z));
       this._bldg = { center: bb.getCenter(new THREE.Vector3()), half: bb.getSize(new THREE.Vector3()).multiplyScalar(0.5) };
     }
+    // 데이터센터 건물 한 동: 지붕(M_BldgRoof) 면적과 높이로 정한다. 호버와 클릭 판정, 외곽선은 이 상자만 쓴다(옥외 설비, 수위실 같은 부속 건물은 제외).
+    const off = new THREE.Vector3(c.x - mid.x, 0, c.z - mid.z);
+    const roof = meshes.find((m) => /BldgRoof/.test(m.material.name || ''));
+    if (roof) {
+      const rb = roof.geometry.boundingBox.clone();
+      rb.min.add(off);
+      rb.max.add(off);
+      const top = rb.max.y + 0.5;
+      const sz = rb.getSize(new THREE.Vector3());
+      const ctr = rb.getCenter(new THREE.Vector3());
+      this._main = { center: new THREE.Vector3(ctr.x, top / 2, ctr.z), half: new THREE.Vector3(sz.x / 2 + 0.8, top / 2, sz.z / 2 + 0.8) };
+    } else {
+      this._main = this._bldg;
+    }
     const model = new THREE.Group();
     for (const m of meshes) model.add(m);
     this._applyEnvMaps();
     model.position.set(c.x - mid.x, 0, c.z - mid.z); // 건물 가운데를 홀 가운데에 맞춘다
     this.exterior.add(model);
     for (const b of this.building) b.visible = false; // 상자는 숨기고 클릭 판정에만 쓴다
-    const proxy = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial({ visible: false }));
-    proxy.position.set(c.x, size.y / 2, c.z);
+    const proxy = new THREE.Mesh(new THREE.BoxGeometry(this._main.half.x * 2, this._main.half.y * 2, this._main.half.z * 2), new THREE.MeshBasicMaterial({ visible: false }));
+    proxy.position.copy(this._main.center);
     this.exterior.add(proxy);
     this.building = [proxy];
     this.exteriorModel = model;
-    this._hullMeshes = meshes.filter((m) => /Bldg(Concrete|WallCore|Roof|PanelMetal)/.test(m.material.name || ''));
-    this._hullOffset = new THREE.Vector3(c.x - mid.x, 0, c.z - mid.z);
-    this._tagAnchor = new THREE.Vector3(this._bldg.center.x, this._bldg.center.y + this._bldg.half.y + 4, this._bldg.center.z);
+    this._tagAnchor = new THREE.Vector3(this._main.center.x, this._main.center.y + this._main.half.y + 4, this._main.center.z);
     this.renderer.shadowMap.needsUpdate = true;
     this._extR = Math.max(size.x, size.z) * 0.9;
     this._extH = size.y;
@@ -686,9 +702,8 @@ export class HallScene {
     return meshes.length;
   }
 
-  // 외관에서 데이터센터 건물의 실루엣을 따라 하늘색 외곽 강조선을 낸다(홀 안 선택 상자와 같은 색).
-  // 건물 모델을 조금(2.5%) 키워 뒷면만 하늘색으로 한 번 더 그리는 방식이라, 상자가 아니라 건물 모양 그대로 윤곽이 생긴다.
-  // 모델이 없으면(받기 실패) 상자 건물의 모서리 선을 쓴다.
+  // 외관에서 데이터센터 건물 한 동의 모서리를 따라 하늘색 외곽 강조선을 낸다(홀 안 선택 상자와 같은 색).
+  // 건물 모델 전체가 아니라 건물 본체 상자(_main)의 12개 모서리를 굵은 선(LineSegments2, 화면 3px)으로 그린다. 가려진 쪽은 건물에 가려진다.
   setBuildingHover(on) {
     if (!on) {
       if (this._bHover?.visible) {
@@ -697,41 +712,26 @@ export class HallScene {
       }
       return;
     }
-    if (!this._bldg) return;
-    if (!this._bHover || this._bHoverFor !== this._bldg) {
+    if (!this._main) return;
+    if (!this._bHover || this._bHoverFor !== this._main) {
       if (this._bHover) {
         this.exterior.remove(this._bHover);
-        this._bHover.traverse((o) => o.material?.dispose());
+        this._bHover.geometry.dispose();
+        this._bHover.material.dispose();
       }
-      const { center, half } = this._bldg;
-      const grp = new THREE.Group();
-      grp.position.copy(center);
-      if (this._hullMeshes?.length) {
-        // 면을 법선 방향으로 1.4 m 밀어낸 뒷면만 그린다. 얇은 벽도 안쪽 면이 건물 밖으로 나오지 않아 윤곽만 남는다.
-        const mat = new THREE.MeshBasicMaterial({ color: 0x4fd8ff, side: THREE.BackSide, transparent: true });
-        mat.onBeforeCompile = (sh) => {
-          sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-          transformed += normalize(normal) * 1.4;`);
-        };
-        mat.customProgramCacheKey = () => 'dc-hover-hull';
-        const inner = new THREE.Group();
-        inner.position.copy(this._hullOffset).sub(center);
-        for (const m of this._hullMeshes) {
-          const h = new THREE.Mesh(m.geometry, mat); // 지오메트리는 건물과 공유한다(복사하지 않음)
-          h.renderOrder = 7;
-          inner.add(h);
-        }
-        grp.add(inner);
-      } else {
-        const g = new THREE.BoxGeometry(half.x * 2 + 1, half.y * 2 + 1, half.z * 2 + 1);
-        const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0x4fd8ff }));
-        g.dispose();
-        edges.renderOrder = 7;
-        grp.add(edges);
-      }
-      this.exterior.add(grp);
-      this._bHover = grp;
-      this._bHoverFor = this._bldg;
+      const { center, half } = this._main;
+      const box = new THREE.BoxGeometry(half.x * 2, half.y * 2, half.z * 2);
+      const geo = new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(box));
+      box.dispose();
+      const mat = new LineMaterial({ color: 0x4fd8ff, linewidth: 3 * (this.pixelRatio ?? 1), worldUnits: false });
+      const c = this.renderer.domElement;
+      mat.resolution.set((c.clientWidth || 1) * (this.pixelRatio ?? 1), (c.clientHeight || 1) * (this.pixelRatio ?? 1));
+      const lines = new LineSegments2(geo, mat);
+      lines.position.copy(center);
+      lines.renderOrder = 7;
+      this.exterior.add(lines);
+      this._bHover = lines;
+      this._bHoverFor = this._main;
     }
     if (!this._bHover.visible) this._dirty = true;
     this._bHover.visible = true;
@@ -972,6 +972,10 @@ export class HallScene {
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.fx?.setSize(w, h, pr);
+    if (this._bHover) {
+      this._bHover.material.resolution.set(w * pr, h * pr);
+      this._bHover.material.linewidth = 3 * pr;
+    }
   }
 
   // 후처리(빛 번짐, 접촉 그림자). 단계가 켜고(q.bloom > 0), 주소의 fx=off가 아니며, 자동 시험 브라우저가 아니면(fx=on으로만) 켠다.

@@ -53,7 +53,6 @@
       <div id="building-card" hidden aria-live="polite">
         <b>가상 데이터센터</b>
         <span id="bc-status" data-state="none">–</span>
-        <small id="bc-hint">눌러서 홀 들어가기</small>
         <button type="button" id="bc-enter">홀 들어가기</button>
       </div>
       <span id="mode-badge" class="badge" role="status">불러오는 중</span>
@@ -225,7 +224,6 @@
       <span id="live-text"></span>
       <button id="live-back" type="button">녹화 재생으로 돌아가기</button>
     </div>
-    <p id="disclaimer">시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않는다. 가상 시설이다.</p>
   </footer>
 
   <div id="gl-lost" role="status" hidden>그래픽이 잠시 멈췄다. 자동으로 복구를 시도한다. 복구되지 않으면 페이지를 새로 고친다.</div>
@@ -247,6 +245,7 @@ uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ../out
 
   <dialog id="help-dialog">
     <h2>보는 방법</h2>
+    <p id="disclaimer">시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않는다. 가상 시설이다.</p>
     <ul>
       <li><b>랙 앞면의 색</b>은 선택한 값이다. 온도는 18도(파랑)에서 35도(빨강)까지 변한다.</li>
       <li><b>랙 위의 막대</b>는 AI 대리 모델 보정값의 믿을 수 있는 정도다. 막대가 짧을수록 90% 구간이 넓다(불확실하다).</li>

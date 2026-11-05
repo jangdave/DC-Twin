@@ -187,8 +187,8 @@ await page.click('#help-btn');
 ok('FR-72 도움말 열림', await page.$eval('#help-dialog', (d) => d.open));
 ok('FR-73 등급 설명 4개', (await page.$$eval('#help-conf li', (l) => l.length)) === 4);
 await page.keyboard.press('Escape');
-ok('FR-70 안내 문구가 항상 보임', (await page.$eval('#disclaimer', (e) => e.textContent)).includes('공학적 정확성'));
-ok('FR-71 녹화 모드 표시', (await page.$eval('#mode-badge', (e) => e.textContent)).includes('실시간 아님'));
+ok('FR-70 "시각화 목적" 안내는 도움말 안에 있고 화면 아래에는 없음', await page.evaluate(() => { const d = document.getElementById('disclaimer'); return !!d && d.closest('#help-dialog') !== null && d.textContent.includes('공학적 정확성') && !document.getElementById('bottom').contains(d); }));
+ok('FR-71 녹화 재생 표시는 화면에서 보이지 않음(글자는 상태로 남아 있음)', await page.$eval('#mode-badge', (e) => e.textContent.includes('실시간 아님') && getComputedStyle(e).display === 'none'));
 
 // 7) 좁은 화면(6.2장): 가로 스크롤이 없어야 한다
 for (const [w, h] of [[390, 844], [768, 900]]) {
@@ -1056,10 +1056,23 @@ await pc.close();
   const TG = await bp.evaluate(() => { const c = document.getElementById('building-card'); const r = c.getBoundingClientRect(); const cv = document.getElementById('canvas').getBoundingClientRect(); return { shown: !c.hidden && getComputedStyle(c).visibility === 'visible', name: c.querySelector('b').textContent, status: document.getElementById('bc-status').textContent, hot: c.classList.contains('hot'), inside: r.left >= cv.left && r.right <= cv.right && r.top >= cv.top && r.bottom <= cv.bottom, box: !!window.__viewer.scene.building && window.__viewer.scene._bldg !== undefined }; });
   ok('TAG 외관에서는 건물 위에 이름과 상태가 항상 붙어 있고(마우스 없이도), 화면 안에 있음(초록 상자 대체)', TG.shown && TG.name.length > 0 && /정상|주의|없음/.test(TG.status) && !TG.hot && TG.inside, JSON.stringify(TG));
   const bpos = await bpt();
+  const sizeBefore = await bp.$eval('#building-card', (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
+  const PK = await bp.evaluate(() => {
+    const s = window.__viewer.scene;
+    const c = document.getElementById('canvas');
+    const r = c.getBoundingClientRect();
+    const at = (x, y, z) => { const v = { x, y, z }; const p = new (s.camera.position.constructor)(v.x, v.y, v.z).project(s.camera); return [((p.x + 1) / 2), ((1 - p.y) / 2)]; };
+    const m = s._main;
+    const mid = at(m.center.x, m.center.y, m.center.z);
+    const side = at(m.center.x + m.half.x + 9, 1.5, m.center.z); // 건물 옆 부지(부속 시설 쪽)
+    const sizeOk = m.half.x * 2 < 90 && m.half.z * 2 < 70;
+    return { hitMain: s.pickBuilding(...mid), hitSide: s.pickBuilding(...side), sizeOk, size: [+(m.half.x * 2).toFixed(1), +(m.half.y * 2).toFixed(1), +(m.half.z * 2).toFixed(1)] };
+  });
+  ok('PICK 데이터센터 건물 한 동만 호버와 클릭 대상(건물 옆 부속 시설 쪽은 아님)', PK.hitMain && !PK.hitSide && PK.sizeOk, JSON.stringify(PK));
   await bp.mouse.move(bpos.x, bpos.y, { steps: 4 });
   await sleep(300);
-  const H1 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, hot: document.getElementById('building-card').classList.contains('hot'), status: document.getElementById('bc-status').textContent, name: document.querySelector('#building-card b').textContent, outline: !!window.__viewer.scene._bHover?.visible, silhouette: window.__viewer.scene._hullMeshes?.length > 0 && window.__viewer.scene._bHover?.children[0]?.children?.length === window.__viewer.scene._hullMeshes.length, pinned: document.getElementById('building-card').classList.contains('pinned') }));
-  ok('HOVER 외관에서 건물에 올리면 건물 모양을 따라 외곽 강조선이 생기고 표시에 "눌러서 들어가기" 안내가 붙음', H1.card && H1.hot && H1.outline && !H1.pinned && H1.silhouette, JSON.stringify(H1));
+  const H1 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, hot: document.getElementById('building-card').classList.contains('hot'), status: document.getElementById('bc-status').textContent, name: document.querySelector('#building-card b').textContent, outline: !!window.__viewer.scene._bHover?.visible, edges: !!window.__viewer.scene._bHover?.isLineSegments2, size: (() => { const r = document.getElementById('building-card').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })(), pinned: document.getElementById('building-card').classList.contains('pinned') }));
+  ok('HOVER 외관에서 건물에 올리면 외곽 강조선이 생기고 이름·상태 표시는 커지지 않음(테두리 색만 바뀜)', H1.card && H1.hot && H1.outline && H1.edges && !H1.pinned && H1.size[0] === sizeBefore[0] && H1.size[1] === sizeBefore[1], JSON.stringify({ H1, sizeBefore }));
   await bp.mouse.move(8, 700, { steps: 4 });
   await sleep(300);
   const H2 = await bp.evaluate(() => ({ card: document.getElementById('building-card').classList.contains('hot'), outline: !!window.__viewer.scene._bHover?.visible }));

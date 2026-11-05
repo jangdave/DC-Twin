@@ -112,13 +112,10 @@ input[type="radio"], input[type="checkbox"], input[type="range"] { accent-color:
 #building-card { position: absolute; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px var(--p-2); max-width: 240px; padding: var(--p-1-5) var(--p-3); border-radius: var(--radius-large); background: var(--surface-page); backdrop-filter: blur(6px); box-shadow: var(--shadow-md); border: 1px solid var(--border-disabled); transform: translate(-50%, calc(-100% - 8px)); pointer-events: none; white-space: nowrap; }
 #building-card::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; background: var(--surface-page); border-right: 1px solid var(--border-disabled); border-bottom: 1px solid var(--border-disabled); transform: translateX(-50%) rotate(45deg); }
 #building-card b { font-size: var(--text-sm); }
-#building-card small { display: none; flex-basis: 100%; text-align: center; color: var(--text-tertiary); font-size: var(--text-xs); }
 #building-card.hot { border-color: #4fd8ff; }
-#building-card.hot small { display: block; }
 #building-card #bc-enter { display: none; flex-basis: 100%; margin-top: var(--p-1); }
 #building-card.pinned { pointer-events: auto; }
 #building-card.pinned #bc-enter { display: block; }
-#building-card.pinned small { display: none; }
 #bc-status::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--gray-40); }
 #bc-status[data-state="ok"]::before { background: var(--success, #2e9f5b); }
 #bc-status[data-state="alarm"]::before { background: var(--emergency); }
@@ -438,3 +435,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   #top button, #rail button, #cctv button, #stage-tools button, #stage-tools label span, #side button, #bottom button, #server-cta-btn { min-height: 32px; }
   #sheet-handle { height: 32px; }
 }
+
+/* 녹화 재생 표시(실시간 아님)는 화면에서 뺀다. 다른 출처(미리 계산한 값, 간이 계산, 서버 연결과 오류)는 그대로 보인다. */
+#mode-badge.rec { display: none; }
+#help-dialog #disclaimer { margin: 0 0 var(--p-3); font-size: var(--text-xs); color: var(--text-secondary); }
+/* 건물 표시는 마우스를 올려도 커지지 않는다(테두리 색만 바뀐다) */
