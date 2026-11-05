@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
+import { SKY_PRESETS, displayInverse, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
 import { Airflow, loadFlow } from './airflow.js';
 import { CITY, buildCity } from './city.js';
 import { prepareShell, shellVisibility } from './hall_shell.js';
@@ -124,6 +124,7 @@ export class HallScene {
     this._buildExterior(data, sx, sy, sz);
     this.setStage(stage, true);
     this._setupFx();
+    this._refreshSkyForFx();
     this._applyAniso();
   }
 
@@ -543,6 +544,7 @@ export class HallScene {
     this.q = { ...this.q, ...q, cityRings: this.q.cityRings };
     this._applySize(this.renderer.domElement.clientWidth, this.renderer.domElement.clientHeight);
     this._setupFx();
+    this._refreshSkyForFx();
     this._applyAniso();
     this.sunExt.castShadow = q.shadow > 0;
     if (q.shadow > 0) {
@@ -563,10 +565,12 @@ export class HallScene {
     this.skyName = SKY_PRESETS[name] ? name : 'day';
     const dir = sunVector(p.elev, p.azim);
     const u = this.sky.material.uniforms;
-    u.zenith.value.set(p.zenith);
-    u.horizon.value.set(p.horizon);
-    u.sunColor.value.set(p.sun);
-    u.groundColor.value.set(p.grass).multiplyScalar(0.5);
+    // 후처리 중에는 화면이 톤 매핑과 sRGB 변환을 한 번 더 거치므로 그 변환을 거쳐 원래 색이 되는 값을 쓴다(env.js displayInverse)
+    const skyCol = (c) => (this.fx ? displayInverse(c) : c);
+    u.zenith.value.copy(skyCol(new THREE.Color(p.zenith)));
+    u.horizon.value.copy(skyCol(new THREE.Color(p.horizon)));
+    u.sunColor.value.copy(skyCol(new THREE.Color(p.sun)));
+    u.groundColor.value.copy(skyCol(new THREE.Color(p.grass).multiplyScalar(0.5)));
     u.sunDir.value.copy(dir);
     this.sunExt.color.set(p.sun);
     this.sunExt.intensity = p.sunI;
@@ -1073,6 +1077,10 @@ export class HallScene {
     this.fx = new Fx(this.renderer, this.scene, this.camera, { bloom: this.q.bloom, ao: !!this.q.ao });
     this.fx.setSize(c.clientWidth || 1, c.clientHeight || 1, this.pixelRatio ?? 1);
     this._dirty = true;
+  }
+
+  _refreshSkyForFx() {
+    if (this.sky && this.skyName) this.setSky(this.skyName);
   }
 
   resize(w, h) {
