@@ -110,16 +110,13 @@ input[type="radio"], input[type="checkbox"], input[type="range"] { accent-color:
 
 /* 외관에서 건물에 마우스를 올리거나(휴대폰은 한 번 누르면) 뜨는 이름과 상태 카드 */
 #building-card { position: absolute; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px var(--p-2); max-width: 240px; padding: var(--p-1-5) var(--p-3); border-radius: var(--radius-large); background: var(--surface-page); backdrop-filter: blur(6px); box-shadow: var(--shadow-md); border: 1px solid var(--border-disabled); transform: translate(-50%, calc(-100% - 8px)); pointer-events: none; white-space: nowrap; }
-#building-card::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; background: var(--surface-page); border-right: 1px solid var(--border-disabled); border-bottom: 1px solid var(--border-disabled); transform: translateX(-50%) rotate(45deg); }
 #building-card b { font-size: var(--text-sm); }
 #building-card.hot { border-color: #4fd8ff; }
 #building-card #bc-enter { display: none; flex-basis: 100%; margin-top: var(--p-1); }
 #building-card.pinned { pointer-events: auto; }
 #building-card.pinned #bc-enter { display: block; }
-#bc-status::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--gray-40); }
-#bc-status[data-state="ok"]::before { background: var(--success, #2e9f5b); }
-#bc-status[data-state="alarm"]::before { background: var(--emergency); }
-#bc-status[data-state="alarm"] { color: var(--tag-danger-text); font-weight: var(--weight-semibold); }
+#bc-power { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+#bc-alarm { padding: 0 var(--p-2); border-radius: var(--radius-max); background: var(--emergency); color: #fff; font-size: var(--text-xs); font-weight: var(--weight-semibold); }
 canvas.over-building { cursor: pointer; }
 #side-toggle .count { margin-left: 2px; }
 #alarm-chip { position: absolute; z-index: 3; left: 50%; bottom: 18px; transform: translateX(-50%); padding: 0 var(--p-4); min-height: 36px; border-radius: var(--radius-max); border: 1px solid var(--emergency); background: var(--surface-page); color: var(--tag-danger-text); font-weight: var(--weight-semibold); box-shadow: var(--shadow-md); backdrop-filter: blur(6px); }
@@ -310,7 +307,7 @@ dialog input[type="text"]:focus { border-color: var(--border-dark); }
 @media (prefers-reduced-motion: reduce) { #boot, .boot-bar i { transition: none; } }
 
 /* 외관 카드 상태 표시 */
-#ext-status[data-state="ok"]::before, #ext-status[data-state="alarm"]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--success, #2e9f5b); }
+#ext-status[data-state="alarm"]::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--success, #2e9f5b); }
 #ext-status[data-state="alarm"]::before { background: var(--emergency); }
 #ext-status[data-state="alarm"] { color: var(--tag-danger-text); font-weight: var(--weight-semibold); }
 

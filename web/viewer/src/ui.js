@@ -320,13 +320,19 @@ export class UI {
 
   renderExterior(s) {
     const none = '데이터 없음';
-    $('ext-total').textContent = s.facilityPower === null ? none : `${fmt(s.facilityPower, 1)} kW`;
-    $('ext-status').textContent = !s.hasData ? none : s.alarms > 0 ? '주의 필요' : '정상';
-    $('ext-status').dataset.state = !s.hasData ? 'none' : s.alarms > 0 ? 'alarm' : 'ok';
+    const power = s.facilityPower === null ? none : `${fmt(s.facilityPower, 1)} kW`;
+    $('ext-total').textContent = power;
+    $('ext-kwh').textContent = s.kwh === null ? none : `${fmt(s.kwh, 2)} kWh`;
     $('ext-pue').textContent = s.pue === null ? none : fmt(s.pue, 2);
-    $('bc-status').textContent = $('ext-status').textContent;
-    $('bc-status').dataset.state = $('ext-status').dataset.state;
+    // 정상, 비정상은 기준이 없어 판정하지 않는다. 센서가 기준을 넘은 알람 수만 보인다.
+    $('ext-status').textContent = !s.hasData ? none : s.alarms > 0 ? `${s.alarms}건` : '없음';
+    $('ext-status').dataset.state = !s.hasData ? 'none' : s.alarms > 0 ? 'alarm' : 'none';
+    $('bc-power').textContent = power;
+    const al = $('bc-alarm');
+    al.hidden = !(s.hasData && s.alarms > 0);
+    al.textContent = `알람 ${s.alarms}`;
   }
+
 
   // 시나리오 이름과 설명, 일어나는 일 목록(녹화 재생에서만 눌러서 그 시각으로 이동)
   setScenarioCard(title, desc, events = [], seekable = false) {

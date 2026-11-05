@@ -214,7 +214,7 @@ await p3.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 }
 const vis = (sel) => p3.$eval(sel, (e) => !e.hidden);
 ok('FR-80 처음은 외관: 요약 카드가 보이고 보기 도구와 뒤로 단추는 숨김', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior' && (await vis('#exterior-card')) && !(await vis('#stage-tools')) && !(await vis('#back-btn')));
 const ext = await p3.evaluate(() => ({ total: document.getElementById('ext-total').textContent, pue: document.getElementById('ext-pue').textContent, status: document.getElementById('ext-status').textContent, hasOld: !!document.getElementById('ext-temp') }));
-ok('FR-82 외관 요약은 건물 전체 전력, PUE, 상태 표시만(최고 입구 온도와 알람 표 없음)', /kW$/.test(ext.total) && /^\d/.test(ext.pue) && ext.status.length > 1 && !ext.hasOld, JSON.stringify(ext));
+ok('FR-82 외관 요약은 건물 전체 전력, 누적 전력량, PUE, 알람 건수만("정상/비정상" 판정 없음, 최고 입구 온도와 알람 표 없음)', /kW$/.test(ext.total) && /^\d/.test(ext.pue) && /^(없음|\d+건)$/.test(ext.status) && !/정상|주의 필요/.test(await p3.$eval('#exterior-card', (e) => e.textContent)) && !ext.hasOld, JSON.stringify(ext));
 await p3.mouse.click(5, 5); // 하늘이나 빈 곳을 눌러도 들어가지 않는다
 await sleep(200);
 ok('빈 곳을 누르면 외관 유지', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior');
@@ -1080,8 +1080,8 @@ await pc.close();
   await bp.evaluate(() => { const s = window.__viewer.scene; s._anim = null; s.setPreset('ext', true); s.update(0.016, 1); });
   await sleep(500);
   const bpt = () => bp.evaluate(() => { const s = window.__viewer.scene; const c = document.getElementById('canvas'); const r = c.getBoundingClientRect(); const v = s._bldg.center.clone().project(s.camera); return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height }; });
-  const TG = await bp.evaluate(() => { const c = document.getElementById('building-card'); const r = c.getBoundingClientRect(); const cv = document.getElementById('canvas').getBoundingClientRect(); return { shown: !c.hidden && getComputedStyle(c).visibility === 'visible', name: c.querySelector('b').textContent, status: document.getElementById('bc-status').textContent, hot: c.classList.contains('hot'), inside: r.left >= cv.left && r.right <= cv.right && r.top >= cv.top && r.bottom <= cv.bottom, box: !!window.__viewer.scene.building && window.__viewer.scene._bldg !== undefined }; });
-  ok('TAG 외관에서는 건물 위에 이름과 상태가 항상 붙어 있고(마우스 없이도), 화면 안에 있음(초록 상자 대체)', TG.shown && TG.name.length > 0 && /정상|주의|없음/.test(TG.status) && !TG.hot && TG.inside, JSON.stringify(TG));
+  const TG = await bp.evaluate(() => { const c = document.getElementById('building-card'); const r = c.getBoundingClientRect(); const cv = document.getElementById('canvas').getBoundingClientRect(); return { shown: !c.hidden && getComputedStyle(c).visibility === 'visible', name: c.querySelector('b').textContent, power: document.getElementById('bc-power').textContent, alarmChip: document.getElementById('bc-alarm').hidden ? '' : document.getElementById('bc-alarm').textContent, hot: c.classList.contains('hot'), inside: r.left >= cv.left && r.right <= cv.right && r.top >= cv.top && r.bottom <= cv.bottom, box: !!window.__viewer.scene.building && window.__viewer.scene._bldg !== undefined }; });
+  ok('TAG 외관에서는 건물 위에 이름과 전체 전력(kW)이 항상 붙어 있고, 알람이 있을 때만 알람 건수가 붙음("정상" 문구 없음), 화면 안에 있음', TG.shown && TG.name.length > 0 && /kW$/.test(TG.power) && /^(|알람 \d+)$/.test(TG.alarmChip) && !TG.hot && TG.inside, JSON.stringify(TG));
   const bpos = await bpt();
   const sizeBefore = await bp.$eval('#building-card', (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
   const PK = await bp.evaluate(() => {
@@ -1098,7 +1098,7 @@ await pc.close();
   ok('PICK 데이터센터 건물 한 동만 호버와 클릭 대상(건물 옆 부속 시설 쪽은 아님)', PK.hitMain && !PK.hitSide && PK.sizeOk, JSON.stringify(PK));
   await bp.mouse.move(bpos.x, bpos.y, { steps: 4 });
   await sleep(300);
-  const H1 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, hot: document.getElementById('building-card').classList.contains('hot'), status: document.getElementById('bc-status').textContent, name: document.querySelector('#building-card b').textContent, outline: !!window.__viewer.scene._bHover?.visible, edges: !!window.__viewer.scene._bHover?.isLineSegments2, size: (() => { const r = document.getElementById('building-card').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })(), pinned: document.getElementById('building-card').classList.contains('pinned') }));
+  const H1 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, hot: document.getElementById('building-card').classList.contains('hot'), power: document.getElementById('bc-power').textContent, name: document.querySelector('#building-card b').textContent, outline: !!window.__viewer.scene._bHover?.visible, edges: !!window.__viewer.scene._bHover?.isLineSegments2, size: (() => { const r = document.getElementById('building-card').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })(), pinned: document.getElementById('building-card').classList.contains('pinned') }));
   ok('HOVER 외관에서 건물에 올리면 외곽 강조선이 생기고 이름·상태 표시는 커지지 않음(테두리 색만 바뀜)', H1.card && H1.hot && H1.outline && H1.edges && !H1.pinned && H1.size[0] === sizeBefore[0] && H1.size[1] === sizeBefore[1], JSON.stringify({ H1, sizeBefore }));
   await bp.mouse.move(8, 700, { steps: 4 });
   await sleep(300);
