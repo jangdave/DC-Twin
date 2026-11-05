@@ -23,6 +23,40 @@ export function mulberry32(a) {
 }
 
 const S = 256;
+let K = 1; // 외벽 그림 배율(1: 256 px, 2: 512, 4: 1024). 그리는 좌표는 항상 256 기준이고 배율만 곱하므로 배치는 단계와 상관없이 같다.
+
+// 밝기를 높이로 보고 법선 지도를 만든다(소벨). 외벽의 창틀, 벽돌 줄눈, 포장 줄눈이 빛에 따라 살짝 들어가 보인다. 가장자리는 이어 붙이도록 감싼다.
+export function normalFromCanvas(src, strength = 2) {
+  const w = src.width, h = src.height;
+  const d = src.getContext('2d').getImageData(0, 0, w, h).data;
+  const H = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) H[i] = (d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11) / 255;
+  const out = document.createElement('canvas');
+  out.width = w;
+  out.height = h;
+  const g = out.getContext('2d');
+  const img = g.createImageData(w, h);
+  const at = (x, y) => H[((y + h) % h) * w + ((x + w) % w)];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const dx = (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1));
+      const dy = (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1));
+      let nx = -dx * strength, ny = dy * strength, nz = 1;
+      const l = Math.hypot(nx, ny, nz);
+      nx /= l; ny /= l; nz /= l;
+      const o = (y * w + x) * 4;
+      img.data[o] = (nx * 0.5 + 0.5) * 255;
+      img.data[o + 1] = (ny * 0.5 + 0.5) * 255;
+      img.data[o + 2] = (nz * 0.5 + 0.5) * 255;
+      img.data[o + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(out);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
+  return t; // 색 공간 없음(선형)
+}
 const canvas = (w = S, h = S) => {
   const c = document.createElement('canvas');
   c.width = w;
@@ -41,6 +75,20 @@ function speckle(g, rng, n, alpha, w = S, h = S) {
 function finish(wall, glow, rng) {
   const g = wall.getContext('2d');
   speckle(g, rng, 900, 0.07);
+  if (K > 1) {
+    // 배율이 높을 때만 더하는 미세한 입자와 비 얼룩(위에서 아래로 번지는 옅은 줄). 다른 난수를 써서 배치가 단계마다 달라지지 않게 한다.
+    const fr = mulberry32(1000 + K);
+    speckle(g, fr, 2600 * K, 0.05);
+    for (let i = 0; i < 26; i++) {
+      const x = fr() * S, len = 20 + fr() * 70, y = fr() * (S - len);
+      const grad = g.createLinearGradient(0, y, 0, y + len);
+      grad.addColorStop(0, 'rgba(10,14,18,0.0)');
+      grad.addColorStop(0.3, 'rgba(10,14,18,0.07)');
+      grad.addColorStop(1, 'rgba(10,14,18,0.0)');
+      g.fillStyle = grad;
+      g.fillRect(x, y, 1 + fr() * 2.5, len);
+    }
+  }
   g.fillStyle = '#fff';
   g.fillRect(S - 8, S - 8, 8, 8); // 지붕용 흰 점
   const tex = (c, srgb) => {
@@ -50,7 +98,9 @@ function finish(wall, glow, rng) {
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     return t;
   };
-  return { map: tex(wall, true), glow: tex(glow, true) };
+  const out = { map: tex(wall, true), glow: tex(glow, true) };
+  if (K >= 2) out.normal = normalFromCanvas(wall, 1.6); // 보통 이상에서만(메모리 절약)
+  return out;
 }
 
 const GLASS = ['#2b5a78', '#3a7392', '#1f4560', '#4b86a3', '#335f7a'];
@@ -69,6 +119,13 @@ function windowCell(a, g, rng, x, y, w, h, lit) {
   a.lineTo(x + w, y);
   a.lineTo(x, y + h);
   a.fill();
+  // 창틀 입체감: 위·왼쪽은 밝게, 아래·오른쪽은 어둡게 한 줄씩
+  a.fillStyle = 'rgba(255,255,255,0.16)';
+  a.fillRect(x, y, w, 1);
+  a.fillRect(x, y, 1, h);
+  a.fillStyle = 'rgba(0,0,0,0.28)';
+  a.fillRect(x, y + h - 1, w, 1);
+  a.fillRect(x + w - 1, y, 1, h);
   if (lit) {
     a.fillStyle = 'rgba(150,185,215,0.28)';
     a.fillRect(x, y, w, h);
@@ -78,11 +135,15 @@ function windowCell(a, g, rng, x, y, w, h, lit) {
 }
 
 function newPair() {
-  const wall = canvas(), glow = canvas();
+  const gk = Math.max(1, K / 2); // 발광 그림은 절반 해상도로 충분하다
+  const wall = canvas(S * K, S * K), glow = canvas(S * gk, S * gk);
   const g = glow.getContext('2d');
+  g.scale(gk, gk);
   g.fillStyle = '#000';
   g.fillRect(0, 0, S, S);
-  return [wall, glow, wall.getContext('2d'), g];
+  const a = wall.getContext('2d');
+  a.scale(K, K);
+  return [wall, glow, a, g];
 }
 
 // 유리 커튼월. 2번: 세로로 긴 판(8열)과 층마다 불투명한 띠
@@ -223,7 +284,8 @@ function drawMetal(rng, v) {
   return finish(wall, glow, rng);
 }
 
-export function facadeTextures(seed = 5) {
+export function facadeTextures(seed = 5, scale = 1) {
+  K = scale;
   const rng = mulberry32(seed);
   const out = {};
   for (const [name, draw] of [['glass', drawGlass], ['ribbon', drawRibbon], ['concrete', drawConcrete], ['brick', drawBrick], ['metal', drawMetal]]) {
@@ -241,40 +303,90 @@ function repeatTex(c, srgb = true) {
   return t;
 }
 
-export function roadTexture() {
-  const c = canvas(64, 128);
+// 바닥 그림들은 k배 크기로 그린다(1: 기본, 2: 보통, 4: 높음). 좌표는 기본 크기 기준이라 배치는 같고 선명도만 달라진다.
+// k가 2 이상이면 포장의 미세한 입자, 얼룩, 균열을 더하고 법선 지도(texture.userData.normalMap)를 붙인다.
+function groundCanvas(w, h, k) {
+  const c = canvas(w * k, h * k);
   const x = c.getContext('2d');
+  x.scale(k, k);
+  return [c, x];
+}
+function withNormal(t, c, k, strength) {
+  if (k >= 2) t.userData.normalMap = normalFromCanvas(c, strength);
+  return t;
+}
+function fineGrain(x, seed, w, h, k, n, a = 0.08) {
+  const r = mulberry32(seed);
+  for (let i = 0; i < n * k; i++) {
+    const v = r() < 0.5 ? 0 : 255;
+    x.fillStyle = `rgba(${v},${v},${v},${a * r()})`;
+    x.fillRect(r() * w, r() * h, 0.5 + r() * 0.8, 0.5 + r() * 0.8);
+  }
+}
+function cracks(x, seed, w, h, n, color) {
+  const r = mulberry32(seed);
+  x.strokeStyle = color;
+  x.lineWidth = 0.35;
+  for (let i = 0; i < n; i++) {
+    let px = r() * w, py = r() * h;
+    x.beginPath();
+    x.moveTo(px, py);
+    for (let s = 0; s < 5; s++) {
+      px += (r() - 0.5) * 9;
+      py += (r() - 0.3) * 9;
+      x.lineTo(px, py);
+    }
+    x.stroke();
+  }
+}
+
+export function roadTexture(k = 1) {
+  const [c, x] = groundCanvas(64, 128, k);
   x.fillStyle = '#3b3d41';
   x.fillRect(0, 0, 64, 128);
   const rng = mulberry32(9);
   speckle(x, rng, 900, 0.12, 64, 128);
+  if (k >= 2) {
+    fineGrain(x, 91, 64, 128, k, 5200, 0.1);
+    for (let i = 0; i < 14; i++) { // 타이어 자국이 지나가는 옅은 줄(차선 가운데에서 양쪽으로)
+      x.fillStyle = 'rgba(20,20,22,0.05)';
+      x.fillRect(12 + (i % 2) * 28 + rng() * 6, 0, 3 + rng() * 4, 128);
+    }
+    cracks(x, 92, 64, 128, 7, 'rgba(15,15,18,0.45)');
+  }
   x.fillStyle = '#d9c25a';
   x.fillRect(30, 8, 4, 48);
   x.fillStyle = '#c9ccd0';
   x.fillRect(3, 0, 2, 128);
   x.fillRect(59, 0, 2, 128);
-  return repeatTex(c);
+  return withNormal(repeatTex(c), c, k, 1.1);
 }
 
 // 인도: 가로세로 2 m 판 4 x 4장(8 m)
-export function sidewalkTexture() {
-  const c = canvas(128, 128);
-  const x = c.getContext('2d');
+export function sidewalkTexture(k = 1) {
+  const [c, x] = groundCanvas(128, 128, k);
   x.fillStyle = '#9a9c9e';
   x.fillRect(0, 0, 128, 128);
   const rng = mulberry32(21);
   speckle(x, rng, 600, 0.1, 128, 128);
+  if (k >= 2) {
+    fineGrain(x, 211, 128, 128, k, 4200, 0.09);
+    for (let i = 0; i < 16; i++) { // 판마다 밝기가 조금씩 다르다
+      x.fillStyle = `rgba(${rng() < 0.5 ? '255,255,255' : '0,0,0'},${0.02 + rng() * 0.04})`;
+      x.fillRect((i % 4) * 32 + 1, Math.floor(i / 4) * 32 + 1, 30, 30);
+    }
+    cracks(x, 212, 128, 128, 6, 'rgba(60,62,64,0.5)');
+  }
   x.fillStyle = '#7d8083';
   for (let i = 0; i < 128; i += 32) {
     x.fillRect(i, 0, 1, 128);
     x.fillRect(0, i, 128, 1);
   }
-  return repeatTex(c);
+  return withNormal(repeatTex(c), c, k, 1.4);
 }
 
-export function grassTexture() {
-  const c = canvas(128, 128);
-  const x = c.getContext('2d');
+export function grassTexture(k = 1) {
+  const [c, x] = groundCanvas(128, 128, k);
   x.fillStyle = '#3f6b34';
   x.fillRect(0, 0, 128, 128);
   const rng = mulberry32(31);
@@ -283,19 +395,42 @@ export function grassTexture() {
     x.fillStyle = `hsla(${95 + rng() * 25}, 45%, ${l}%, 0.55)`;
     x.fillRect(rng() * 128, rng() * 128, 1 + rng() * 2, 2 + rng() * 3);
   }
+  if (k >= 2) {
+    const gr = mulberry32(311);
+    for (let i = 0; i < 2600 * k; i++) { // 가는 풀잎
+      x.fillStyle = `hsla(${88 + gr() * 35}, ${40 + gr() * 20}%, ${24 + gr() * 34}%, ${0.35 + gr() * 0.4})`;
+      x.fillRect(gr() * 128, gr() * 128, 0.5 + gr() * 0.7, 1.2 + gr() * 2.4);
+    }
+    for (let i = 0; i < 90; i++) { // 마른 풀과 흙이 비치는 곳
+      x.fillStyle = `rgba(${120 + gr() * 40},${105 + gr() * 30},${60 + gr() * 20},${0.1 + gr() * 0.15})`;
+      x.beginPath();
+      x.arc(gr() * 128, gr() * 128, 1 + gr() * 3, 0, 6.3);
+      x.fill();
+    }
+  }
   return repeatTex(c);
 }
 
 // 주차장: 어두운 포장과 4 m 간격의 흰 선
-export function lotTexture() {
-  const c = canvas(128, 128);
-  const x = c.getContext('2d');
+export function lotTexture(k = 1) {
+  const [c, x] = groundCanvas(128, 128, k);
   x.fillStyle = '#44464a';
   x.fillRect(0, 0, 128, 128);
   speckle(x, mulberry32(41), 700, 0.12, 128, 128);
+  if (k >= 2) {
+    fineGrain(x, 411, 128, 128, k, 4600, 0.1);
+    const lr = mulberry32(412);
+    for (let i = 0; i < 9; i++) { // 기름 얼룩
+      x.fillStyle = `rgba(10,10,12,${0.08 + lr() * 0.1})`;
+      x.beginPath();
+      x.ellipse(lr() * 128, lr() * 96, 3 + lr() * 6, 2 + lr() * 4, lr() * 3, 0, 6.3);
+      x.fill();
+    }
+    cracks(x, 413, 128, 128, 5, 'rgba(20,20,22,0.45)');
+  }
   x.fillStyle = '#c7cacd';
   for (let i = 4; i < 128; i += 32) x.fillRect(i, 0, 2, 96);
-  return repeatTex(c);
+  return withNormal(repeatTex(c), c, k, 1.1);
 }
 
 // 먼 도시 윤곽: 안개 낀 건물 그림자. 원통 안쪽에 둘러 붙인다.
