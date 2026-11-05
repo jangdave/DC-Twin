@@ -12,7 +12,6 @@
   <div id="boot" role="status" aria-live="polite">
     <div class="boot-card">
       <h2 class="boot-title">DC-Twin 가상 데이터센터</h2>
-      <p class="boot-sub">건물 밖에서 안으로 들어가며 온도와 공기 흐름을 보는 화면</p>
       <div id="boot-bar" class="boot-bar" role="progressbar" aria-label="불러오는 정도" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
       <p id="boot-text" class="boot-text">화면 준비 불러오는 중…</p>
       <ol id="boot-steps" class="boot-steps">
@@ -24,7 +23,7 @@
         <button type="button" data-act="retry">다시 시도</button>
         <button type="button" data-act="low" hidden>낮은 화질로 열기</button>
       </div>
-      <p class="boot-note">가상 시설입니다. 시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않습니다.</p>
+      <p class="boot-note">가상 건물입니다.</p>
     </div>
   </div>
   <header id="top">
@@ -118,7 +117,7 @@
         <h2>가상 데이터센터</h2>
         <dl>
           <dt>건물 전체 전력</dt><dd id="ext-total">–</dd>
-          <dt>누적 전력량</dt><dd id="ext-kwh">–</dd>
+          <dt title="하루 사용량은 더미 데이터이며 실제 측정값이 아닙니다(시각화 목적).">오늘 사용량</dt><dd id="ext-kwh">–</dd>
           <dt>PUE</dt><dd id="ext-pue">–</dd>
           <dt title="센서 값이 센서마다 정한 주의 기준을 넘으면 알람으로 센다. 건물 전체가 정상인지 아닌지를 따로 판정하지 않는다.">알람</dt><dd id="ext-status">–</dd>
         </dl>

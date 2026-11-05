@@ -187,6 +187,7 @@ await page.click('#help-btn');
 ok('FR-72 도움말 열림', await page.$eval('#help-dialog', (d) => d.open));
 ok('FR-73 등급 설명 4개', (await page.$$eval('#help-conf li', (l) => l.length)) === 4);
 await page.keyboard.press('Escape');
+ok('BOOT 로딩 창 안내는 "가상 건물입니다." 한 줄뿐(설명 문구 없음)', await page.evaluate(() => { const n = document.querySelector('.boot-note'); return !!n && n.textContent.trim() === '가상 건물입니다.' && !document.querySelector('.boot-sub'); }));
 ok('FR-70 "시각화 목적" 안내는 도움말 안에 있고 화면 아래에는 없음', await page.evaluate(() => { const d = document.getElementById('disclaimer'); return !!d && d.closest('#help-dialog') !== null && d.textContent.includes('공학적 정확성') && !document.getElementById('bottom').contains(d); }));
 ok('FR-71 녹화 재생 표시는 화면에서 보이지 않음(글자는 상태로 남아 있음)', await page.$eval('#mode-badge', (e) => e.textContent.includes('실시간 아님') && getComputedStyle(e).display === 'none'));
 
@@ -214,7 +215,7 @@ await p3.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 }
 const vis = (sel) => p3.$eval(sel, (e) => !e.hidden);
 ok('FR-80 처음은 외관: 요약 카드가 보이고 보기 도구와 뒤로 단추는 숨김', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior' && (await vis('#exterior-card')) && !(await vis('#stage-tools')) && !(await vis('#back-btn')));
 const ext = await p3.evaluate(() => ({ total: document.getElementById('ext-total').textContent, pue: document.getElementById('ext-pue').textContent, status: document.getElementById('ext-status').textContent, hasOld: !!document.getElementById('ext-temp') }));
-ok('FR-82 외관 요약은 건물 전체 전력, 누적 전력량, PUE, 알람 건수만("정상/비정상" 판정 없음, 최고 입구 온도와 알람 표 없음)', /kW$/.test(ext.total) && /^\d/.test(ext.pue) && /^(없음|\d+건)$/.test(ext.status) && !/정상|주의 필요/.test(await p3.$eval('#exterior-card', (e) => e.textContent)) && !ext.hasOld, JSON.stringify(ext));
+ok('FR-82 외관 요약은 건물 전체 전력, 오늘 사용량, PUE, 알람 건수만("정상/비정상" 판정 없음, 최고 입구 온도와 알람 표 없음)', /kW$/.test(ext.total) && /^\d/.test(ext.pue) && /^(없음|\d+건)$/.test(ext.status) && !/정상|주의 필요/.test(await p3.$eval('#exterior-card', (e) => e.textContent)) && !ext.hasOld, JSON.stringify(ext));
 await p3.mouse.click(5, 5); // 하늘이나 빈 곳을 눌러도 들어가지 않는다
 await sleep(200);
 ok('빈 곳을 누르면 외관 유지', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior');
@@ -1067,6 +1068,17 @@ await pc.close();
   await sleep(700);
   const S1 = await sp.evaluate(() => ({ split: window.__viewer.scene._split, diff: window.__viewer.scene._splitDiff, bar: !document.getElementById('split-bar').hidden, btnHiddenBefore: null }));
   ok('SPLIT 기준을 저장하기 전에는 나눠 비교 단추가 없고, 저장 후 시나리오를 바꿔 켜면 기준과 지금의 색이 다른 채 반으로 나뉨', before === true && S1.split === 0.5 && S1.diff > 0.02 && S1.bar, JSON.stringify({ before, S1 }));
+  // 후처리를 켠 화면과 나눠 비교 화면은 색이 같아야 한다(같은 값을 양쪽에 그렸을 때 평균 색 차이가 작다)
+  const tone = await sp.evaluate(() => {
+    const s = window.__viewer.scene;
+    const mean = () => { const c = s.renderer.domElement; const t = document.createElement('canvas'); t.width = t.height = 48; const g = t.getContext('2d'); g.drawImage(c, 0, 0, c.width, c.height, 0, 0, 48, 48); const d = g.getImageData(0, 0, 48, 48).data; const m = [0, 0, 0]; for (let i = 0; i < d.length; i += 4) { m[0] += d[i]; m[1] += d[i + 1]; m[2] += d[i + 2]; } return m.map((v) => v / (48 * 48)); };
+    s.saveBaselineColors(); // 기준을 지금 색으로 다시 저장해 양쪽이 같게 한다
+    s.setSplit(false); s._dirty = true; s.update(0.016, 1); const plain = mean();
+    s.setSplit(true); s._dirty = true; s.update(0.016, 1); const split = mean();
+    return { plain, split, fx: !!s.fx, d: Math.max(...plain.map((v, i) => Math.abs(v - split[i]))) };
+  });
+  ok('SPLIT 같은 값을 양쪽에 그리면 나눠 비교 화면의 평균 색이 일반 화면과 거의 같음(후처리 경로를 같이 탐)', tone.d < 4, JSON.stringify(tone));
+  await sp.evaluate(() => window.__viewer.scene.setSplitFraction(0.5));
   await sp.mouse.move(720, 430);
   await sp.mouse.down();
   await sp.mouse.move(420, 430, { steps: 6 });
@@ -1074,6 +1086,13 @@ await pc.close();
   await sleep(400);
   const S2 = await sp.evaluate(() => ({ f: window.__viewer.scene._split, left: document.getElementById('split-bar').style.left }));
   ok('SPLIT 가운데 선을 끌면 경계가 옮겨짐(8~92% 안)', S2.f > 0.2 && S2.f < 0.4 && Math.abs(parseFloat(S2.left) / 100 - S2.f) < 0.001, JSON.stringify(S2));
+  // 온도 색칠을 끄면 나눠 비교도 꺼진다
+  await sp.click('#heat-btn');
+  await sleep(500);
+  const SH = await sp.evaluate(() => ({ split: window.__viewer.scene._split, bar: !document.getElementById('split-bar').hidden }));
+  ok('SPLIT 온도 색칠을 끄면 나눠 비교와 가운데 선이 함께 꺼짐(선만 남지 않음)', SH.split === 0 && !SH.bar, JSON.stringify(SH));
+  await sp.click('#heat-btn');
+  await sleep(300);
   await sp.evaluate(() => document.querySelector('#rail [data-mode="rec"]').click());
   await sleep(800);
   const S3 = await sp.evaluate(() => ({ split: window.__viewer.scene._split, bar: !document.getElementById('split-bar').hidden }));
@@ -1123,7 +1142,7 @@ await pc.close();
         if (!m || Array.isArray(m)) return;
         if (m.map && m.emissiveMap && m.map.image && !seen.has(m.map)) { seen.add(m.map); maxW = Math.max(maxW, m.map.image.width); if (m.normalMap) normals++; minAniso = Math.min(minAniso, m.map.anisotropy); }
       });
-      return { extra: extras ? { ...extras.userData, plume: !!extras.getObjectByName('plume'), leds: extras.getObjectByName('genLeds')?.count ?? 0, wire: !!extras.getObjectByName('fenceWire') } : null, lightN: lights?.userData.count ?? 0, lightVisible: !!lights?.visible, asphalt, treeN, oldTrunk: names.some((x) => /Trunk/.test(x)), roof, glass, detail, maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
+      return { extra: extras ? { ...extras.userData, plume: !!extras.getObjectByName('plume'), leds: extras.getObjectByName('genLeds') ? 1 : 0, wire: !!extras.getObjectByName('fenceWire') } : null, lightN: lights?.userData.count ?? 0, lightVisible: !!lights?.visible, asphalt, treeN, oldTrunk: names.some((x) => /Trunk/.test(x)), roof, glass, detail, maxW, normals, minAniso, cap: s.renderer.capabilities.getMaxAnisotropy(), want: s.q.aniso };
     });
     await tp2.close();
     return r;
@@ -1132,11 +1151,38 @@ await pc.close();
   ok('TEX 질감 단계: 낮음 256 px(법선 없음), 보통 512 px(법선 있음), 높음 1024 px', T1.maxW === 256 && T1.normals === 0 && T2.maxW === 512 && T2.normals > 0 && T3.maxW === 1024 && T3.normals > 0, JSON.stringify({ T1, T2, T3 }));
   ok('GLASS 본 건물 유리에 창마다 농도, 반사, 층 띠 변화가 모든 단계에서 적용됨', T1.glass >= 1 && T2.glass >= 1 && T3.glass >= 1, JSON.stringify({ low: T1.glass, mid: T2.glass, high: T3.glass }));
   ok('SITE 주차장 아스팔트에 균열, 기름 얼룩, 보수 흔적이 그려지고 부지 나무가 상세 나무로 바뀜(모델의 줄기 없음, 나무 10그루)', T1.asphalt === 1 && T2.asphalt === 1 && T3.asphalt === 1 && T1.treeN === 10 && T3.treeN === 10 && !T1.oldTrunk, JSON.stringify({ a: [T1.asphalt, T2.asphalt, T3.asphalt], trees: [T1.treeN, T3.treeN], old: T1.oldTrunk }));
-  ok('EQUIP 냉각탑 4기에 김, 발전기 8기에 상태 표시등, 울타리 5구간에 가시철사가 모든 단계에서 얹힘', [T1, T2, T3].every((t) => t.extra && t.extra.towers === 4 && t.extra.gens === 8 && t.extra.fenceSegments === 5 && t.extra.plume && t.extra.leds === 8 && t.extra.wire), JSON.stringify({ t1: T1.extra, t3: T3.extra }));
+  ok('EQUIP 냉각탑 4기에 김, 울타리 5구간에 가시철사가 모든 단계에서 얹히고, 발전기 위에 표시등(초록 상자)은 없음', [T1, T2, T3].every((t) => t.extra && t.extra.towers === 4 && t.extra.fenceSegments === 5 && t.extra.plume && t.extra.leds === 0 && t.extra.wire), JSON.stringify({ t1: T1.extra, t3: T3.extra }));
   ok('NIGHT 부지 가로등 12개에 저녁 조명(빛 번짐과 바닥 웅덩이)이 있고 낮에는 보이지 않음', T1.lightN === 12 && !T1.lightVisible && !T3.lightVisible, JSON.stringify({ n: T1.lightN, day: [T1.lightVisible, T3.lightVisible] }));
   ok('ROOF 본 건물 지붕에 이음선, 가장자리 띠, 얼룩, 배수구가 모든 단계에서 그려짐(재질 1개)', T1.roof === 1 && T2.roof === 1 && T3.roof === 1, JSON.stringify({ low: T1.roof, mid: T2.roof, high: T3.roof }));
   ok('DETAIL 건물 모델의 단조로운 면(콘크리트, 지붕, 아스팔트, 금속 패널, 벽 안쪽)에 미세 디테일이 높음과 보통에서만 겹쳐짐', T1.detail === 0 && T2.detail >= 4 && T3.detail >= 4, JSON.stringify({ low: T1.detail, mid: T2.detail, high: T3.detail }));
   ok('TEX 비등방성 필터링이 단계 상한(낮음 2, 보통 8, 높음 16)과 기기 상한 중 작은 값으로 적용됨', T1.minAniso === Math.min(2, T1.cap) && T2.minAniso === Math.min(8, T2.cap) && T3.minAniso === Math.min(16, T3.cap), JSON.stringify({ a: [T1.minAniso, T2.minAniso, T3.minAniso], cap: T1.cap }));
+}
+
+// 오늘 사용량(더미 데이터): 시계 기준이라 재생과 상관없이 값이 있고, 에너지·용량 탭에 하루 막대 24칸이 있음
+{
+  const dp = await browser.newPage();
+  await dp.setViewport({ width: 1440, height: 860 });
+  await dp.goto(`${base}?scenario=normal&t=100&panel=open&q=low&fx=off`, { waitUntil: 'networkidle0' });
+  await dp.waitForFunction(() => window.__viewer?.state.player, { timeout: 20000 });
+  await dp.evaluate(() => { window.__viewer.state.player.playing = false; });
+  await sleep(500);
+  const k1 = await dp.$eval('#ext-kwh', (e) => e.textContent);
+  await dp.evaluate(() => window.__viewer.state.player.seek(0)); // 재생 위치를 처음으로 돌려도 하루 사용량은 그대로(재생과 무관)
+  await sleep(400);
+  const k2 = await dp.$eval('#ext-kwh', (e) => e.textContent);
+  const n = (t) => Number(String(t).replace(/[^0-9]/g, ''));
+  ok('DAY 외관의 오늘 사용량은 재생 위치와 상관없이 kWh 값이 있고(0이 아니면 새벽 0시 직후가 아님) 줄지 않음', /kWh$/.test(k1) && n(k2) >= n(k1) && n(k2) - n(k1) < 50, JSON.stringify({ k1, k2 }));
+  await dp.evaluate(() => window.__viewer.startLibrary('normal'));
+  await dp.waitForFunction(() => window.__viewer.state.mode === 'lib', { timeout: 15000 });
+  await dp.evaluate(() => window.__viewer.dispatch({ type: 'stage', stage: 'hall' }));
+  await sleep(600);
+  await dp.evaluate(() => document.getElementById('enter-btn')?.click());
+  await sleep(1200);
+  await dp.click('#side-tabs [data-tab="energy"]').catch(() => {});
+  await sleep(400);
+  const d = await dp.evaluate(() => ({ label: [...document.querySelectorAll('#pane-energy .kv dt')].map((e) => e.textContent), bars: document.querySelectorAll('#pane-energy .day-chart i').length, now: document.querySelectorAll('#pane-energy .day-chart i.now').length, note: document.querySelector('#pane-energy .day-chart + .day-axis + p')?.textContent ?? '', kwh: [...document.querySelectorAll('#pane-energy .kv dd')][4]?.textContent }));
+  ok('DAY 에너지·용량 탭에 "오늘 사용량(더미)" 값과 하루 막대 24칸(지금 시각 1칸 강조), 더미 데이터라는 안내가 있음', d.label.includes('오늘 사용량(더미)') && d.bars === 24 && d.now === 1 && /더미 데이터/.test(d.note) && /kWh$/.test(d.kwh), JSON.stringify(d));
+  await dp.close();
 }
 
 // 인터랙션 개편: 오른쪽 패널 기본 접힘, 건물 호버(외곽선+카드), 휴대폰 첫 터치는 정보

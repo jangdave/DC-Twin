@@ -1,6 +1,7 @@
 // "에너지·용량" 탭과 "이상 대비" 탭의 화면 (docs/27 14장). 값은 textContent로만 넣는다.
 import { SCENARIOS, SUPPLY_MAX, SUPPLY_MIN } from './core.js';
 import { capacity, compare, responseFor, rowInlets, snapshot, supplyRoom } from './insight.js';
+import { todayUsage } from '../daily.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -29,12 +30,27 @@ export class InsightPanel {
     const r = this.refs;
     root.append(el('h2', '', '에너지'));
     const dl = el('dl', 'kv');
-    for (const [k, label] of [['it', 'IT 전력'], ['cooling', '냉각 전력'], ['facility', '설비 전력'], ['pue', 'PUE'], ['kwh', '누적 전력량'], ['maxIn', '가장 높은 입구 온도']]) {
+    for (const [k, label] of [['it', 'IT 전력'], ['cooling', '냉각 전력'], ['facility', '설비 전력'], ['pue', 'PUE'], ['kwh', '오늘 사용량(더미)'], ['maxIn', '가장 높은 입구 온도']]) {
       dl.append(el('dt', '', label));
       r[k] = el('dd', '', '–');
       dl.append(r[k]);
     }
     root.append(dl);
+    // 하루 사용량 막대(더미 데이터): 시간마다 한 칸, 지금 시각은 강조, 아직 안 온 시간은 옅게(예상)
+    r.day = el('div', 'day-chart');
+    r.day.setAttribute('role', 'img');
+    r.dayBars = [];
+    for (let h = 0; h < 24; h++) {
+      const b = el('i');
+      r.day.append(b);
+      r.dayBars.push(b);
+    }
+    root.append(r.day);
+    const ax = el('div', 'day-axis');
+    for (const t of ['0시', '6시', '12시', '18시', '24시']) ax.append(el('span', '', t));
+    root.append(ax);
+    r.dayNote = el('p', 'muted small', '');
+    root.append(r.dayNote);
 
     root.append(el('h3', '', '기준과 비교'));
     const bar = el('div', 'btn-row');
@@ -162,6 +178,26 @@ export class InsightPanel {
     }
   }
 
+  // 오늘 사용량(더미 데이터): 시계 기준이라 창을 닫아 둬도 이어서 늘어난다
+  _renderDay() {
+    const r = this.refs;
+    const u = todayUsage();
+    r.kwh.textContent = `${Math.round(u.kwh).toLocaleString('ko-KR')} kWh`;
+    const h = Math.floor(u.hour);
+    if (this._dayHour !== h) {
+      this._dayHour = h;
+      const lo = Math.min(...u.profile), hi = Math.max(...u.profile);
+      u.profile.forEach((v, i) => {
+        const b = r.dayBars[i];
+        b.style.height = `${28 + (72 * (v - lo)) / Math.max(hi - lo, 1)}%`;
+        b.className = i === h ? 'now' : i > h ? 'future' : '';
+        b.title = `${i}시 ${Math.round(v)} kW${i > h ? ' (예상)' : ''}`;
+      });
+      r.day.setAttribute('aria-label', `오늘 시간별 전력(더미 데이터). 지금 ${h}시`);
+      r.dayNote.textContent = `하루 전체 약 ${Math.round(u.total).toLocaleString('ko-KR')} kWh(더미 데이터). 진한 칸은 지난 시간, 옅은 칸은 예상, 강조는 지금이다. 실제 측정값이 아니다.`;
+    }
+  }
+
   // engine: 직접 시뮬레이션 엔진(없으면 서버 모드), scenario: 지금 시나리오 이름
   // kind: 'sim'(브라우저 간이 계산) | 'lib'(미리 계산한 값) | 'live'(서버). 서버와 미리 계산한 값에서는 engine이 없다.
   render(engine, scenario, kind = 'sim', supplyNow = null) {
@@ -172,7 +208,7 @@ export class InsightPanel {
     r.cooling.textContent = now.cooling === null ? '–' : `${fmt(now.cooling)} kW`;
     r.facility.textContent = now.facility === null ? '–' : `${fmt(now.facility)} kW`;
     r.pue.textContent = fmt(now.pue, 2);
-    r.kwh.textContent = now.kwh === null ? '–' : `${fmt(now.kwh, 2)} kWh`;
+    this._renderDay();
     r.maxIn.textContent = now.maxIn === null ? '–' : `${fmt(now.maxIn)} °C (${this.o.pretty(now.maxRack)})`;
     this._renderCmp(now);
 

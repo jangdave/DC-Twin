@@ -115,6 +115,38 @@ function makeBuilding(rng, p, ring) {
   return { kind, facade, pal: Math.floor(rng() * 5), h: topY, parts, roof };
 }
 
+// 저녁 창 불빛: 발광 그림은 모든 창이 칠해져 있고, 어느 창이 켜질지는 여기서 정한다.
+// 창 번호는 면을 따라 이어지는 질감 좌표(타일 번호 포함)로 매겨서 그림이 반복되어도 창마다 다르고, 건물 구역(약 60 m)마다 켜진 비율이 다르며,
+// 어떤 층은 통째로 켜지고(사무층), 창마다 밝기와 색(따뜻한 색 ~ 흰색)이 다르다.
+function windowLights(mat, grid) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uGrid = { value: new THREE.Vector2(grid.cols, grid.rows) };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', `#include <common>
+      varying vec3 vCW;`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+      vCW = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+      varying vec3 vCW;
+      uniform vec2 uGrid;
+      float wh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      {
+        vec2 wc = floor(vEmissiveMapUv * uGrid);
+        vec2 reg = floor(vCW.xz / 60.0);
+        float occ = mix(0.1, 0.62, wh(reg * 1.7 + 3.1));
+        float floorLit = step(0.8, wh(vec2(wc.y, wh(reg + 9.0) * 50.0)));
+        float on = step(1.0 - mix(occ, 0.92, floorLit), wh(wc + reg * 17.3));
+        float br = 0.5 + 0.5 * wh(wc * 1.3 + reg);
+        float cool = wh(wc + 5.7 + reg * 3.0);
+        vec3 tint = mix(vec3(1.0, 0.86, 0.6), vec3(0.82, 0.9, 1.0), step(0.78, cool));
+        totalEmissiveRadiance *= on * br * tint;
+      }`);
+  };
+  mat.customProgramCacheKey = () => 'dc-city-windows-v1';
+}
+
 // 블록마다 필지로 나누고 공원, 주차장, 건물을 놓는다. 가운데 블록(0,0)은 비운다.
 export function planCity({ cx, cz, rings, seed = 11 }) {
   const rng = mulberry32(seed);
@@ -333,12 +365,14 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     if (tex[f].normal) track(tex[f].normal);
     const base = { map: tex[f].map, emissiveMap: tex[f].glow, emissive: new THREE.Color(0xffffff), emissiveIntensity: 0.05, vertexColors: true };
     if (tex[f].normal) Object.assign(base, { normalMap: tex[f].normal, normalScale: new THREE.Vector2(0.7, 0.7) });
+    const grid = tex[f].grid;
     const glassy = baseFacade(f) === 'glass';
     const metal = baseFacade(f) === 'metal';
     // 유리는 반사가 강한 짙은 유리, 금속은 반사가 중간. 콘크리트, 벽돌, 띠창은 반사하지 않는 면(보는 각도에 따라 색이 변하지 않음)
     mats[f] = glassy ? new THREE.MeshStandardMaterial({ ...base, roughness: 0.08, metalness: 0.45 })
       : metal ? new THREE.MeshStandardMaterial({ ...base, roughness: 0.4, metalness: 0.5 })
       : new THREE.MeshLambertMaterial(base);
+    windowLights(mats[f], grid);
   }
   const roofGeos = [];
   for (const b of plan.buildings) {
@@ -378,6 +412,43 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     return g;
   });
   mesh(mergeGeometries(strips, false), mat(rt));
+  // 먼 도로: 정밀한 도시(블록 격자)의 끝에서 도로가 갑자기 끊겨 보이던 것을, 바닥 원판 가장자리(반지름 약 1090 m)까지 이어서 없앤다.
+  // 안개가 거의 다 가리는 거리라 끝이 보이지 않는다. 먼 건물 블록(링 4~5)이 있는 줄은 처음부터 끝까지 깐다.
+  // 가로 방향과 세로 방향 도로가 겹치는 곳은 세로 쪽에 깊이 보정을 줘서 깜빡이지 않게 한다.
+  {
+    const FAR = 1090;
+    const rings = quality.cityRings, maxRing = 5;
+    const edgeX = (rings + 1) * CITY.pitchX, edgeZ = (rings + 1) * CITY.pitchZ;
+    const farX = [], farZ = [];
+    const strip = (dir, x, z, len) => {
+      const g = new THREE.PlaneGeometry(CITY.road, len);
+      g.rotateX(-Math.PI / 2);
+      const uv = g.attributes.uv;
+      for (let k = 0; k < uv.count; k++) uv.setY(k, uv.getY(k) * (len / 16));
+      if (dir === 'x') g.rotateY(Math.PI / 2);
+      g.translate(x, 0.1, z);
+      return g;
+    };
+    for (let j = -maxRing - 1; j <= maxRing; j++) { // 동서 방향(z 고정)
+      const z = cz + (j + 0.5) * CITY.pitchZ;
+      if (j >= -rings - 1 && j <= rings) {
+        const len = FAR - edgeX;
+        farX.push(strip('x', cx + edgeX + len / 2, z, len), strip('x', cx - edgeX - len / 2, z, len));
+      } else farX.push(strip('x', cx, z, 2 * FAR));
+    }
+    for (let i = -maxRing - 1; i <= maxRing; i++) { // 남북 방향(x 고정)
+      const x = cx + (i + 0.5) * CITY.pitchX;
+      if (i >= -rings - 1 && i <= rings) {
+        const len = FAR - edgeZ;
+        farZ.push(strip('z', x, cz + edgeZ + len / 2, len), strip('z', x, cz - edgeZ - len / 2, len));
+      } else farZ.push(strip('z', x, cz, 2 * FAR));
+    }
+    mesh(mergeGeometries(farX, false), mat(rt));
+    const mz = mat(rt, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    mesh(mergeGeometries(farZ, false), mz);
+    farX.forEach((g) => g.dispose());
+    farZ.forEach((g) => g.dispose());
+  }
   mesh(flatRects(plan.intersections.map((i) => ({ x: i.x, z: i.z, w: CITY.road, d: CITY.road })), 0.1, 16), new THREE.MeshLambertMaterial({ color: 0x3b3d41 }));
   const zebra = plan.crosswalks.map((r) => {
     const g = new THREE.PlaneGeometry(r.w, r.d);
