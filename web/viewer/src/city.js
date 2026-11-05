@@ -271,7 +271,8 @@ function boxGeometry(q, b) {
     for (let k = 0; k < 4; k++) {
       const n = f * 4 + k;
       if (f === 2 || f === 3) {
-        uv.setXY(n, ROOF_UV, ROOF_UV); // 지붕과 바닥: 흰 점
+        // 지붕과 바닥: 흰 점. 네 꼭짓점이 같은 UV면 화면 기울기(미분)가 0이라 법선 지도의 접선이 깨져 잡음이 난다 -> 점 안(0.982~0.988)에서 위치에 따라 아주 조금만 퍼뜨린다.
+        uv.setXY(n, ROOF_UV + ((pos.getX(n) - q.x) / q.w) * 0.006, ROOF_UV + ((pos.getZ(n) - q.z) / q.d) * 0.006);
         const roof = f === 2 ? 0.52 : 0.3;
         col[n * 3] = col[n * 3 + 1] = col[n * 3 + 2] = roof;
       } else {

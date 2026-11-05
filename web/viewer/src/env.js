@@ -124,3 +124,38 @@ export function mergeByMaterial(root, scale) {
   }
   return meshes;
 }
+
+// 후처리를 켜면 화면이 톤 매핑(ACES)과 sRGB 변환을 한 번 더 거친다. 하늘 셰이더는 값을 그대로 화면 값으로 내보내므로 그대로 두면 하늘이 하얗게 떠 보인다.
+// 그래서 후처리 중에는 하늘 색을 "ACES + sRGB를 거쳐 원래 색이 되는 값"으로 미리 바꿔 둔다(뉴턴법). 낮은 단계(후처리 없음)와 같은 하늘이 된다.
+const ACES_IN = [[0.59719, 0.35458, 0.04823], [0.076, 0.90834, 0.01566], [0.0284, 0.13383, 0.83777]];
+const ACES_OUT = [[1.60475, -0.53108, -0.07367], [-0.10208, 1.10813, -0.00605], [-0.00327, -0.07276, 1.07602]];
+const mul = (m, v) => m.map((r) => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
+const fit = (v) => v.map((x) => (x * (x + 0.0245786) - 0.000090537) / (x * (0.983729 * x + 0.432951) + 0.238081));
+const enc = (x) => (x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055);
+export function displayForward(c) {
+  const t = mul(ACES_OUT, fit(mul(ACES_IN, c.map((x) => (x / 0.6) * 1))));
+  return t.map((x) => enc(Math.min(Math.max(x, 0), 1)));
+}
+export function displayInverse(color) {
+  const target = [color.r, color.g, color.b].map((x) => Math.min(Math.max(x, 0), 0.985));
+  let c = target.map((x) => Math.pow(x, 2.2)); // 시작값
+  for (let it = 0; it < 24; it++) {
+    const f = displayForward(c);
+    const err = f.map((x, i) => x - target[i]);
+    if (Math.max(...err.map(Math.abs)) < 1e-4) break;
+    const h = 1e-4;
+    const J = [0, 1, 2].map((j) => { const cj = c.slice(); cj[j] += h; const fj = displayForward(cj); return f.map((x, i) => (fj[i] - x) / h); }); // J[j][i] = df_i/dc_j
+    // 3x3 풀이: J^T 형태 → 가우스 소거
+    const A = [0, 1, 2].map((i) => [J[0][i], J[1][i], J[2][i], err[i]]);
+    for (let col = 0; col < 3; col++) {
+      let p = col;
+      for (let r = col + 1; r < 3; r++) if (Math.abs(A[r][col]) > Math.abs(A[p][col])) p = r;
+      [A[col], A[p]] = [A[p], A[col]];
+      if (Math.abs(A[col][col]) < 1e-12) continue;
+      for (let r = 0; r < 3; r++) if (r !== col) { const k = A[r][col] / A[col][col]; for (let q = col; q < 4; q++) A[r][q] -= k * A[col][q]; }
+    }
+    const d = [0, 1, 2].map((i) => (Math.abs(A[i][i]) < 1e-12 ? 0 : A[i][3] / A[i][i]));
+    c = c.map((x, i) => Math.max(x - d[i] * 0.9, 0));
+  }
+  return color.clone().setRGB(c[0], c[1], c[2], 'srgb-linear');
+}
