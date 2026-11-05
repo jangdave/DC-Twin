@@ -107,6 +107,22 @@ export class UI {
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
     $('bc-enter').addEventListener('click', () => this.h.onEnter());
     $('alarm-chip').addEventListener('click', () => this.h.onNextAlarm());
+    // 화면 나눠 비교 선 끌기(마우스, 터치, 키보드)
+    const bar = $('split-bar');
+    const moveTo = (clientX) => {
+      const r = $('stage').getBoundingClientRect();
+      this.h.onSplitMove(Math.min(Math.max((clientX - r.left) / r.width, 0.08), 0.92));
+    };
+    bar.addEventListener('pointerdown', (e) => { bar.setPointerCapture(e.pointerId); this._splitDrag = true; moveTo(e.clientX); });
+    bar.addEventListener('pointermove', (e) => this._splitDrag && moveTo(e.clientX));
+    bar.addEventListener('pointerup', () => (this._splitDrag = false));
+    bar.addEventListener('pointercancel', () => (this._splitDrag = false));
+    bar.addEventListener('keydown', (e) => {
+      const d = { ArrowLeft: -0.05, ArrowRight: 0.05 }[e.key];
+      if (d === undefined) return;
+      e.preventDefault();
+      this.h.onSplitMove(Math.min(Math.max(this.splitF + d, 0.08), 0.92));
+    });
     $('back-btn').addEventListener('click', () => this.h.onBack());
     $('server-cta-btn').addEventListener('click', () => this.openServerDialog());
     $('sc-max').addEventListener('click', (e) => e.currentTarget.dataset.rack && this.h.onSelect(e.currentTarget.dataset.rack, true));
@@ -242,6 +258,16 @@ export class UI {
     c.style.top = `${Math.max(pos.y, 40)}px`;
   }
 
+  // 화면 나눠 비교 선 표시. f: 0~1(왼쪽 기준 비율)
+  setSplit(on, f = 0.5) {
+    this._split = on;
+    this.splitF = f;
+    const bar = $('split-bar');
+    bar.hidden = !on;
+    bar.style.left = `${f * 100}%`;
+    bar.setAttribute('aria-valuenow', String(Math.round(f * 100)));
+  }
+
   // 이상이 있으면 서버실 화면에서만 '다음 이상 장비 보기' 단추를 보인다(CCTV가 열려 있으면 숨긴다)
   updateAlarmChip() {
     $('alarm-chip').hidden = !(this._alarmChipActive && this._chipStage === 'hall' && !this._chipCctv);
@@ -313,6 +339,8 @@ export class UI {
       if (ext) $('enter-btn').focus({ preventScroll: true });
     }
     $('stage').dataset.overlay = vm.cctvOpen ? 'cctv' : '';
+    // 나눠 비교는 서버실의 시뮬레이션 계열 화면(에너지·용량 탭이 있는 곳)에서만 쓴다
+    if (this._split && (ws.stage !== 'hall' || vm.cctvOpen || !vm.tabs.energy)) this.h.onSplitOff();
     this._chipStage = ws.stage;
     this._chipCctv = vm.cctvOpen;
     this.updateAlarmChip();

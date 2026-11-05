@@ -193,6 +193,11 @@ async function main() {
       startSim(state.simScenario);
     },
     onCctv: () => dispatch({ type: 'overlay-toggle', value: 'cctv' }),
+    onSplitMove: (f) => {
+      scene.setSplitFraction(f);
+      ui.setSplit(true, scene.splitFraction);
+    },
+    onSplitOff: () => setSplit(false),
     onNextAlarm: () => {
       // 이상 장비를 차례로 보여 준다: 선택 + 카메라 이동. 지금 선택한 것 다음 장비로 넘어간다.
       const list = scene.alarmedEquipment();
@@ -249,7 +254,16 @@ async function main() {
     pretty: prettyName,
     onSupply: (v) => (state.server ? serverControl({ kind: 'supply_temp', target: 'hall', value: v }) : state.sim?.setSupply(v)),
     onScenario: (id) => ui.h.onScenario(id),
+    onBase: (has) => (has ? scene.saveBaselineColors() : setSplit(false)),
+    onSplit: (on) => setSplit(on),
   });
+
+  // 화면 나눠 비교 켜고 끄기(장면, 선, 단추를 함께 맞춘다)
+  function setSplit(on) {
+    scene.setSplit(on);
+    ui.setSplit(on, scene.splitFraction);
+    insight.syncSplit(on);
+  }
 
   simSource = new SimSource({
     store,
