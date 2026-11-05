@@ -36,6 +36,17 @@ const ok = (name, cond, extra = '') => {
 
 await mkdir(OUT, { recursive: true });
 const browser = await puppeteer.launch({ executablePath: exe, headless: true, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+
+// 오른쪽 패널을 기본으로 접는 새 동작과 상관없이 기존 시험이 같은 조건에서 돌도록 주소에 panel=open을 붙인다(주소에 panel=이 있으면 그대로 둔다)
+{
+  const newPage = browser.newPage.bind(browser);
+  browser.newPage = async (...a) => {
+    const pg = await newPage(...a);
+    const go = pg.goto.bind(pg);
+    pg.goto = (u, o) => go(String(u).includes('panel=') ? u : u + (String(u).includes('?') ? '&' : '?') + 'panel=open', o);
+    return pg;
+  };
+}
 const errors = [];
 const page = await browser.newPage();
 page.on('pageerror', (e) => errors.push(e.message));
@@ -59,26 +70,27 @@ await sleep(200);
 const sel = await page.evaluate(() => window.__viewer.state.selected);
 ok('FR-30 랙을 누르면 선택', typeof sel === 'string' && sel.startsWith('rack'), `(${sel})`);
 
-// 1-1) 조작: 왼쪽 끌기는 카메라를 안 움직이고, 오른쪽 끌기는 회전하며, 회전 중심은 그대로(자유 이동 없음)
+// 1-1) 조작: 왼쪽 버튼 하나로 끌면 회전(선택은 안 바뀜), 짧게 누르면 선택, 오른쪽 버튼은 아무 일도 없음, 회전 중심은 그대로(자유 이동 없음)
 {
-  const snap = () => page.evaluate(() => { const s = window.__viewer.scene; return { pos: s.camera.position.toArray(), tgt: s.controls.target.toArray(), pan: s.controls.enablePan }; });
+  const snap = () => page.evaluate(() => { const s = window.__viewer.scene; return { pos: s.camera.position.toArray(), tgt: s.controls.target.toArray(), pan: s.controls.enablePan, sel: window.__viewer.state.selected }; });
   const dist = (a, b) => Math.hypot(...a.map((v, i) => v - b[i]));
   await page.evaluate(() => { window.__viewer.scene.controls.enableDamping = false; });
+  await sleep(1000); // 앞의 랙 선택으로 시작한 카메라 이동이 끝나기를 기다림
   const c0 = await snap();
   await page.mouse.move(700, 450);
-  await page.mouse.down({ button: 'left' });
+  await page.mouse.down({ button: 'right' });
   await page.mouse.move(900, 450, { steps: 8 });
-  await page.mouse.up({ button: 'left' });
+  await page.mouse.up({ button: 'right' });
   await sleep(200);
   const c1 = await snap();
   await page.mouse.move(700, 450);
-  await page.mouse.down({ button: 'right' });
+  await page.mouse.down({ button: 'left' });
   await page.mouse.move(900, 470, { steps: 8 });
-  await page.mouse.up({ button: 'right' });
+  await page.mouse.up({ button: 'left' });
   await sleep(200);
   const c2 = await snap();
-  ok('MOUSE 왼쪽 끌기는 카메라를 움직이지 않음', dist(c0.pos, c1.pos) < 1e-6, `이동 ${dist(c0.pos, c1.pos).toFixed(4)}`);
-  ok('MOUSE 오른쪽 끌기는 카메라를 돌리고 회전 중심(데이터센터 중심)은 그대로, 자유 이동은 꺼져 있음', dist(c1.pos, c2.pos) > 0.5 && dist(c1.tgt, c2.tgt) < 1e-6 && c2.pan === false, `이동 ${dist(c1.pos, c2.pos).toFixed(2)} 중심변화 ${dist(c1.tgt, c2.tgt).toFixed(6)}`);
+  ok('MOUSE 오른쪽 끌기는 카메라를 움직이지 않음', dist(c0.pos, c1.pos) < 1e-6, `이동 ${dist(c0.pos, c1.pos).toFixed(4)}`);
+  ok('MOUSE 왼쪽 끌기는 카메라를 돌리고 회전 중심(데이터센터 중심)은 그대로, 자유 이동은 꺼져 있고, 끌기로 선택이 바뀌지 않음', dist(c1.pos, c2.pos) > 0.5 && dist(c1.tgt, c2.tgt) < 1e-6 && c2.pan === false && c2.sel === c1.sel, `이동 ${dist(c1.pos, c2.pos).toFixed(2)} 중심변화 ${dist(c1.tgt, c2.tgt).toFixed(6)} 선택 ${c1.sel}→${c2.sel}`);
   await page.evaluate(() => { window.__viewer.scene.setPreset('home', true); });
   // 1-2) 확대와 축소 한계(외관): 아주 가까이 놓아도 건물 안으로 못 들어가고, 아주 멀리 놓아도 한계 거리 안
   const lim = await page.evaluate(() => {
@@ -98,13 +110,13 @@ ok('FR-30 랙을 누르면 선택', typeof sel === 'string' && sel.startsWith('r
       for (let i = 0; i < 4; i++) s.update(0.016, 1);
       const d = s.camera.position.distanceTo(s.controls.target);
       if (d > s.controls.maxDistance + 1) farOver++;
-      if (s.camera.position.y < 60) lowFar++;
+      { const q = s.camera.position; if (s.city.plan.buildings.some((b) => b.parts.some((r) => Math.abs(q.x - r.x) < r.w / 2 && Math.abs(q.z - r.z) < r.d / 2 && q.y < r.y0 + r.h))) lowFar++; }
     }
-    const r = { n, inside, farOver, lowFar, max: Math.round(s.controls.maxDistance) };
+    const r = { n, inside, farOver, lowFar, max: Math.round(s.controls.maxDistance), polar: +(s.controls.maxPolarAngle / Math.PI).toFixed(2) };
     s.setStage('hall', true);
     return r;
   });
-  ok('ZOOM 외관: 아주 가까이 가도 건물 안으로 못 들어가고, 아주 멀리 가도 한계 거리(도시 반폭의 45%) 안이며 낮게 깔리지 않음', lim.inside === 0 && lim.farOver === 0 && lim.lowFar === 0 && lim.max < 400, JSON.stringify(lim));
+  ok('ZOOM 외관: 아주 가까이 가도 건물 안으로 못 들어가고, 아주 멀리 가도 한계 거리(도시 반폭의 45%) 안이며 도시 건물 안으로 들어가지 않음(각도는 고정하지 않음)', lim.inside === 0 && lim.farOver === 0 && lim.lowFar === 0 && lim.polar >= 0.48 && lim.max < 400, JSON.stringify(lim));
 }
 ok('FR-31 상세 패널에 장비 이름', (await page.$eval('#detail-body .eq-name', (e) => e.textContent)).toLowerCase() === sel);
 await page.mouse.click(pos.x, pos.y);
@@ -986,6 +998,58 @@ await pc.close();
   await fp.close();
   bare.wss.close();
   bare.http.close();
+}
+
+// 인터랙션 개편: 오른쪽 패널 기본 접힘, 건물 호버(외곽선+카드), 휴대폰 첫 터치는 정보
+{
+  const hp = await browser.newPage();
+  await hp.setViewport({ width: 1440, height: 860 });
+  await hp.goto(`${base}?scenario=fan_fault&t=100&stage=hall&panel=default`, { waitUntil: 'networkidle0' });
+  await hp.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+  await sleep(400);
+  const P0 = await hp.evaluate(() => ({ closed: document.getElementById('side').classList.contains('collapsed'), pressed: document.getElementById('side-toggle').getAttribute('aria-pressed'), badge: document.getElementById('side-toggle-count').textContent, badgeHidden: document.getElementById('side-toggle-count').hidden }));
+  ok('PANEL 넓은 화면에서는 오른쪽 정보 패널이 접힌 채 시작하고, 접힌 단추에 이상 건수가 보임', P0.closed && P0.pressed === 'false' && !P0.badgeHidden && Number(P0.badge) >= 1, JSON.stringify(P0));
+  const rp = await hp.evaluate(() => { const c = document.getElementById('canvas'); const p = window.__viewer.scene.screenOf('rack_05', c); const r = c.getBoundingClientRect(); return { x: r.left + p.x, y: r.top + p.y + 14 }; });
+  await hp.mouse.click(rp.x, rp.y);
+  await sleep(300);
+  const P1 = await hp.evaluate(() => ({ closed: document.getElementById('side').classList.contains('collapsed'), tab: document.querySelector('#side-tabs [aria-selected="true"]')?.dataset.tab }));
+  ok('PANEL 랙을 누르면 패널이 펼쳐지며 상세 탭이 열림', !P1.closed && P1.tab === 'detail', JSON.stringify(P1));
+  await hp.close();
+
+  const bp = await browser.newPage();
+  await bp.setViewport({ width: 1440, height: 860 });
+  await bp.goto(`${base}?scenario=fan_fault&t=100&panel=default`, { waitUntil: 'networkidle0' });
+  await bp.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+  await bp.evaluate(() => { const s = window.__viewer.scene; s._anim = null; s.setPreset('ext', true); s.update(0.016, 1); });
+  await sleep(500);
+  const bpt = () => bp.evaluate(() => { const s = window.__viewer.scene; const c = document.getElementById('canvas'); const r = c.getBoundingClientRect(); const v = s._bldg.center.clone().project(s.camera); return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height }; });
+  const bpos = await bpt();
+  await bp.mouse.move(bpos.x, bpos.y, { steps: 4 });
+  await sleep(300);
+  const H1 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, status: document.getElementById('bc-status').textContent, name: document.querySelector('#building-card b').textContent, outline: !!window.__viewer.scene._bHover?.visible, pinned: document.getElementById('building-card').classList.contains('pinned') }));
+  ok('HOVER 외관에서 건물에 올리면 외곽선과 이름, 상태 카드가 뜸(눌러서 들어가는 안내)', H1.card && H1.outline && !H1.pinned && H1.name.length > 0 && /정상|주의|없음/.test(H1.status), JSON.stringify(H1));
+  await bp.mouse.move(8, 700, { steps: 4 });
+  await sleep(300);
+  const H2 = await bp.evaluate(() => ({ card: !document.getElementById('building-card').hidden, outline: !!window.__viewer.scene._bHover?.visible }));
+  ok('HOVER 건물에서 벗어나면 외곽선과 카드가 사라짐', !H2.card && !H2.outline, JSON.stringify(H2));
+  await bp.close();
+
+  const tp = await browser.newPage();
+  await tp.setViewport({ width: 390, height: 844, hasTouch: true, isMobile: true });
+  await tp.goto(`${base}?scenario=fan_fault&t=100&panel=default`, { waitUntil: 'networkidle0' });
+  await tp.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
+  await tp.evaluate(() => { const s = window.__viewer.scene; s._anim = null; s.setPreset('ext', true); s.update(0.016, 1); });
+  await sleep(500);
+  const tpos = await tp.evaluate(() => { const s = window.__viewer.scene; const c = document.getElementById('canvas'); const r = c.getBoundingClientRect(); const v = s._bldg.center.clone().project(s.camera); return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height }; });
+  await tp.touchscreen.tap(tpos.x, tpos.y);
+  await sleep(500);
+  const T1 = await tp.evaluate(() => ({ stage: window.__viewer.flow?.stage ?? window.__viewer.scene.stage, card: !document.getElementById('building-card').hidden, pinned: document.getElementById('building-card').classList.contains('pinned'), outline: !!window.__viewer.scene._bHover?.visible }));
+  ok('TOUCH 휴대폰에서 건물을 처음 누르면 들어가지 않고 정보(외곽선, 카드, 들어가기 단추)만 보임', T1.stage === 'exterior' && T1.card && T1.pinned && T1.outline, JSON.stringify(T1));
+  await tp.touchscreen.tap(tpos.x, tpos.y);
+  await sleep(1500);
+  const T2 = await tp.evaluate(() => ({ stage: window.__viewer.scene.stage, card: !document.getElementById('building-card').hidden }));
+  ok('TOUCH 한 번 더 누르면 홀로 들어가고 카드가 사라짐', T2.stage === 'hall' && !T2.card, JSON.stringify(T2));
+  await tp.close();
 }
 
 await browser.close();

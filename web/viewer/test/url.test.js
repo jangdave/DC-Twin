@@ -34,7 +34,11 @@ describe('주소 매개변수', () => {
     expect(p.liveError).toBeTruthy();
   });
   it('아무것도 없으면 기본값', () => {
-    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null, sky: 'day', q: null });
+    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null, sky: 'day', q: null, panel: 'default' });
+  });
+  it('panel=open만 패널을 처음부터 펼친다', () => {
+    expect(parseParams('?panel=open', ids).panel).toBe('open');
+    expect(parseParams('?panel=x', ids).panel).toBe('default');
   });
   it('stage는 exterior와 hall만 받는다', () => {
     expect(parseParams('?stage=hall', ids).stage).toBe('hall');

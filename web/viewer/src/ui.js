@@ -105,6 +105,7 @@ export class UI {
     $('help-btn').addEventListener('click', () => $('help-dialog').showModal());
     $('live-back').addEventListener('click', () => this.h.onBackToRec());
     $('enter-btn').addEventListener('click', () => this.h.onEnter());
+    $('bc-enter').addEventListener('click', () => this.h.onEnter());
     $('back-btn').addEventListener('click', () => this.h.onBack());
     $('server-cta-btn').addEventListener('click', () => this.openServerDialog());
     $('sc-max').addEventListener('click', (e) => e.currentTarget.dataset.rack && this.h.onSelect(e.currentTarget.dataset.rack, true));
@@ -218,6 +219,24 @@ export class UI {
     $('side').classList.toggle('collapsed', !open);
     $('main').classList.toggle('side-closed', !open);
     $('side-toggle').setAttribute('aria-pressed', String(open));
+  }
+
+  // 외관 건물 카드: 이름, 상태, 안내. pinned이면(휴대폰 첫 터치) 홀 들어가기 단추가 보인다.
+  showBuildingCard(x, y, pinned = false) {
+    const c = $('building-card');
+    const ext = $('ext-status');
+    $('bc-status').textContent = ext.textContent;
+    $('bc-status').dataset.state = ext.dataset.state ?? 'none';
+    c.hidden = false;
+    c.classList.toggle('pinned', pinned);
+    const w = $('stage').clientWidth;
+    c.style.left = `${Math.min(Math.max(x, 8), Math.max(w - 190, 8))}px`;
+    c.style.top = `${Math.max(y, 8)}px`;
+  }
+
+  hideBuildingCard() {
+    $('building-card').hidden = true;
+    $('building-card').classList.remove('pinned');
   }
 
   openServerDialog() {
@@ -387,6 +406,8 @@ export class UI {
     $('tab-alarm-count').textContent = String(Math.min(active, 99));
     $('tab-alarm-count').hidden = active === 0;
     $('tab-alarm-count').title = `지금 이상인 센서 ${active}개`;
+    $('side-toggle-count').textContent = String(Math.min(active, 99)); // 패널이 접혀 있어도 이상이 있음을 보인다
+    $('side-toggle-count').hidden = active === 0;
     for (const a of [...log].reverse().slice(0, 60)) {
       const info = sensorInfo.get(a.sensorId);
       if (!info) continue;

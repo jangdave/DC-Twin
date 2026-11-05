@@ -89,9 +89,10 @@ export class HallScene {
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.5, 2500);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = !reducedMotion;
-    // 조작: 왼쪽 버튼은 선택(끌어도 카메라가 움직이지 않는다), 오른쪽 버튼 끌기는 회전, 휠은 확대. 자유 이동(팬)은 없고 회전 중심은 항상 데이터센터 중심이다.
+    // 조작: 왼쪽 버튼 하나로 처리한다. 끌면 회전, 짧게 누르면 선택(main.js가 5px 넘게 움직이면 선택으로 보지 않는다). 휠은 확대.
+    // 자유 이동(팬)은 없고 오른쪽 버튼은 쓰지 않는다. 회전 중심은 항상 데이터센터 중심이다.
     this.controls.enablePan = false;
-    this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+    this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null };
     this.controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE };
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.minDistance = 2;
@@ -685,6 +686,37 @@ export class HallScene {
     return meshes.length;
   }
 
+  // 외관에서 데이터센터 건물을 하늘색 외곽선과 옅은 면으로 강조한다(홀 안 선택 상자와 같은 색)
+  setBuildingHover(on) {
+    if (!on) {
+      if (this._bHover?.visible) {
+        this._bHover.visible = false;
+        this._dirty = true;
+      }
+      return;
+    }
+    if (!this._bldg) return;
+    if (!this._bHover || this._bHoverFor !== this._bldg) {
+      if (this._bHover) {
+        this.exterior.remove(this._bHover);
+        this._bHover.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
+      }
+      const { center, half } = this._bldg;
+      const g = new THREE.BoxGeometry(half.x * 2 + 1, half.y * 2 + 1, half.z * 2 + 1);
+      const grp = new THREE.Group();
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0x4fd8ff, transparent: true, depthTest: false }));
+      const fill = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x4fd8ff, transparent: true, opacity: 0.12, depthWrite: false, depthTest: false }));
+      edges.renderOrder = fill.renderOrder = 7;
+      grp.add(fill, edges);
+      grp.position.copy(center);
+      this.exterior.add(grp);
+      this._bHover = grp;
+      this._bHoverFor = this._bldg;
+    }
+    if (!this._bHover.visible) this._dirty = true;
+    this._bHover.visible = true;
+  }
+
   // 건물을 가리키는지(외관 단계에서 클릭과 손모양 표시에 쓴다)
   pickBuilding(nx, ny) {
     if (this.stage !== 'exterior') return false;
@@ -721,6 +753,27 @@ export class HallScene {
     if (len < exit) p.copy(t).addScaledVector(dir, exit);
   }
 
+  // 멀리 볼 때 카메라가 도시 건물 안으로 파고들지 않게 한다. 각도는 그대로 두고, 건물 중심에서 카메라로 이어지는 시선에서
+  // 처음 닿는 도시 건물 앞(여유 2 m)까지만 물러난다. 건물 상자는 한 번만 모아 둔다.
+  _keepOutOfCity() {
+    if (this.stage !== 'exterior' || this._anim || !this.city) return;
+    const boxes = (this._cityBoxes ??= this.city.plan.buildings.flatMap((b) => b.parts.map((q) => ({ x0: q.x - q.w / 2 - 2, x1: q.x + q.w / 2 + 2, z0: q.z - q.d / 2 - 2, z1: q.z + q.d / 2 + 2, top: q.y0 + q.h + 2 }))));
+    const t = this.controls.target;
+    const p = this.camera.position;
+    if (p.y > 140) return; // 가장 높은 건물보다 위
+    const dir = p.clone().sub(t);
+    const len = dir.length();
+    if (len < 1) return;
+    dir.divideScalar(len);
+    for (let d = 4; d <= len; d += 4) {
+      const x = t.x + dir.x * d, y = t.y + dir.y * d, z = t.z + dir.z * d;
+      if (boxes.some((q) => x > q.x0 && x < q.x1 && z > q.z0 && z < q.z1 && y < q.top)) {
+        p.copy(t).addScaledVector(dir, Math.max(d - 4, 1));
+        return;
+      }
+    }
+  }
+
   _applyLimits(stage) {
     const ext = stage === 'exterior';
     this.controls.minDistance = ext ? 10 : 2;
@@ -740,6 +793,7 @@ export class HallScene {
     this.scene.background = ext ? null : new THREE.Color(0x0e1218);
     this.scene.fog = ext ? new THREE.FogExp2(this.fogColor, 0.0014) : null;
     this.hover(null);
+    this.setBuildingHover(false);
     for (const l of this.labels) l.el.hidden = ext || !this.showLabels;
     const moving = !(instant || this.reducedMotion);
     if (moving) {
@@ -965,13 +1019,9 @@ export class HallScene {
         a.onDone?.();
       }
     }
-    if (this.stage === 'exterior' && !this._anim) {
-      // 멀리 볼수록 카메라를 높게 둔다: 낮은 각도로 멀리 가면 도시 건물 안으로 들어가 버린다(거리 60 m까지 0.48 pi, 240 m부터 0.30 pi)
-      const d = this.camera.position.distanceTo(this.controls.target);
-      this.controls.maxPolarAngle = Math.PI * (0.48 - 0.18 * Math.min(Math.max((d - 60) / 180, 0), 1));
-    }
     this.controls.update();
     this._keepOutside();
+    this._keepOutOfCity();
     this._updateDepthRange();
     if (!this.cctv) this._updateShell();
     this._stepAirflow(dtSec, timeSec);
