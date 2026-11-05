@@ -58,6 +58,54 @@ await page.mouse.click(pos.x, pos.y);
 await sleep(200);
 const sel = await page.evaluate(() => window.__viewer.state.selected);
 ok('FR-30 랙을 누르면 선택', typeof sel === 'string' && sel.startsWith('rack'), `(${sel})`);
+
+// 1-1) 조작: 왼쪽 끌기는 카메라를 안 움직이고, 오른쪽 끌기는 회전하며, 회전 중심은 그대로(자유 이동 없음)
+{
+  const snap = () => page.evaluate(() => { const s = window.__viewer.scene; return { pos: s.camera.position.toArray(), tgt: s.controls.target.toArray(), pan: s.controls.enablePan }; });
+  const dist = (a, b) => Math.hypot(...a.map((v, i) => v - b[i]));
+  await page.evaluate(() => { window.__viewer.scene.controls.enableDamping = false; });
+  const c0 = await snap();
+  await page.mouse.move(700, 450);
+  await page.mouse.down({ button: 'left' });
+  await page.mouse.move(900, 450, { steps: 8 });
+  await page.mouse.up({ button: 'left' });
+  await sleep(200);
+  const c1 = await snap();
+  await page.mouse.move(700, 450);
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(900, 470, { steps: 8 });
+  await page.mouse.up({ button: 'right' });
+  await sleep(200);
+  const c2 = await snap();
+  ok('MOUSE 왼쪽 끌기는 카메라를 움직이지 않음', dist(c0.pos, c1.pos) < 1e-6, `이동 ${dist(c0.pos, c1.pos).toFixed(4)}`);
+  ok('MOUSE 오른쪽 끌기는 카메라를 돌리고 회전 중심(데이터센터 중심)은 그대로, 자유 이동은 꺼져 있음', dist(c1.pos, c2.pos) > 0.5 && dist(c1.tgt, c2.tgt) < 1e-6 && c2.pan === false, `이동 ${dist(c1.pos, c2.pos).toFixed(2)} 중심변화 ${dist(c1.tgt, c2.tgt).toFixed(6)}`);
+  await page.evaluate(() => { window.__viewer.scene.setPreset('home', true); });
+  // 1-2) 확대와 축소 한계(외관): 아주 가까이 놓아도 건물 안으로 못 들어가고, 아주 멀리 놓아도 한계 거리 안
+  const lim = await page.evaluate(() => {
+    const s = window.__viewer.scene;
+    s.setStage('exterior', true);
+    s.controls.enableDamping = false;
+    const t = s.controls.target.clone();
+    const { center: c, half: h } = s._bldg;
+    let inside = 0, farOver = 0, lowFar = 0, n = 0;
+    for (const az of [0, 90, 180, 270]) for (const pol of [0.2, 0.7, 1.2, 1.5]) {
+      n++;
+      s.camera.position.set(t.x + 0.5 * Math.sin(az) * Math.sin(pol), t.y + 0.5 * Math.cos(pol), t.z + 0.5 * Math.cos(az) * Math.sin(pol));
+      s.update(0.016, 1);
+      const p = s.camera.position;
+      if (Math.abs(p.x - c.x) < h.x && Math.abs(p.y - c.y) < h.y && Math.abs(p.z - c.z) < h.z) inside++;
+      s.camera.position.set(t.x + 5000 * Math.sin(az), t.y + 20, t.z + 5000 * Math.cos(az));
+      for (let i = 0; i < 4; i++) s.update(0.016, 1);
+      const d = s.camera.position.distanceTo(s.controls.target);
+      if (d > s.controls.maxDistance + 1) farOver++;
+      if (s.camera.position.y < 60) lowFar++;
+    }
+    const r = { n, inside, farOver, lowFar, max: Math.round(s.controls.maxDistance) };
+    s.setStage('hall', true);
+    return r;
+  });
+  ok('ZOOM 외관: 아주 가까이 가도 건물 안으로 못 들어가고, 아주 멀리 가도 한계 거리(도시 반폭의 45%) 안이며 낮게 깔리지 않음', lim.inside === 0 && lim.farOver === 0 && lim.lowFar === 0 && lim.max < 400, JSON.stringify(lim));
+}
 ok('FR-31 상세 패널에 장비 이름', (await page.$eval('#detail-body .eq-name', (e) => e.textContent)).toLowerCase() === sel);
 await page.mouse.click(pos.x, pos.y);
 await sleep(200);
