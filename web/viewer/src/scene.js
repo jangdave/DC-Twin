@@ -12,7 +12,8 @@ import { CCTV_LIMITS } from './cctv.js';
 import { VIEWS } from './views.js';
 import { SETTINGS, pixelRatioFor } from './quality.js';
 import { Fx } from './fx.js';
-import { detailTexture } from './citytex.js';
+import { detailTexture, mulberry32 } from './citytex.js';
+import { filterTriangles, siteTreeGeometries, trunkCenters } from './trees.js';
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
@@ -676,8 +677,16 @@ export class HallScene {
       }
       // 건물 모델의 단조로운 면에 미세 디테일: 콘크리트, 지붕, 아스팔트, 금속 패널, 벽 안쪽
       if (/Concrete/i.test(n)) this._addDetail(m.material, { scale: 0.45, amt: 0.3, bump: 0.025 });
-      else if (/Roof/i.test(n)) this._addDetail(m.material, { scale: 0.6, amt: 0.4, bump: 0.03 });
-      else if (/Asphalt/i.test(n)) this._addDetail(m.material, { scale: 0.9, amt: 0.65, bump: 0.05 });
+      else if (/Roof/i.test(n)) {
+        this._addDetail(m.material, { scale: 0.6, amt: 0.4, bump: 0.03 });
+        this._roofDetail(m.material);
+      }
+      else if (/Asphalt/i.test(n)) {
+        this._addDetail(m.material, { scale: 0.9, amt: 0.65, bump: 0.05 });
+        this._asphaltDetail(m.material);
+      } else if (/ParkingPaint/i.test(n)) this._addDetail(m.material, { scale: 1.4, amt: 0.55, bump: 0.02 }); // 주차선: 바랜 느낌
+      else if (/OutdoorEquip/i.test(n)) this._addDetail(m.material, { scale: 1.0, amt: 0.3, bump: 0.02 });
+      else if (/Foliage/i.test(n)) this._addDetail(m.material, { scale: 2.2, amt: 0.5, bump: 0.04 }); // 생울타리 잎의 거친 느낌
       else if (/PanelMetal/i.test(n)) this._addDetail(m.material, { scale: 1.2, amt: 0.25, bump: 0.015 });
       else if (/WallCore/i.test(n)) this._addDetail(m.material, { scale: 0.5, amt: 0.35, bump: 0.03 });
       if (/Paint|Crosswalk/i.test(n)) Object.assign(m.material, { polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -6 });
@@ -709,8 +718,22 @@ export class HallScene {
     } else {
       this._main = this._bldg;
     }
+    // 부지 나무 교체: 줄기 위치를 찾아 모델의 나무(줄기와 수관)를 지우고 상세 나무를 같은 자리에 세운다. 생울타리 같은 낮은 식재는 남긴다.
+    let siteTrees = null;
+    const trunkM = meshes.find((m) => /Trunk/.test(m.material.name || ''));
+    const foliageM = meshes.find((m) => /Foliage/.test(m.material.name || ''));
+    if (trunkM && foliageM) {
+      const spots = trunkCenters(trunkM.geometry);
+      if (spots.length) {
+        foliageM.geometry = filterTriangles(foliageM.geometry, (x, y, z) => !(y > 1.8 && spots.some((p) => Math.hypot(p.x - x, p.z - z) < 3.6)));
+        meshes.splice(meshes.indexOf(trunkM), 1);
+        siteTrees = this._buildSiteTrees(spots);
+      }
+    }
+    if (this._roofU) this._roofU.value.set(this._main.center.x, this._main.center.z, this._main.half.x - 0.8, this._main.half.z - 0.8);
     const model = new THREE.Group();
     for (const m of meshes) model.add(m);
+    if (siteTrees) model.add(siteTrees);
     this._applyEnvMaps();
     model.position.set(c.x - mid.x, 0, c.z - mid.z); // 건물 가운데를 홀 가운데에 맞춘다
     this.exterior.add(model);
@@ -1050,6 +1073,122 @@ export class HallScene {
         }`);
     };
     mat.customProgramCacheKey = () => `dc-detail-${scale}-${amt}-${bump}`;
+    mat.needsUpdate = true;
+  }
+
+  // 본 건물 지붕: 방수층 이음선(1.5 m 간격), 가장자리 마감 띠(0.9 m), 빗물 얼룩, 배수구(9 m 칸마다 일부)를 셰이더로 그린다.
+  // 지붕 면적(가운데와 반폭)은 _main에서 가져온다. 앞서 _addDetail이 붙인 셰이더가 있으면 그 뒤에 이어서 고친다.
+  _roofDetail(mat) {
+    const m = this._main;
+    const uRoof = (this._roofU ??= { value: new THREE.Vector4(m.center.x, m.center.z, m.half.x - 0.8, m.half.z - 0.8) }); // 건물 상자는 모델을 읽은 뒤 정해지므로 그때 다시 맞춘다
+    const prev = mat.onBeforeCompile;
+    const prevKey = mat.customProgramCacheKey?.() ?? '';
+    mat.onBeforeCompile = (sh, r) => {
+      prev?.(sh, r);
+      sh.uniforms.uRoof = uRoof;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', `#include <common>
+        varying vec3 vRp;`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vRp = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', `#include <common>
+        varying vec3 vRp;
+        uniform vec4 uRoof;
+        float rh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float rn(vec2 p) {
+          vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(rh(i), rh(i + vec2(1.0, 0.0)), f.x), mix(rh(i + vec2(0.0, 1.0)), rh(i + vec2(1.0, 1.0)), f.x), f.y);
+        }`)
+        .replace('#include <map_fragment>', `#include <map_fragment>
+        if (vRp.y > 1.0) {
+          vec2 rp = vRp.xz;
+          vec2 e = uRoof.zw - abs(rp - uRoof.xy);
+          float ed = min(e.x, e.y);
+          float trim = 1.0 - smoothstep(0.7, 0.95, ed);
+          float f = fract(rp.x / 1.5);
+          float seam = 1.0 - smoothstep(0.0, 0.07, min(f, 1.0 - f) * 1.5);
+          float stain = rn(rp * 0.28) * 0.6 + rn(rp * 0.9) * 0.4;
+          diffuseColor.rgb *= 1.0 - 0.22 * smoothstep(0.35, 0.8, stain);
+          diffuseColor.rgb *= 1.0 - 0.34 * seam * (1.0 - trim);
+          diffuseColor.rgb *= mix(1.0, 0.7, trim);
+          diffuseColor.rgb *= 1.0 + 0.1 * smoothstep(0.93, 1.0, ed) * (1.0 - smoothstep(1.0, 1.08, ed)); // 마감 띠 안쪽의 밝은 선
+          vec2 cell = floor(rp / 9.0);
+          vec2 dc = (cell + 0.5 + (vec2(rh(cell + 1.7), rh(cell + 4.1)) - 0.5) * 0.4) * 9.0;
+          float dd = distance(rp, dc);
+          if (rh(cell) > 0.55 && ed > 2.0) {
+            float grate = 1.0 - smoothstep(0.52, 0.58, dd);
+            float ring = smoothstep(0.58, 0.62, dd) * (1.0 - smoothstep(0.78, 0.84, dd));
+            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.17, 0.18), grate);
+            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.5, 0.52, 0.54), ring * 0.8);
+          }
+        }`);
+    };
+    mat.customProgramCacheKey = () => `${prevKey}-dc-roof-v1`;
+    mat.needsUpdate = true;
+  }
+
+  // 부지 나무(줄기 + 수관) 인스턴스. spots: 모델 좌표의 [{ x, z, y0 }]
+  _buildSiteTrees(spots) {
+    const { trunk, crown } = siteTreeGeometries();
+    const T = new THREE.InstancedMesh(trunk, new THREE.MeshLambertMaterial({ vertexColors: true }), spots.length);
+    const C = new THREE.InstancedMesh(crown, new THREE.MeshLambertMaterial({ vertexColors: true }), spots.length);
+    const rng = mulberry32(41);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
+    spots.forEach((s, i) => {
+      const k = 0.92 + rng() * 0.28;
+      m.compose(new THREE.Vector3(s.x, s.y0, s.z), q.setFromAxisAngle(up, rng() * 6.28), new THREE.Vector3(k, k * (0.95 + rng() * 0.15), k));
+      T.setMatrixAt(i, m);
+      C.setMatrixAt(i, m);
+      C.setColorAt(i, col.setRGB(0.9 + rng() * 0.2, 0.92 + rng() * 0.16, 0.9 + rng() * 0.2)); // 나무마다 색이 조금씩 다름
+    });
+    for (const o of [T, C]) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+      o.frustumCulled = false;
+    }
+    const g = new THREE.Group();
+    g.name = 'siteTrees';
+    g.add(T, C);
+    return g;
+  }
+
+  // 주차장 아스팔트: 균열(능선 잡음), 기름 얼룩, 보수 흔적 사각형. 월드 좌표의 땅(y < 1) 면에만 그린다.
+  _asphaltDetail(mat) {
+    const prev = mat.onBeforeCompile;
+    const prevKey = mat.customProgramCacheKey?.() ?? '';
+    mat.onBeforeCompile = (sh, r) => {
+      prev?.(sh, r);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', `#include <common>
+        varying vec3 vAp;`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vAp = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', `#include <common>
+        varying vec3 vAp;
+        float ah(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float an(vec2 p) {
+          vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(ah(i), ah(i + vec2(1.0, 0.0)), f.x), mix(ah(i + vec2(0.0, 1.0)), ah(i + vec2(1.0, 1.0)), f.x), f.y);
+        }`)
+        .replace('#include <map_fragment>', `#include <map_fragment>
+        {
+          vec2 ap = vAp.xz;
+          float fade = 1.0 - smoothstep(30.0, 110.0, distance(cameraPosition, vAp));
+          float c1 = abs(an(ap * 0.22) - 0.5);
+          float c2 = abs(an(ap * 0.61 + 7.0) - 0.5);
+          float crack = clamp((1.0 - smoothstep(0.0, 0.012, c1)) * 0.9 + (1.0 - smoothstep(0.0, 0.008, c2)) * 0.5, 0.0, 1.0);
+          float oil = smoothstep(0.62, 0.9, an(ap * 0.5 + 3.3)) * smoothstep(0.35, 0.6, an(ap * 0.13));
+          vec2 pc = floor(ap / 14.0);
+          vec2 pf = fract(ap / 14.0);
+          float repair = step(0.8, ah(pc)) * step(0.15, pf.x) * step(pf.x, 0.75) * step(0.2, pf.y) * step(pf.y, 0.6);
+          diffuseColor.rgb *= 1.0 - 0.5 * crack * fade;
+          diffuseColor.rgb *= 1.0 - 0.38 * oil * fade;
+          diffuseColor.rgb *= 1.0 - 0.14 * repair;
+        }`);
+    };
+    mat.customProgramCacheKey = () => `${prevKey}-dc-asphalt-v1`;
     mat.needsUpdate = true;
   }
 
