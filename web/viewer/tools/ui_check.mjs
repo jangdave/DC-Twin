@@ -250,7 +250,7 @@ await pm.goto(`${base}?stage=exterior`, { waitUntil: 'networkidle0' });
 await pm.waitForFunction(() => window.__viewer?.scene?.exteriorModel, { timeout: 30000 }).catch(() => {});
 const midInfo = await pm.evaluate(() => {
   const s = window.__viewer.scene;
-  return { tier: s.tier, blocks: s.city.plan.blocks.length, cars: s.city.group.children.some((c) => c.isInstancedMesh && c.count === 60), shadow: s.sunExt.castShadow };
+  return { tier: s.tier, blocks: s.city.plan.blocks.length, cars: s.city.carCount() === 60, shadow: s.sunExt.castShadow };
 });
 ok('Q 자동 시험 브라우저는 보통(도시 블록 48, 차량 60, 그림자)', midInfo.tier === 'mid' && midInfo.blocks === 48 && midInfo.cars && midInfo.shadow, JSON.stringify(midInfo));
 await pm.close();

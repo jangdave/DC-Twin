@@ -566,6 +566,7 @@ export class HallScene {
     this.hemi.intensity = p.hemiI;
     this.hills.material.color.set(p.grass).multiplyScalar(0.8);
     this.city?.setSky(this.skyName);
+    this._nightU.value = this.skyName === 'dusk' ? 1 : 0; // 데이터센터 창에 불이 켜진다
     this._updateReflection();
     this.fogColor = new THREE.Color(p.fog);
     this.renderer.shadowMap.needsUpdate = true;
@@ -583,6 +584,36 @@ export class HallScene {
       this.camera.far = far;
       this.camera.updateProjectionMatrix();
     }
+  }
+
+  get _nightU() {
+    return (this._nightUniform ??= { value: 0 });
+  }
+
+  // 저녁에 유리 창 일부(약 55%)가 따뜻한 불빛으로 켜진다. 창 위치는 월드 좌표를 칸(수평 2.4 m x 층 3.6 m)으로 나눠 해시로 고르므로
+  // 그림 파일이 필요 없고 건물이 움직여도 같은 창이 켜진다. 낮에는 uNight가 0이라 아무 일도 없다.
+  _lightWindows(mat) {
+    const u = this._nightU;
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uNight = u;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', `#include <common>
+        varying vec3 vWp;`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vWp = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', `#include <common>
+        varying vec3 vWp;
+        uniform float uNight;
+        float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        vec2 cell = vec2(floor((vWp.x + vWp.z) / 1.3), floor(vWp.y / 3.6));
+        float lit = step(0.6, h21(cell)) * (0.45 + 0.55 * h21(cell + 7.0));
+        float onFloor = step(0.4, vWp.y);
+        totalEmissiveRadiance += vec3(1.0, 0.74, 0.4) * lit * onFloor * uNight * 0.75;`);
+    };
+    mat.customProgramCacheKey = () => 'dc-night-windows';
+    mat.needsUpdate = true;
   }
 
   // 건물 모델(glb)을 받아 단순 상자 건물을 바꾼다. 실패하면 상자로 계속 쓴다.
@@ -604,6 +635,7 @@ export class HallScene {
       if (k > 0) {
         // 유리와 금속만 반사하는 재질로 둔다. 유리는 짙은 색에 반사가 강하고 거의 불투명하게 해서 안쪽 벽이 비치지 않게 한다.
         if (/Glass/i.test(n)) Object.assign(m.material, { color: new THREE.Color(0x35506a), metalness: 0.3, roughness: 0.05, opacity: 0.9, transparent: true });
+        if (/Glass/i.test(n)) this._lightWindows(m.material);
         (this._reflective ??= []).push({ mat: m.material, k });
       } else {
         m.material = toLambert(m.material); // 바닥, 콘크리트, 지붕, 울타리, 식재: 보는 각도에 따라 색이 변하지 않는 재질
