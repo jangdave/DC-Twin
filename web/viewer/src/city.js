@@ -135,16 +135,17 @@ function windowLights(mat, grid) {
       {
         vec2 wc = floor(vEmissiveMapUv * uGrid);
         vec2 reg = floor(vCW.xz / 60.0);
-        float occ = mix(0.1, 0.62, wh(reg * 1.7 + 3.1));
-        float floorLit = step(0.8, wh(vec2(wc.y, wh(reg + 9.0) * 50.0)));
-        float on = step(1.0 - mix(occ, 0.92, floorLit), wh(wc + reg * 17.3));
+        // 건물(약 60 m 구역)마다 창의 40 %만 켠다. 무작위 문턱 대신 황금비 격자(R2 수열)를 쓰면 켜진 창이 고르게 퍼져 한곳에 뭉치지 않고,
+        // 여기에 창마다 작은 흔들림을 더해 규칙적인 무늬는 피한다(구역마다 시작점이 달라 건물끼리도 다르다).
+        float u = fract(dot(wc, vec2(0.7548776662, 0.5698402910)) + wh(reg + 4.3) + 0.3 * wh(wc * 1.9 + reg));
+        float on = step(u, 0.4);
         float br = 0.5 + 0.5 * wh(wc * 1.3 + reg);
         float cool = wh(wc + 5.7 + reg * 3.0);
         vec3 tint = mix(vec3(1.0, 0.86, 0.6), vec3(0.82, 0.9, 1.0), step(0.78, cool));
         totalEmissiveRadiance *= on * br * tint;
       }`);
   };
-  mat.customProgramCacheKey = () => 'dc-city-windows-v1';
+  mat.customProgramCacheKey = () => 'dc-city-windows-v2';
 }
 
 // 블록마다 필지로 나누고 공원, 주차장, 건물을 놓는다. 가운데 블록(0,0)은 비운다.

@@ -643,11 +643,13 @@ export class HallScene {
         roughnessFactor = mix(0.04, 0.16, h21(wCell() + 3.0));`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         vec2 cell = wCell();
-        float lit = step(0.6, h21(cell)) * (0.45 + 0.55 * h21(cell + 7.0));
+        // 창의 40 %만 켠다. 무작위 문턱은 켜진 창이 뭉치므로 황금비 격자(R2 수열)로 고르게 흩고, 창마다 작은 흔들림으로 규칙 무늬를 피한다.
+        float ru = fract(dot(cell, vec2(0.7548776662, 0.5698402910)) + 0.3 * h21(cell + 11.0));
+        float lit = step(ru, 0.4) * (0.45 + 0.55 * h21(cell + 7.0));
         float onFloor = step(0.4, vWp.y);
         totalEmissiveRadiance += vec3(1.0, 0.74, 0.4) * lit * onFloor * uNight * 0.75;`);
     };
-    mat.customProgramCacheKey = () => 'dc-glass-windows-v2';
+    mat.customProgramCacheKey = () => 'dc-glass-windows-v3';
     mat.needsUpdate = true;
   }
 
