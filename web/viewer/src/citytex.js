@@ -9,6 +9,11 @@ export const FACADE_TILE = {
   concrete: { tw: 12, th: 14.4, cols: 4 }, concrete2: { tw: 12, th: 14.4, cols: 2 },
   brick: { tw: 12.8, th: 12, cols: 4 }, brick2: { tw: 12.8, th: 12, cols: 4 },
   metal: { tw: 12.8, th: 14.4, cols: 4 }, metal2: { tw: 12.8, th: 14.4, cols: 4 },
+  // 창이 적은 외벽: 작은 구멍창, 세로 틈창, 큰 창 두 층 높이, 창고형 벽
+  punched: { tw: 12, th: 14.4, cols: 2 }, punched2: { tw: 12, th: 14.4, cols: 2 },
+  slit: { tw: 12.8, th: 14.4, cols: 4 }, slit2: { tw: 12.8, th: 14.4, cols: 4 },
+  wide: { tw: 14, th: 14.4, cols: 2 }, wide2: { tw: 14, th: 14.4, cols: 2 },
+  solid: { tw: 12.8, th: 14.4, cols: 4 }, solid2: { tw: 12.8, th: 14.4, cols: 4 },
 };
 export const ROOF_UV = 0.985; // 흰 점의 위치
 
@@ -291,11 +296,93 @@ function drawMetal(rng, v) {
   return finish(wall, glow, rng);
 }
 
+// 구멍창: 넓은 벽에 작은 창이 드문드문(층마다 두 칸에 하나). 2번: 짙은 회색 벽에 창 한 쌍
+function drawPunched(rng, v) {
+  const [wall, glow, a, g] = newPair();
+  a.fillStyle = v ? '#8d969e' : '#bdb6a9';
+  a.fillRect(0, 0, S, S);
+  for (let y = 0; y < S; y += 32) {
+    a.fillStyle = v ? '#7d868e' : '#aaa397';
+    a.fillRect(0, y, S, 1);
+  }
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 2; c++) {
+      const x = c * 128 + (v ? 30 : 46), y = r * 64 + 14;
+      a.fillStyle = v ? '#5d656c' : '#8f897d';
+      a.fillRect(x - 3, y - 3, (v ? 68 : 40) + 6, 40);
+      if (v) {
+        windowCell(a, g, rng, x, y, 30, 34, rng() < 0.3);
+        windowCell(a, g, rng, x + 38, y, 30, 34, rng() < 0.3);
+      } else windowCell(a, g, rng, x, y, 40, 34, rng() < 0.3);
+    }
+  }
+  return finish(wall, glow, rng);
+}
+
+// 세로 틈창: 폭이 좁고 긴 창이 일정 간격. 2번: 짙은 벽에 두 층 높이 틈창
+function drawSlit(rng, v) {
+  const [wall, glow, a, g] = newPair();
+  a.fillStyle = v ? '#5f646b' : '#c6c2ba';
+  a.fillRect(0, 0, S, S);
+  for (let c = 0; c < 4; c++) {
+    const x = c * 64 + 26;
+    for (let r = 0; r < (v ? 2 : 4); r++) {
+      const y = v ? r * 128 + 8 : r * 64 + 6;
+      a.fillStyle = v ? '#44484e' : '#9d998f';
+      a.fillRect(x - 2, y - 2, 16, (v ? 112 : 54) + 4);
+      windowCell(a, g, rng, x, y, 12, v ? 108 : 50, rng() < 0.3);
+    }
+  }
+  return finish(wall, glow, rng);
+}
+
+// 큰 창: 두 층 높이의 큰 창이 칸마다 하나. 2번: 짙은 틀에 가로로 긴 창
+function drawWide(rng, v) {
+  const [wall, glow, a, g] = newPair();
+  a.fillStyle = v ? '#4e555c' : '#a4aaa8';
+  a.fillRect(0, 0, S, S);
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      const x = c * 128 + 12, y = r * 128 + (v ? 22 : 12);
+      a.fillStyle = v ? '#2f353a' : '#7b8180';
+      a.fillRect(x - 3, y - 3, 110, (v ? 84 : 110) + 6);
+      windowCell(a, g, rng, x, y, 104, v ? 78 : 104, rng() < 0.3);
+    }
+  }
+  return finish(wall, glow, rng);
+}
+
+// 창고형 벽: 거의 막힌 벽에 높은 곳의 작은 창줄. 1번: 골판 금속, 2번: 프리캐스트 판
+function drawSolid(rng, v) {
+  const [wall, glow, a, g] = newPair();
+  if (!v) {
+    a.fillStyle = '#b4bab6';
+    a.fillRect(0, 0, S, S);
+    for (let x = 0; x < S; x += 6) {
+      a.fillStyle = (x / 6) % 2 ? '#a4aaa6' : '#c0c6c2';
+      a.fillRect(x, 0, 3, S);
+    }
+    for (let c = 0; c < 4; c++) windowCell(a, g, rng, c * 64 + 14, 10, 36, 12, rng() < 0.3);
+    a.fillStyle = '#6f7571';
+    a.fillRect(0, 128, S, 3);
+  } else {
+    a.fillStyle = '#bcb8b0';
+    a.fillRect(0, 0, S, S);
+    for (let y = 0; y < S; y += 64) {
+      a.fillStyle = '#9a968e';
+      a.fillRect(0, y, S, 2);
+    }
+    for (let x = 0; x < S; x += 64) a.fillRect(x, 0, 2, S);
+    for (let c = 0; c < 4; c++) windowCell(a, g, rng, c * 64 + 12, 22, 40, 14, rng() < 0.3);
+  }
+  return finish(wall, glow, rng);
+}
+
 export function facadeTextures(seed = 5, scale = 1) {
   K = scale;
   const rng = mulberry32(seed);
   const out = {};
-  for (const [name, draw] of [['glass', drawGlass], ['ribbon', drawRibbon], ['concrete', drawConcrete], ['brick', drawBrick], ['metal', drawMetal]]) {
+  for (const [name, draw] of [['glass', drawGlass], ['ribbon', drawRibbon], ['concrete', drawConcrete], ['brick', drawBrick], ['metal', drawMetal], ['punched', drawPunched], ['slit', drawSlit], ['wide', drawWide], ['solid', drawSolid]]) {
     out[name] = draw(rng, 0);
     out[`${name}2`] = draw(rng, 1);
   }
