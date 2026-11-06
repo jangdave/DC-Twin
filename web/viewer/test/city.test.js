@@ -51,10 +51,12 @@ describe('planCity', () => {
     }
   });
 
-  it('건물이 다양하다: 외벽 5종, 모양 5종, 높이 차이, 공원과 주차장', () => {
-    expect(new Set(plan.buildings.map((b) => baseFacade(b.facade))).size).toBe(5);
-    expect(new Set(plan.buildings.map((b) => b.facade)).size).toBeGreaterThanOrEqual(9); // 10종 중 거의 다
+  it('건물이 다양하다: 외벽 9종, 모양 5종, 높이 차이, 공원과 주차장', () => {
+    expect(new Set(plan.buildings.map((b) => baseFacade(b.facade))).size).toBe(9);
+    expect(new Set(plan.buildings.map((b) => b.facade)).size).toBeGreaterThanOrEqual(9); // 18종 중 절반 이상
     expect(plan.buildings.every((b) => FACADES.includes(b.facade))).toBe(true);
+    const sparse = plan.buildings.filter((b) => ['punched', 'slit', 'wide', 'solid'].includes(baseFacade(b.facade))).length;
+    expect(sparse / plan.buildings.length).toBeGreaterThan(0.3); // 창이 적은 외벽이 3할 넘게 섞인다
     expect(new Set(plan.buildings.map((b) => b.kind)).size).toBe(5);
     const hs = plan.buildings.map((b) => b.h);
     const mean = hs.reduce((a, v) => a + v, 0) / hs.length;
