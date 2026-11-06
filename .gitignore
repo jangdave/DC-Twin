@@ -88,3 +88,6 @@ experiments/openfoam_baseline/hb.txt
 .env
 *.env
 !*.env.example
+
+# 실험 중 생기는 실행 기록(다시 만들 수 있다)
+experiments/**/*.log
