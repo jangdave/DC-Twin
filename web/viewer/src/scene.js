@@ -647,9 +647,9 @@ export class HallScene {
         float ru = fract(dot(cell, vec2(0.7548776662, 0.5698402910)) + 0.3 * h21(cell + 11.0));
         float lit = step(ru, 0.4) * (0.45 + 0.55 * h21(cell + 7.0));
         float onFloor = step(0.4, vWp.y);
-        totalEmissiveRadiance += vec3(1.0, 0.74, 0.4) * lit * onFloor * uNight * 0.75;`);
+        totalEmissiveRadiance += vec3(1.0, 0.74, 0.4) * lit * onFloor * uNight * 0.6;`);
     };
-    mat.customProgramCacheKey = () => 'dc-glass-windows-v3';
+    mat.customProgramCacheKey = () => 'dc-glass-windows-v4';
     mat.needsUpdate = true;
   }
 
@@ -726,7 +726,8 @@ export class HallScene {
     // 설비 보강: 냉각탑 김, 울타리 윗줄의 가시철사
     const extras = this._buildEquipmentExtras(gltf.scene);
     // 저녁 조명: 모델의 가로등(LightPole_*) 위치에 빛 번짐과 바닥 빛 웅덩이를 둔다(저녁에만 보임)
-    const siteLights = this._buildSiteLights(gltf.scene);
+    const roofM = meshes.find((m) => /BldgRoof/.test(m.material.name || ''));
+    const siteLights = this._buildSiteLights(gltf.scene, roofM?.geometry.boundingBox ?? null);
     // 부지 나무 교체: 줄기 위치를 찾아 모델의 나무(줄기와 수관)를 지우고 상세 나무를 같은 자리에 세운다. 생울타리 같은 낮은 식재는 남긴다.
     let siteTrees = null;
     const trunkM = meshes.find((m) => /Trunk/.test(m.material.name || ''));
@@ -1320,7 +1321,8 @@ export class HallScene {
   }
 
   // 부지 가로등 조명: root(glb 장면)에서 LightPole_* 노드의 월드 위치를 읽어 m 단위로 바꾼다.
-  _buildSiteLights(root) {
+  // wall: 데이터센터 건물 지붕의 모델 좌표 상자(없으면 null). 건물 둘레에 벽등을 일정한 간격으로 단다.
+  _buildSiteLights(root, wall = null) {
     root.updateMatrixWorld(true);
     const poles = [];
     const box = new THREE.Box3();
@@ -1331,19 +1333,40 @@ export class HallScene {
       poles.push({ x: ((box.min.x + box.max.x) / 2) * CM, z: ((box.min.z + box.max.z) / 2) * CM, top: box.max.y * CM });
     });
     if (!poles.length) return null;
+    const lamps = []; // 벽등: 건물 둘레 바닥 가까이, 바깥으로 0.5 m
+    if (wall) {
+      const gap = 9;
+      const side = (x0, z0, x1, z1, nx, nz) => {
+        const n = Math.max(2, Math.round(Math.hypot(x1 - x0, z1 - z0) / gap));
+        for (let i = 0; i < n; i++) {
+          const t = (i + 0.5) / n;
+          lamps.push({ x: x0 + (x1 - x0) * t + nx * 0.5, z: z0 + (z1 - z0) * t + nz * 0.5 });
+        }
+      };
+      side(wall.min.x, wall.min.z, wall.max.x, wall.min.z, 0, -1);
+      side(wall.min.x, wall.max.z, wall.max.x, wall.max.z, 0, 1);
+      side(wall.min.x, wall.min.z, wall.min.x, wall.max.z, -1, 0);
+      side(wall.max.x, wall.min.z, wall.max.x, wall.max.z, 1, 0);
+    }
     const tex = (this._glowTex ??= glowTexture());
     const warm = 0xffc880;
     const pools = new THREE.InstancedMesh(
       new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ map: tex, color: warm, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
-      poles.length,
+      new THREE.MeshBasicMaterial({ map: tex, color: warm, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
+      poles.length + lamps.length,
     );
     const m = new THREE.Matrix4();
-    const pts = new Float32Array(poles.length * 3);
+    const pts = new Float32Array((poles.length + lamps.length) * 3);
     poles.forEach((p, i) => {
-      m.compose(new THREE.Vector3(p.x, 0.09, p.z), new THREE.Quaternion(), new THREE.Vector3(13, 1, 13));
+      m.compose(new THREE.Vector3(p.x, 0.09, p.z), new THREE.Quaternion(), new THREE.Vector3(15, 1, 15));
       pools.setMatrixAt(i, m);
       pts.set([p.x, p.top, p.z], i * 3);
+    });
+    lamps.forEach((p, k) => {
+      const i = poles.length + k;
+      m.compose(new THREE.Vector3(p.x, 0.08, p.z), new THREE.Quaternion(), new THREE.Vector3(5.5, 1, 5.5)); // 벽 아래를 비추는 작은 웅덩이
+      pools.setMatrixAt(i, m);
+      pts.set([p.x, 2.6, p.z], i * 3);
     });
     pools.frustumCulled = false;
     pools.renderOrder = 5;
@@ -1355,6 +1378,7 @@ export class HallScene {
     const grp = new THREE.Group();
     grp.name = 'siteLights';
     grp.userData.count = poles.length;
+    grp.userData.wallLamps = lamps.length;
     grp.add(pools, heads);
     return grp;
   }

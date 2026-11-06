@@ -677,7 +677,7 @@ export function buildCity({ cx, cz, quality, seed = 11 }) {
     // 낮이면 창이 어둡고 저녁이면 창과 가로등에 불이 켜지며, 먼 윤곽은 어두워진다
     setSky(name) {
       const dusk = name === 'dusk';
-      for (const m of emissiveMats) m.emissiveIntensity = dusk ? 1.5 : 0.05;
+      for (const m of emissiveMats) m.emissiveIntensity = dusk ? 1.0 : 0.05; // 40 % 규칙 뒤 너무 밝아 낮춤
       if (lampHeads) lampHeads.material.emissiveIntensity = dusk ? 2.5 : 0;
       skyline.material.color.setScalar(dusk ? 0.45 : 1);
       lightMat.color.setScalar(dusk ? 1.6 : 0.55); // 차량 앞뒤 등: 저녁에 밝아진다
