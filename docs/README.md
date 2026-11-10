@@ -38,6 +38,7 @@
 | [28_kit_run_and_commercial_tool_options.md](28_kit_run_and_commercial_tool_options.md) | Kit 실행 결과와 상용 데이터센터 도구(Reality DC) 활용 방안 | 초안 |
 | [29_server_side_rendering_review.md](29_server_side_rendering_review.md) | 3D 그리기를 서버로 옮기는 안 검토 | 초안 |
 | [30_architecture_review.md](30_architecture_review.md) | 아키텍처 검토: 문제 진단 (2026-11-04) | 초안 |
+| [31_monitoring_simulation_quickcalc.md](31_monitoring_simulation_quickcalc.md) | 모니터링, 시뮬레이션, 간이 계산의 역할 다시 나누기 | 초안 |
 
 `상태`가 "초안"인 문서는 결정 전의 제안이다. 숫자는 문서 맨 위의 날짜 기준이다. 실제 값은 코드와 시험이 정본이다.
 
