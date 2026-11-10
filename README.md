@@ -16,15 +16,15 @@ Blender로 모델링 → USD 파일 → Omniverse(데이터 생성)  ┐
 - 완료: USD 모델(랙 60기 홀, 건물 외관과 내부, 센서 204개), 열·기류 시뮬레이션 시험, 센서 값 생성기, 게이트웨이, Unreal 데이터 계층(연결, 센서 목록, 알람 모델)
 - 진행 중: **Unreal 운영 화면**(랙 입구 온도 색 표시는 만들었고, 알람 목록·센서 상세·추이 그래프는 아직 없음)
 - 이후: Pixel Streaming과 exe 패키징, 데모 영상. 방향 검토는 [17 방향 검토](docs/17_direction_review.md)
-- 진행 상황은 [Milestone](https://github.com/jangdave/Portfolio_DT/milestones)과 [Issue](https://github.com/jangdave/Portfolio_DT/issues)에서 볼 수 있습니다.
+- 진행 상황은 [Milestone](https://github.com/jangdave/DC-Twin/milestones)과 [Issue](https://github.com/jangdave/DC-Twin/issues)에서 볼 수 있습니다.
 
 ## 처음 시작하기
 필요한 것: Windows, NVIDIA RTX GPU, Unreal Engine 5.8(5.8.3에서 확인), Blender 5.1, Git, Git LFS, `uv`(Python 환경 도구).
 
 1. 저장소를 받습니다.
    ```
-   git clone https://github.com/jangdave/Portfolio_DT.git
-   cd Portfolio_DT
+   git clone https://github.com/jangdave/DC-Twin.git
+   cd DC-Twin
    git lfs install
    ```
 2. 개발 환경을 점검합니다. 설치하거나 바꾸는 것은 없고, 무엇이 있고 없는지만 보여 줍니다.

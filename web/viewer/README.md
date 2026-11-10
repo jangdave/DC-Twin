@@ -26,7 +26,7 @@ npm run build          # dist/ 만들기 + 용량 기준 점검
 
 ## 공개 주소 (GitHub Pages)
 
-https://jangdave.github.io/Portfolio_DT/ — `web/viewer`가 main에 병합되면 자동으로 다시 배포한다(`.github/workflows/web-viewer-pages.yml`). 녹화 재생만 된다. 라이브 모드는 이 컴퓨터의 게이트웨이(`ws://127.0.0.1`)로만 붙는다.
+https://jangdave.github.io/DC-Twin/ — `web/viewer`가 main에 병합되면 자동으로 다시 배포한다(`.github/workflows/web-viewer-pages.yml`). 녹화 재생만 된다. 라이브 모드는 이 컴퓨터의 게이트웨이(`ws://127.0.0.1`)로만 붙는다.
 
 ## 정적 자료 다시 만들기
 

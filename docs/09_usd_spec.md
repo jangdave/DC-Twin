@@ -1,6 +1,6 @@
 # 09. USD 규격 (v2)
 
-- 상태: 채택 (2026-10-15). 검증 스크립트와 규칙 문서는 [이슈 #10](https://github.com/jangdave/Portfolio_DT/issues/10)에서 이 규격에 맞춘다.
+- 상태: 채택 (2026-10-15). 검증 스크립트와 규칙 문서는 [이슈 #10](https://github.com/jangdave/DC-Twin/issues/10)에서 이 규격에 맞춘다.
 - 목적: 3D 에셋과 장면을 어떤 구조와 이름으로 만들지 정한다. 모델링하는 사람, 스크립트를 쓰는 사람, Unreal 클라이언트를 만드는 사람이 같은 약속을 쓰게 한다.
 - 관련 문서: [08 설계 재점검](08_design_review.md), [10 모델링 가이드](10_modeling_guide.md), [11 데이터 규격](11_data_spec.md)
 - 용어는 [용어집](07_glossary_and_writing_rules.md)을 따른다.
@@ -102,7 +102,7 @@ USD 경로  /DC/Hall01/Row01/Rack_01/Anchors/Sensor_TEMP_IN
 MQTT 주소 dct/v1/hall01/rack_01/temp_in
 ```
 - 장비 번호가 홀 안에서 겹치지 않기 때문에 줄(Row) 번호는 ID에 넣지 않는다.
-- 이 변환은 코드 한 곳(센서 매니페스트 생성 스크립트, [이슈 #12](https://github.com/jangdave/Portfolio_DT/issues/12))에만 두고, 다른 곳에서는 변환을 다시 구현하지 않는다.
+- 이 변환은 코드 한 곳(센서 매니페스트 생성 스크립트, [이슈 #12](https://github.com/jangdave/DC-Twin/issues/12))에만 두고, 다른 곳에서는 변환을 다시 구현하지 않는다.
 
 ## 6. 장면 만들기: 참조와 덮어쓰기
 
@@ -188,7 +188,7 @@ Blender에서 사용자 속성으로 만들면 USD에는 string으로 나온다.
 내부 둘러보기([12](12_unreal_design.md) 10장)를 위해 방을 걸어 다닐 수 있게 만들고, 안내 투어 지점을 USD로 정의한다. 검증 스크립트에는 이 규격이 확정된 뒤 반영한다.
 
 ### 11.1 홀 외피 (바닥, 벽, 천장)
-데이터센터 내부가 곧 장면이므로 **방을 따로 모델링하지 않는다.** 걸어 다니는 데 필요한 바닥, 벽, 천장은 장면 생성 스크립트(`build_scene.py`, [이슈 #11](https://github.com/jangdave/Portfolio_DT/issues/11))가 **스크립트가 만든다.** 처음에는 기본 도형(상자)이었고, 2026-10-15에 재질과 UV가 있는 Mesh로 다듬었다(11.1.1).
+데이터센터 내부가 곧 장면이므로 **방을 따로 모델링하지 않는다.** 걸어 다니는 데 필요한 바닥, 벽, 천장은 장면 생성 스크립트(`build_scene.py`, [이슈 #11](https://github.com/jangdave/DC-Twin/issues/11))가 **스크립트가 만든다.** 처음에는 기본 도형(상자)이었고, 2026-10-15에 재질과 UV가 있는 Mesh로 다듬었다(11.1.1).
 
 | 항목 | 값 | 설명 |
 |---|---|---|
@@ -283,7 +283,7 @@ Blender에서 사용자 속성으로 만들면 USD에는 string으로 나온다.
 - **자세히 만드는 층은 하나**(`Hall01`)이다. 다른 층은 외관 안쪽을 가린 단순 모양이며 누를 수 없다(화면에 "준비 중" 표시 없이 비활성).
 - 건물 외관과 옥외 설비는 **직접 모델링**한다. 외벽은 모듈형 패널로 만들어 반복해 쓴다.
 - 외관 모델은 걸어 다니지 않으므로 충돌 형상이 필요 없고, 열 시뮬레이션에도 쓰이지 않는다. 외관 정보는 보기 위한 모양이다.
-- 검증 스크립트는 `building`, `outdoor`를 `dct:assetType` 허용 값에 추가하고, `/DC` 바로 아래에 `Hall##`과 `Building##`을 모두 허용하도록 고친다([이슈 #10](https://github.com/jangdave/Portfolio_DT/issues/10)).
+- 검증 스크립트는 `building`, `outdoor`를 `dct:assetType` 허용 값에 추가하고, `/DC` 바로 아래에 `Hall##`과 `Building##`을 모두 허용하도록 고친다([이슈 #10](https://github.com/jangdave/DC-Twin/issues/10)).
 
 ### 12.1 건물 외관 에셋 (`building.usda`) 규격
 

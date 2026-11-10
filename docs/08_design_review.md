@@ -24,7 +24,7 @@
 ### P1. 센서 정의 방식에 결함이 있다 (영향 큼)
 - **문제:** 지금 규칙은 장비 prim 하나에 `dct:sensorId` 하나를 붙인다. 그런데 랙에는 입구 온도, 출구 온도처럼 센서가 둘 이상이다. 랙 prim 하나로는 센서를 둘 이상 나타낼 수 없다. 블록아웃에는 이미 센서 위치용 빈 오브젝트(`Sensor_TEMP_IN` 등)가 있어서 규칙과 에셋이 서로 다르다.
 - **조치:** **센서를 별도 prim(센서 앵커)으로 만든다.** 센서 하나가 앵커 prim 하나이고, 앵커가 `dct:sensorId`, `dct:metric`, `dct:unit`을 가진다. 장비는 센서 앵커를 하나 이상 가진다. 상세는 [09](09_usd_spec.md) 4장.
-- **후속 작업:** 검증 스크립트의 U401(장비에 센서 ID 필수)을 "장비에 센서 앵커 하나 이상"으로 바꾸고, assetType에 `sensor`를 추가한다. ([이슈 #10](https://github.com/jangdave/Portfolio_DT/issues/10))
+- **후속 작업:** 검증 스크립트의 U401(장비에 센서 ID 필수)을 "장비에 센서 앵커 하나 이상"으로 바꾸고, assetType에 `sensor`를 추가한다. ([이슈 #10](https://github.com/jangdave/DC-Twin/issues/10))
 
 ### P2. 센서 ID, MQTT 주소, USD 경로가 서로 연결되지 않았다
 - **문제:** 센서 ID 예시(`H01-R01-RK01-TEMP-IN`)와 MQTT 주소(`dct/{hall}/{asset}/{metric}`)와 USD 경로의 대응 규칙이 없었다. 또 다른 줄(Row)에 같은 번호 `Rack_01`이 생기면 이름이 겹친다.
@@ -77,4 +77,4 @@
 ## 6. 이번 재점검의 결과
 - 문서 5개를 새로 쓰고(`08`~`12`), `01` 구조 문서와 ADR-001을 고쳤다.
 - 센서 정의 방식을 바꾸는 [ADR-005](decisions/ADR-005-sensor-anchors-and-manifest.md)를 추가했다.
-- 후속 작업은 GitHub Issue로 등록했다: [#10 검증 스크립트 개정](https://github.com/jangdave/Portfolio_DT/issues/10), [#11 장면 생성 스크립트](https://github.com/jangdave/Portfolio_DT/issues/11), [#12 센서 매니페스트 생성](https://github.com/jangdave/Portfolio_DT/issues/12).
+- 후속 작업은 GitHub Issue로 등록했다: [#10 검증 스크립트 개정](https://github.com/jangdave/DC-Twin/issues/10), [#11 장면 생성 스크립트](https://github.com/jangdave/DC-Twin/issues/11), [#12 센서 매니페스트 생성](https://github.com/jangdave/DC-Twin/issues/12).

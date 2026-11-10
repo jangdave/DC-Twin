@@ -17,7 +17,7 @@
   ]
 }
 ```
-이 프로젝트는 시험용이라 저장소에 올리지 않는다. (실제 클라이언트 프로젝트는 [이슈 #5](https://github.com/jangdave/Portfolio_DT/issues/5)에서 만든다.)
+이 프로젝트는 시험용이라 저장소에 올리지 않는다. (실제 클라이언트 프로젝트는 [이슈 #5](https://github.com/jangdave/DC-Twin/issues/5)에서 만든다.)
 
 ## 실행 (저장소 루트에서)
 ```

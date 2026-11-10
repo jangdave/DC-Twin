@@ -135,7 +135,7 @@ UI는 CommonUI로 만들고, 기초 부품(버튼, 레이블, 카드) → 조합
 
 | Phase | Unreal 쪽 작업 |
 |---|---|
-| 1 | 프로젝트 생성, 플러그인 설정([이슈 #5](https://github.com/jangdave/Portfolio_DT/issues/5)) |
+| 1 | 프로젝트 생성, 플러그인 설정([이슈 #5](https://github.com/jangdave/DC-Twin/issues/5)) |
 | 2 | USD 가져오기, 변환 손실 확인(E1), 재질 대체 방법, 성능 측정 |
 | 3 | `Data` 계층, 센서 상세·상태 표시줄·시나리오 제어 패널, 온도 색 표시 |
 | 4 | `ADCTAirflowVolume` |
