@@ -358,6 +358,21 @@ def project_faces(lay: Layout, s: np.ndarray, faces: dict) -> tuple[dict, dict]:
     return out, {"proj_residual": info["residual"], "proj_solve_s": info["solve_s"], "div_mismatch_before_1s": round(before, 3)}
 
 
+def porous_rack_layout(lay: Layout) -> Layout:
+    """랙을 공기가 지나가는 칸으로 바꾼 레이아웃 복사본(V4-2, OpenFOAM 사례와 같은 가정). 랙 앞뒤 원천은 없애고,
+    랙 발열은 랙 칸 전체의 부피 발열로 넣는다(fv의 rack_heat). 받은 흐름(set_flow_field)과 함께만 쓴다."""
+    import copy
+
+    new = copy.copy(lay)
+    rack = lay.rack_id >= 0
+    new.solid = lay.solid & ~rack
+    new.fluid = ~new.solid
+    new.intake_id = np.full(lay.shape, -1, dtype=np.int32)
+    new.exhaust_id = np.full(lay.shape, -1, dtype=np.int32)
+    new.porous_racks = True
+    return new
+
+
 def faces_from_cells(lay: Layout, u_cells: np.ndarray) -> dict:
     """칸 중심 속도(nx, ny, nz, 3)에서 면 속도를 만든다: 두 칸이 모두 우리 공기 칸이면 평균, 아니면 0(벽)."""
     fluid = lay.fluid
@@ -531,6 +546,7 @@ def fv_step_kernel(
     vent: wp.array3d(dtype=int), exhaust_id: wp.array3d(dtype=int), leak_src_id: wp.array3d(dtype=int),
     rack_sum: wp.array(dtype=float), rack_cnt: wp.array(dtype=float), rack_rise: wp.array(dtype=float),
     leak_sum: wp.array(dtype=float), leak_cnt: wp.array(dtype=float), kd: wp.array3d(dtype=float),
+    rack_id: wp.array3d(dtype=int), rack_heat: wp.array(dtype=float),
     dt: float, dx: float, t_supply: float,
 ):
     """열을 보존하는 유한 체적 이류(1차 풍상) + 원천항 + 확산 (V4, docs/32).
@@ -580,6 +596,9 @@ def fv_step_kernel(
         rate = rate + s * t_in
     if s < 0.0:
         rate = rate + s * c
+    rid = rack_id[i, j, k]
+    if rid >= 0:
+        rate = rate + rack_heat[rid]  # 다공질 랙: 랙 칸 전체에 고르게 발열(K/s). 막힌 랙이면 랙 칸은 공기 칸이 아니라 여기 오지 않는다
     kc = kd[i, j, k]
     lap = float(0.0)
     if i > 0:
@@ -647,6 +666,10 @@ class Sim:
             self.rack_sum = wp.zeros(nr, dtype=float, device=d)
             self.rack_cnt = wp.array(np.bincount(lay.intake_id[lay.intake_id >= 0], minlength=nr).astype(np.float32), dtype=float, device=d)
             self.kd = wp.array(np.full(lay.shape, K_DIFF, dtype=np.float32), dtype=float, device=d)
+            # 다공질 랙(porous_rack_layout)이면 랙 칸 부피 발열 = P / (rho cp V_랙)
+            vol = np.bincount(lay.rack_id[lay.rack_id >= 0], minlength=nr).astype(np.float64) * DX ** 3
+            heat = (power_kw / (RHO_CP * np.maximum(vol, 1e-9))) if getattr(lay, "porous_racks", False) else np.zeros(nr)
+            self.rack_heat = wp.array(np.asarray(heat, dtype=np.float32) * np.ones(nr, dtype=np.float32), dtype=float, device=d)
             self.kd_max = K_DIFF
         self.u = None
         self.vent_on = 1.0
@@ -713,7 +736,7 @@ class Sim:
                 wp.launch(group_sum_kernel, dim=self.lay.shape, inputs=[self.T, self.leak_sink_id, self.leak_sums], device=self.device)
                 wp.launch(fv_step_kernel, dim=self.lay.shape, inputs=[self.T, self.T2, self.fx, self.fy, self.fz, self.fluid, self.src, self.vent,
                                                                       self.exhaust_id, self.leak_src_id, self.rack_sum, self.rack_cnt, self.rack_rise,
-                                                                      self.leak_sums, self.leak_counts, self.kd, h, DX, self.t_supply], device=self.device)
+                                                                      self.leak_sums, self.leak_counts, self.kd, self.rack_id, self.rack_heat, h, DX, self.t_supply], device=self.device)
                 self.T, self.T2 = self.T2, self.T
             return
         self.leak_sums.zero_()

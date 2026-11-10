@@ -48,3 +48,24 @@ def test_rack_heat_enters_exactly(hall_lay):
     e1 = float(sim.T.numpy()[lay.fluid].astype(np.float64).sum())
     kw = (e1 - e0) * hs.RHO_CP * hs.DX ** 3 / sim.dt
     assert kw == pytest.approx(10.0 * len(hall["racks"]), rel=0.01)
+
+
+def test_porous_racks_heat_and_uniform(hall_lay):
+    """다공질 랙(OpenFOAM과 같은 가정): 받은 흐름이 0이어도 투영이 원천을 맞추고, 발열 0이면 고른 온도가 그대로, 발열 10 kW면 첫 단계 열 증가가 600 kW."""
+    hall, lay = hall_lay
+    play = hs.porous_rack_layout(lay)
+    fan = np.ones(lay.n_cracs, dtype=np.float32)
+    zero = np.zeros(lay.shape + (3,))
+    sim = hs.Sim(hall, play, 0.0, 10.0, device="cpu", advection="fv")
+    sim.set_flow_field(fan, zero)
+    sim.T.fill_(sim.t_supply)
+    for _ in range(3):
+        sim.step()
+    assert np.abs(sim.T.numpy()[play.fluid] - sim.t_supply).max() < 1e-3
+    sim = hs.Sim(hall, play, 10.0, 10.0, device="cpu", advection="fv")
+    sim.set_flow_field(fan, zero)
+    sim.T.fill_(sim.t_supply)
+    e0 = float(sim.T.numpy()[play.fluid].astype(np.float64).sum())
+    sim.step()
+    e1 = float(sim.T.numpy()[play.fluid].astype(np.float64).sum())
+    assert (e1 - e0) * hs.RHO_CP * hs.DX ** 3 / sim.dt == pytest.approx(600.0, rel=0.01)
