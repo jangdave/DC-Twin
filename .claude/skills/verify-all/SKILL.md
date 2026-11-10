@@ -21,6 +21,10 @@ description: PR 전에 이 프로젝트의 시험과 점검을 순서대로 돌�
 
 화면 시험 결과는 `통과`와 `실패`로 시작하는 줄이다. `grep -c '^통과'`로 개수를 세고 `grep '^실패'`로 실패를 본다.
 
+## 앞으로 붙일 점검 (`docs/31` 구현 중)
+- Kit 서버(2a 이후): Kit 앱으로 서버를 띄워 실제 연결로 확인한다. 끝나면 `kit.exe` 프로세스를 반드시 끝낸다.
+- OpenFOAM 단계(2c 이후): 한 번에 하나만 돌린다(동시에 돌리면 20배 넘게 느려짐). 약 10분 걸리므로 백그라운드로 돌리고, WSL의 `~/foam_runs/` 결과 폴더를 정리한다.
+
 ## 데이터를 다시 만들 때
 - 웹 자료: `node tools/build_data.mjs`(원본: `sim/out`, 정의: `sim/library.json`). 만든 뒤 반드시 5번.
 - 미리 계산한 모음 녹화: `experiments/omniverse_probe`에서 `uv run --python 3.13 python ../../scripts/make_sim_library.py`(GPU, scikit-learn).

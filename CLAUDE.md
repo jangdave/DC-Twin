@@ -35,8 +35,8 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 | `usd/scenes/hall01.config.json` | 홀 배치 원본(랙 6줄 x 10기, CRAC 8기). 장면은 이 파일에서만 만든다 |
 | `gateway/` | MQTT → WebSocket/REST 게이트웨이 (Node) |
 | `unreal/` | UE 5.8 프로젝트 `unreal/DataCenter_DT/DataCenter_DT.uproject` (C++, 모듈 `DataCenter_DT`) |
-| `web/viewer/` | 웹 보기 화면(Three.js, Vite). GitHub Pages에 자동 배포. 메뉴: 모니터링 / 시뮬레이션(미리 계산한 값 12개) / 간이 계산(브라우저 L0) / CCTV. 설명은 `web/viewer/README.md`, 설계는 `docs/27` |
-| `server/` | 시뮬레이션 서버 실행 구성(Docker, compose, `run_local.ps1`, 센서 매니페스트·앵커 사본). 코드는 `sim/sensors/dct_sensors/serve.py`, `api.py`. 인증, 안전, 한계는 `server/README.md` |
+| `web/viewer/` | 웹 보기 화면(Three.js, Vite). GitHub Pages에 자동 배포. 메뉴: 모니터링 / 시뮬레이션(미리 계산한 값 12개) / 간이 계산(브라우저 L0) / CCTV. 설명은 `web/viewer/README.md`, 설계는 `docs/27`. **세 메뉴의 역할 개편 중**(`docs/31`: 모니터링=서버 실시간, 시뮬레이션=조건을 정해 서버에서 정확하게 계산, 간이 계산=모니터링 상태에서 팬·급기만 빠르게) |
+| `server/` | 시뮬레이션 서버 실행 구성(Docker, compose, `run_local.ps1`, 센서 매니페스트·앵커 사본). 코드는 `sim/sensors/dct_sensors/serve.py`, `api.py`. 인증, 안전, 한계는 `server/README.md`. **계획: Omniverse Kit 안에서 도는 로컬 서버**(장면 USD, 센서 생성기, 작업 실행기. 정확한 계산은 Warp 시간 변화 + OpenFOAM 정상 상태, `docs/31` 4.1, 8장) |
 | `sim/library.json` | 미리 계산해 두는 상태와 시나리오 정의(이상 상황 4, 급기 온도 5, 부하 3). 생성은 `scripts/make_sim_library.py` |
 | `experiments/` | 비교 실험 코드와 측정 결과 |
 | `scripts/` | 환경 점검, 실행 보조 스크립트 |
@@ -70,6 +70,7 @@ PR 전에 해당하는 것을 돌린다. 하나라도 실패하면 이유를 밝
 주의: 점검용으로 띄운 서버와 브라우저, Kit(`kit.exe`) 프로세스는 끝내고 정리한다. Kit 스크립트는 파일이 있는 상태에서 실행한다(없으면 종료되지 않는다).
 
 ## 작업 방식
+- **지금 진행 중인 일**: `docs/31` 6장 단계(2a Kit 서버 동작 확인 → 2b 작업 API → 2c OpenFOAM → 3 시뮬레이션 화면 → 4 모니터링 → 5 간이 계산). 서버는 로컬만(배포는 나중).
 - **우선순위**: 가장 중요한 것은 Omniverse 시뮬레이션과 센서 데이터의 Unreal 연동·표현이다(`docs/14_sim_to_unreal_core.md`). 외관과 둘러보기는 보조다. 진행 순서는 ① 내부 구조 모델링 → ② 그 구조로 시뮬레이션 → ③ Unreal에서 확인이며, 외부 솔버 연동은 이 구조가 동작한 뒤에 붙인다.
 - 단계는 `docs/02_roadmap.md`의 Phase 순서를 따른다. 각 Phase 끝에 산출물과 측정값을 `experiments/` 또는 `docs/`에 남긴다.
 - 설계 결정은 `docs/decisions/ADR-XXX-*.md`에 한 장씩 기록한다(결정, 근거, 대안, 한계).
