@@ -51,8 +51,22 @@ RETURN_Z_CM = (10.0, 190.0)  # CRAC 회수면의 높이 범위
 # =====================================================================
 # 1) 장면 읽기
 # =====================================================================
+# 경로 -> 이미 읽은 홀 정보. Kit 안에서는 Kit이 연 장면에서 메인 스레드가 미리 읽어 넣는다(server/kit_server.py).
+# 다른 스레드가 같은 파일을 Usd.Stage.Open으로 다시 열면 Kit의 장면 구성과 부딪혀 PcpCache 오류가 났다(2026-11-10).
+HALL_CACHE: dict[str, dict] = {}
+
+
 def read_hall(path: Path) -> dict:
-    stage = Usd.Stage.Open(str(path))
+    key = str(Path(path).resolve())
+    if key in HALL_CACHE:
+        import copy
+
+        return copy.deepcopy(HALL_CACHE[key])  # 부르는 쪽이 고쳐도 저장한 것은 그대로
+    return read_hall_from_stage(Usd.Stage.Open(str(path)))
+
+
+def read_hall_from_stage(stage) -> dict:
+    """열린 USD 장면에서 홀 정보(랙, CRAC, 급기구, 격벽, 센서 앵커, 홀 크기)를 읽는다."""
     cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
     hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "anchors": [], "size_cm": None}
     for prim in stage.Traverse():

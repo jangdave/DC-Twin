@@ -29,7 +29,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .api import DataApi
+from .api import DataApi, origin_allowed
 from .config import Config
 from .generator import Generator, iso
 from .manifest import Manifest, load_manifest
@@ -266,6 +266,7 @@ class Server:
     def __init__(self, engine: Engine, speed: float = 1.0, api: DataApi | None = None, token: str | None = None, clock=time.monotonic, jobs=None):
         self.engine = engine
         self.jobs = jobs  # 시뮬레이션 작업 관리자(jobs.JobManager). 없으면 작업 메시지를 거절한다
+        self.origins = DEFAULT_ORIGINS  # 허용하는 웹 페이지 출처(serve()가 정한다). 확인은 process_request에서
         self.api = api
         self.token = token
         self.clock = clock
@@ -306,16 +307,27 @@ class Server:
         Omniverse Kit 안에서는 Kit에 들어 있는 websockets 12.0이 쓰인다(server/kit_server.py, 2026-11-10 확인)."""
         legacy = not hasattr(request, "headers")
         path, headers = (connection, request) if legacy else (request.path, request.headers)
-        if self.api is None or headers.get("Upgrade", "").lower() == "websocket":
+
+        def respond(status: int, reason: str, hdrs: dict, body: bytes):
+            if legacy:
+                return status, list(hdrs.items()), body
+            from websockets.datastructures import Headers
+            from websockets.http11 import Response
+
+            return Response(status, reason, Headers(hdrs), body)
+
+        if headers.get("Upgrade", "").lower() == "websocket":
+            # 웹 페이지 출처 확인을 여기서 한다. websockets 12의 origins는 정규식을 받지 않아 localhost의 아무 포트나 허용하는 규칙을 못 쓴다
+            # (Kit 안에서 브라우저 접속이 모두 403이었다, 2026-11-10).
+            if not origin_allowed(headers.get("Origin"), self.origins):
+                return respond(403, "Forbidden", {"Content-Type": "text/plain; charset=utf-8"}, "허용하지 않은 웹 페이지 출처".encode("utf-8"))
+            return None
+        if self.api is None:
             return None
         reply = self.api.route("GET", path, headers)  # 이 서버의 HTTP는 읽기 전용이라 GET만 들어온다
         if reply is None:
             return None
-        if legacy:
-            return reply.status, list(reply.headers.items()), reply.body
-        from websockets.datastructures import Headers
-        from websockets.http11 import Response
-        return Response(reply.status, reply.reason, Headers(reply.headers), reply.body)
+        return respond(reply.status, reply.reason, reply.headers, reply.body)
 
     def _peer(self, ws) -> str:
         addr = getattr(ws, "remote_address", None)
@@ -466,13 +478,14 @@ async def serve(engine: Engine, host: str, port: int, speed: float = 1.0, origin
     import websockets
 
     srv = Server(engine, speed, api, token, jobs=jobs)
+    srv.origins = origins or DEFAULT_ORIGINS
     srv._loop = asyncio.get_running_loop()
     if jobs is not None:
         jobs.listeners.append(srv.job_event)
     if server_box is not None:
         server_box.append(srv)
     max_size = MAX_JOB_MESSAGE_BYTES if jobs is not None else MAX_MESSAGE_BYTES
-    async with websockets.serve(srv.handler, host, port, origins=origins or DEFAULT_ORIGINS, max_size=max_size, max_queue=16, process_request=srv.process_request):
+    async with websockets.serve(srv.handler, host, port, max_size=max_size, max_queue=16, process_request=srv.process_request):  # 출처 확인은 srv.process_request
         if ready is not None:
             ready.set()
         import signal

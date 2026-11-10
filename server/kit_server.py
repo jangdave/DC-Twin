@@ -42,6 +42,13 @@ async def run() -> None:
         await ctx.open_stage_async(str(ROOT / "usd" / "scenes" / "hall01.usda"))
         log(f"장면을 열었다: prim {sum(1 for _ in ctx.get_stage().Traverse())}개, {time.time() - t0:.2f}초")
         STOP.unlink(missing_ok=True)
+        # 홀 정보는 Kit이 연 장면에서 메인 스레드가 한 번 읽어 둔다. 서버 스레드가 같은 파일을 다시 열면 Kit의 장면과 부딪혔다(2026-11-10).
+        import hall60_sim as hs
+
+        scene = (ROOT / "usd" / "scenes" / "hall01.usda").resolve()
+        hs.HALL_CACHE[str(scene)] = hs.read_hall_from_stage(ctx.get_stage())
+        h = hs.HALL_CACHE[str(scene)]
+        log(f"홀 정보를 Kit 장면에서 읽었다: 랙 {len(h['racks'])}, CRAC {len(h['cracs'])}, 센서 앵커 {len(h['anchors'])}")
         # Kit에는 websockets 12.0(옛 API)이 들어 있고, 경로를 바꾸거나 모듈을 갈아 끼워도 일부가 계속 Kit 것으로 올라왔다(2026-11-10).
         # 그래서 서버 코드(serve.py)가 옛 API와 새 API를 모두 받게 하고 Kit의 것을 그대로 쓴다.
         import websockets
