@@ -40,6 +40,7 @@
 | [30_architecture_review.md](30_architecture_review.md) | 아키텍처 검토: 문제 진단 (2026-11-04) | 초안 |
 | [31_monitoring_simulation_quickcalc.md](31_monitoring_simulation_quickcalc.md) | 모니터링, 시뮬레이션, 간이 계산의 역할 다시 나누기 | 채택 |
 | [32_kit_accuracy_verification.md](32_kit_accuracy_verification.md) | Omniverse Kit으로 데이터센터 시뮬레이션 정확도 검증 | 채택 |
+| [33_raised_floor_plenum.md](33_raised_floor_plenum.md) | 이중 바닥과 바닥 아래 공간(플레넘) | 초안 |
 
 `상태`가 "초안"인 문서는 결정 전의 제안이다. 숫자는 문서 맨 위의 날짜 기준이다. 실제 값은 코드와 시험이 정본이다.
 
