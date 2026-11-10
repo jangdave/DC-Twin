@@ -41,7 +41,8 @@ def heat_out_kw(sim: "hs.Sim", lay: "hs.Layout", T: np.ndarray) -> tuple[float, 
     return out, t_ret
 
 
-def run_case(hall: dict, fail: list[str], dx: float, device: str = "cuda:0", slow: float = SLOW, advection: str = "maccormack") -> dict:
+def run_case(hall: dict, fail: list[str], dx: float, device: str = "cuda:0", slow: float = SLOW, advection: str = "maccormack", flow_npz: Path | None = None,
+             turb: bool = False) -> dict:
     hs.DX = dx  # Layout, Sim, 흐름 계산이 모듈의 DX를 읽는다
     t0 = time.time()
     lay = hs.Layout(hall)
@@ -50,7 +51,12 @@ def run_case(hall: dict, fail: list[str], dx: float, device: str = "cuda:0", slo
     fan = np.ones(len(names), dtype=np.float32)
     for n in fail:
         fan[names.index(n)] = 0.0
-    sim.set_fans(fan)
+    if flow_npz is not None:  # 받은 흐름(OpenFOAM)으로 온도만 푼다(V4-2)
+        z = np.load(flow_npz)
+        k = (1.5e-5 / 0.71 + z["nut"] / 0.85) if turb else None  # 분자 확산 + 난류 확산(난류 프란틀 수 0.85, OpenFOAM 사례와 같은 값)
+        sim.set_flow_field(fan, z["U"].astype(np.float64), k)
+    else:
+        sim.set_fans(fan)
     flow_s = time.time() - t0
     racks = [r["name"] for r in hall["racks"]]
     anc = sorted((a for a in hall["anchors"] if a["equipment"].startswith("Rack_") and a["metric"] == "temp_in"), key=lambda a: a["equipment"])
@@ -87,7 +93,7 @@ def run_case(hall: dict, fail: list[str], dx: float, device: str = "cuda:0", slo
     diverged = not np.isfinite(inlet).all()
     return {
         "dx_m": dx, "slow": slow, "advection": advection, "substeps": sim.flow_info.get("fv_substeps", 1), "diverged": diverged, "grid": list(lay.shape), "cells": int(np.prod(lay.shape)), "fluid_cells": int(lay.fluid.sum()),
-        "dt_phys_s": sim.dt_phys, "flow": {k: sim.flow_info[k] for k in ("supply_m3s", "rack_m3s", "aisle_leak_m3s", "crac_return_m3s", "residual", "solve_s")},
+        "dt_phys_s": sim.dt_phys, "flow": {k: sim.flow_info.get(k) for k in ("supply_m3s", "rack_m3s", "aisle_leak_m3s", "crac_return_m3s", "residual", "solve_s", "proj_residual", "div_mismatch_before_1s", "flow", "k_max", "k_mean")},
         "sim_seconds": t, "steady": steady_at is not None, "steady_at_s": steady_at, "last60_max_change_C": None if drift is None else round(drift, 4),
         "heat_in_kw": round(p_in, 2), "heat_out_kw": round(q_out, 2), "heat_balance_pct": round(100.0 * (q_out - p_in) / p_in, 3),
         "stored_kw": round(store_kw, 2), "numerical_gap_pct": round(100.0 * (p_in - q_out - store_kw) / p_in, 3),
@@ -135,6 +141,8 @@ def main(argv: list[str] | None = None, env: str = "독립 실행") -> dict:
     ap.add_argument("--scene", type=Path, default=hs.ROOT / "usd" / "scenes" / "hall01.usda")
     ap.add_argument("--slow", type=float, default=SLOW)
     ap.add_argument("--advection", choices=["maccormack", "linear", "fv"], default="maccormack")
+    ap.add_argument("--turb", action="store_true", help="--flow-dir와 함께: OpenFOAM 난류 점성으로 확산 계수를 칸마다 정한다")
+    ap.add_argument("--flow-dir", type=Path, default=None, help="OpenFOAM 흐름(.npz, export_flow.py) 폴더. 주면 조건마다 <조건>_dx10.npz의 흐름으로 온도만 푼다(fv, 10 cm)")
     ap.add_argument("--out", type=Path, default=hs.HERE / "out" / "verify" / "v1")
     a = ap.parse_args(argv)
     import warp as wp
@@ -146,7 +154,8 @@ def main(argv: list[str] | None = None, env: str = "독립 실행") -> dict:
     a.out.mkdir(parents=True, exist_ok=True)
     for case in a.cases:
         for dx in a.dx:
-            r = run_case(hall, CASES[case], dx, slow=a.slow, advection=a.advection)
+            fnpz = (a.flow_dir / f"{case}_dx10.npz") if a.flow_dir else None
+            r = run_case(hall, CASES[case], dx, slow=a.slow, advection=a.advection, flow_npz=fnpz, turb=a.turb)
             res["cases"].setdefault(case, {})[f"{dx:g}"] = r
             print(f"[V1] {case} dx={dx:g}: 정상 {r['steady_at_s']}s, 열 수지 {r['heat_balance_pct']:+.2f}%, 입구 평균 {r['inlet_mean_C']} 최고 {r['inlet_max_C']}, {r['wall_s']}s", flush=True)
             (a.out / "v1_result.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")  # 중간에도 저장
