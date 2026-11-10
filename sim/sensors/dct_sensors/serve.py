@@ -37,6 +37,7 @@ from .scenarios import SCENARIOS, get
 from .solvers import make_solver
 
 MAX_MESSAGE_BYTES = 1024          # 웹이 보내는 조작 한 건의 최대 크기
+MAX_JOB_MESSAGE_BYTES = 16384     # 시뮬레이션 작업 요청 한 건의 최대 크기(랙 60기 전력까지 담을 수 있게)
 MAX_CLIENTS = 8
 CONTROLS_PER_SECOND = 20          # 접속 하나가 초당 보낼 수 있는 조작 수
 SPEED_RANGE = (0.5, 20.0)
@@ -227,13 +228,44 @@ def parse_auth(raw) -> str | None:
     return None
 
 
+def parse_job_message(raw: str | bytes) -> dict | None:
+    """시뮬레이션 작업 메시지면 {action, id?, conditions?}, 아니면 None. 틀린 작업 메시지는 ValueError.
+
+    받는 것: {"type":"job","action":"submit","conditions":{...}} / {"type":"job","action":"status|cancel|result","id":"..."} / {"type":"job","action":"list"}"""
+    if len(raw) > MAX_JOB_MESSAGE_BYTES:
+        raise ValueError("메시지가 너무 크다")
+    if (b'"job"' if isinstance(raw, bytes) else '"job"') not in raw:
+        return None
+    try:
+        d = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if not isinstance(d, dict) or d.get("type") != "job":
+        return None
+    action = d.get("action")
+    if action not in ("submit", "status", "cancel", "result", "list"):
+        raise ValueError("알 수 없는 작업 동작")
+    out = {"action": action}
+    if action == "submit":
+        if not isinstance(d.get("conditions"), dict):
+            raise ValueError("조건(conditions)은 객체여야 한다")
+        out["conditions"] = d["conditions"]
+    elif action != "list":
+        jid = d.get("id")
+        if not isinstance(jid, str) or not re.fullmatch(r"[0-9a-f]{6,32}", jid):
+            raise ValueError("작업 id가 올바르지 않다")
+        out["id"] = jid
+    return out
+
+
 def _num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf")
 
 
 class Server:
-    def __init__(self, engine: Engine, speed: float = 1.0, api: DataApi | None = None, token: str | None = None, clock=time.monotonic):
+    def __init__(self, engine: Engine, speed: float = 1.0, api: DataApi | None = None, token: str | None = None, clock=time.monotonic, jobs=None):
         self.engine = engine
+        self.jobs = jobs  # 시뮬레이션 작업 관리자(jobs.JobManager). 없으면 작업 메시지를 거절한다
         self.api = api
         self.token = token
         self.clock = clock
@@ -268,15 +300,21 @@ class Server:
                 nxt = loop.time()  # 계산이 느리면 따라잡으려 몰아서 보내지 않고 그 시점부터 다시 맞춘다
 
     async def process_request(self, connection, request):
-        """같은 포트에서 HTTP 데이터 API(GET /api/...)를 먼저 받고, 그 밖의 요청은 WebSocket 핸드셰이크로 넘긴다."""
-        from websockets.datastructures import Headers
-        from websockets.http11 import Response
+        """같은 포트에서 HTTP 데이터 API(GET /api/...)를 먼저 받고, 그 밖의 요청은 WebSocket 핸드셰이크로 넘긴다.
 
-        if self.api is None or request.headers.get("Upgrade", "").lower() == "websocket":
+        websockets 13 이상(새 API: (connection, request))과 12 이하(옛 API: (path, request_headers))를 모두 받는다.
+        Omniverse Kit 안에서는 Kit에 들어 있는 websockets 12.0이 쓰인다(server/kit_server.py, 2026-11-10 확인)."""
+        legacy = not hasattr(request, "headers")
+        path, headers = (connection, request) if legacy else (request.path, request.headers)
+        if self.api is None or headers.get("Upgrade", "").lower() == "websocket":
             return None
-        reply = self.api.route("GET", request.path, request.headers)  # 이 서버의 HTTP는 읽기 전용이라 GET만 들어온다
+        reply = self.api.route("GET", path, headers)  # 이 서버의 HTTP는 읽기 전용이라 GET만 들어온다
         if reply is None:
             return None
+        if legacy:
+            return reply.status, list(reply.headers.items()), reply.body
+        from websockets.datastructures import Headers
+        from websockets.http11 import Response
         return Response(reply.status, reply.reason, Headers(reply.headers), reply.body)
 
     def _peer(self, ws) -> str:
@@ -352,6 +390,10 @@ class Server:
                     await ws.send(json.dumps({"type": "error", "message": "조작이 너무 잦다"}))
                     continue
                 try:
+                    j = parse_job_message(raw if isinstance(raw, (bytes, str)) else "")
+                    if j is not None:
+                        await self._job(ws, j)
+                        continue
                     c = validate_control(raw if isinstance(raw, (bytes, str)) else "", self.engine.m)
                     if c["kind"] == "auth":
                         continue
@@ -372,17 +414,65 @@ class Server:
         finally:
             self.clients.discard(ws)
 
+    async def _job(self, ws, j: dict) -> None:
+        """시뮬레이션 작업 요청을 처리한다. 진행 상황은 관리자의 알림으로 모든 접속에 따로 보낸다."""
+        if self.jobs is None:
+            raise ValueError("이 서버는 시뮬레이션 작업을 받지 않는다(--jobs로 켠다)")
+        loop = asyncio.get_running_loop()
+        a = j["action"]
+        try:
+            if a == "submit":
+                st = await loop.run_in_executor(None, self.jobs.submit, j["conditions"])
+            elif a == "status":
+                st = self.jobs.status(j["id"])
+            elif a == "cancel":
+                st = self.jobs.cancel(j["id"])
+            elif a == "list":
+                with self.jobs.lock:
+                    items = [x.public(self.jobs._position(x)) for x in sorted(self.jobs.jobs.values(), key=lambda x: x.created)][-20:]
+                await ws.send(json.dumps({"type": "job_list", "jobs": items}, ensure_ascii=False))
+                return
+            else:  # result
+                p = self.jobs.result_path(j["id"])
+                rec = await loop.run_in_executor(None, lambda: json.loads(p.read_text(encoding="utf-8")))
+                await ws.send(json.dumps({"type": "job_result", "id": j["id"], "rec": rec}, ensure_ascii=False, separators=(",", ":")))
+                return
+        except KeyError:
+            raise ValueError("그런 작업이 없다") from None
+        except FileNotFoundError:
+            raise ValueError("아직 결과가 없다") from None
+        await ws.send(json.dumps({"type": "job", "job": st}, ensure_ascii=False))
+
+    def job_event(self, snap: dict) -> None:
+        """작업 관리자(다른 스레드)가 부르는 알림. 서버의 이벤트 루프에서 모든 접속에 보낸다."""
+        loop = getattr(self, "_loop", None)
+        if loop is None:
+            return
+
+        def send():
+            import websockets
+
+            if self.clients:
+                websockets.broadcast(self.clients, json.dumps({"type": "job", "job": snap}, ensure_ascii=False))
+
+        loop.call_soon_threadsafe(send)
+
     def stop(self) -> None:
         self._stop.set()
 
 
-async def serve(engine: Engine, host: str, port: int, speed: float = 1.0, origins=None, ready: asyncio.Event | None = None, server_box: list | None = None, api: DataApi | None = None, token: str | None = None) -> None:
+async def serve(engine: Engine, host: str, port: int, speed: float = 1.0, origins=None, ready: asyncio.Event | None = None, server_box: list | None = None, api: DataApi | None = None, token: str | None = None,
+                jobs=None) -> None:
     import websockets
 
-    srv = Server(engine, speed, api, token)
+    srv = Server(engine, speed, api, token, jobs=jobs)
+    srv._loop = asyncio.get_running_loop()
+    if jobs is not None:
+        jobs.listeners.append(srv.job_event)
     if server_box is not None:
         server_box.append(srv)
-    async with websockets.serve(srv.handler, host, port, origins=origins or DEFAULT_ORIGINS, max_size=MAX_MESSAGE_BYTES, max_queue=16, process_request=srv.process_request):
+    max_size = MAX_JOB_MESSAGE_BYTES if jobs is not None else MAX_MESSAGE_BYTES
+    async with websockets.serve(srv.handler, host, port, origins=origins or DEFAULT_ORIGINS, max_size=max_size, max_queue=16, process_request=srv.process_request):
         if ready is not None:
             ready.set()
         import signal
@@ -413,6 +503,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--allow-remote", action="store_true", help="127.0.0.1이 아닌 주소로 여는 것을 허용한다(접근 토큰이 필요하다)")
     ap.add_argument("--token", default=None, help="접근 토큰(16자 이상). `auto`면 만들어서 한 번 보여 준다. 환경 변수 DCT_TOKEN도 된다. 켜면 WebSocket은 첫 메시지로 토큰을 보내야 하고 데이터 API는 Authorization: Bearer가 필요하다")
     ap.add_argument("--private-data", action="store_true", help="토큰이 있을 때 데이터 API(/api/...)도 Authorization: Bearer를 요구한다. 기본은 공개(값이 공개 사이트에 이미 있다). 브라우저는 사전 확인을 못 해 이 모드에서 데이터를 받지 못하고 사이트의 파일을 쓴다")
+    ap.add_argument("--jobs", action="store_true", help="시뮬레이션 작업(조건을 받아 OpenFOAM 흐름 + 우리 온도 계산)을 받는다. Warp, pxr, WSL의 OpenFOAM이 필요하다(docs/31, docs/32)")
+    ap.add_argument("--jobs-dir", default=None, help="작업 결과 폴더(기본 sim/out/jobs)")
     ap.add_argument("--no-auth", action="store_true", help="127.0.0.1 밖으로 열면서 토큰을 쓰지 않는다(권장하지 않음, 누구나 조작할 수 있다)")
     args = ap.parse_args(argv)
     if not is_loopback(args.host) and not args.allow_remote:
@@ -440,13 +532,25 @@ def main(argv: list[str] | None = None) -> int:
     engine = Engine(m, cfg, args.solver, args.scenario, args.seed, kw)
     origins = DEFAULT_ORIGINS + args.origin
     data_dir = args.data_dir or os.environ.get("DCT_DATA_DIR") or (REPO / "web" / "viewer" / "public" / "data" if REPO else None)
-    api = DataApi(data_dir if data_dir and Path(data_dir).exists() else None, origins, extra_dirs=args.extra_data_dir, token=token, public_data=not args.private_data, meta={"name": "dct-sim-server", "version": 1, "solver": args.solver, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE)})
+    mgr = None
+    if args.jobs:
+        from . import jobs as jobs_mod
+        from . import precise
+
+        out = Path(args.jobs_dir) if args.jobs_dir else (REPO / "sim" / "out" / "jobs" if REPO else Path("jobs"))
+        mgr = jobs_mod.JobManager(m, out, precise.make_stages(m), stage_scale={"steady": precise.steady_runs_needed(m, out / "flows")})
+    jobs_meta = {"enabled": mgr is not None, "durationRange": [60, 1800], "supplyRange": list(SUPPLY_RANGE), "powerRange": list(POWER_RANGE), "maxQueue": 3,
+                 "model": "openfoam_flow+fv" if mgr else None}
+    api = DataApi(data_dir if data_dir and Path(data_dir).exists() else None, origins, extra_dirs=args.extra_data_dir, token=token, public_data=not args.private_data, meta={"name": "dct-sim-server", "version": 1, "solver": args.solver, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE), "jobs": jobs_meta})
     print(f"[서버] 인증: {'켬(토큰 ' + str(len(token)) + '자, 데이터 읽기는 ' + ('비공개' if args.private_data else '공개') + ')' if token else '끔(이 컴퓨터에서만 열려 있음)' if is_loopback(args.host) else '끔(--no-auth, 누구나 조작 가능)'}", file=sys.stderr)
     print(f"[서버] solver {args.solver}, 시나리오 {args.scenario}, ws://{args.host}:{args.port}/ws, 데이터 API http://{args.host}:{args.port}/api/meta (라이브러리 {api.meta['libraryEntries']}개)", file=sys.stderr)
     try:
-        asyncio.run(serve(engine, args.host, args.port, args.speed, origins, api=api, token=token))
+        asyncio.run(serve(engine, args.host, args.port, args.speed, origins, api=api, token=token, jobs=mgr))
     except KeyboardInterrupt:
         pass
+    finally:
+        if mgr is not None:
+            mgr.stop()
     return 0
 
 
