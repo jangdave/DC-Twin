@@ -42,10 +42,12 @@ def heat_out_kw(sim: "hs.Sim", lay: "hs.Layout", T: np.ndarray) -> tuple[float, 
 
 
 def run_case(hall: dict, fail: list[str], dx: float, device: str = "cuda:0", slow: float = SLOW, advection: str = "maccormack", flow_npz: Path | None = None,
-             turb: bool = False) -> dict:
+             turb: bool = False, porous: bool = False) -> dict:
     hs.DX = dx  # Layout, Sim, 흐름 계산이 모듈의 DX를 읽는다
     t0 = time.time()
     lay = hs.Layout(hall)
+    if porous:
+        lay = hs.porous_rack_layout(lay)  # OpenFOAM처럼 랙을 공기가 지나가는 칸으로(받은 흐름과 함께)
     names = [c["name"] for c in hall["cracs"]]
     sim = hs.Sim(hall, lay, POWER_KW, slow=slow, device=device, advection=advection)
     fan = np.ones(len(names), dtype=np.float32)
@@ -141,6 +143,7 @@ def main(argv: list[str] | None = None, env: str = "독립 실행") -> dict:
     ap.add_argument("--scene", type=Path, default=hs.ROOT / "usd" / "scenes" / "hall01.usda")
     ap.add_argument("--slow", type=float, default=SLOW)
     ap.add_argument("--advection", choices=["maccormack", "linear", "fv"], default="maccormack")
+    ap.add_argument("--porous", action="store_true", help="--flow-dir와 함께: 랙을 OpenFOAM처럼 다공질(공기가 지나가는 칸 + 부피 발열)로")
     ap.add_argument("--turb", action="store_true", help="--flow-dir와 함께: OpenFOAM 난류 점성으로 확산 계수를 칸마다 정한다")
     ap.add_argument("--flow-dir", type=Path, default=None, help="OpenFOAM 흐름(.npz, export_flow.py) 폴더. 주면 조건마다 <조건>_dx10.npz의 흐름으로 온도만 푼다(fv, 10 cm)")
     ap.add_argument("--out", type=Path, default=hs.HERE / "out" / "verify" / "v1")
@@ -155,7 +158,7 @@ def main(argv: list[str] | None = None, env: str = "독립 실행") -> dict:
     for case in a.cases:
         for dx in a.dx:
             fnpz = (a.flow_dir / f"{case}_dx10.npz") if a.flow_dir else None
-            r = run_case(hall, CASES[case], dx, slow=a.slow, advection=a.advection, flow_npz=fnpz, turb=a.turb)
+            r = run_case(hall, CASES[case], dx, slow=a.slow, advection=a.advection, flow_npz=fnpz, turb=a.turb, porous=a.porous)
             res["cases"].setdefault(case, {})[f"{dx:g}"] = r
             print(f"[V1] {case} dx={dx:g}: 정상 {r['steady_at_s']}s, 열 수지 {r['heat_balance_pct']:+.2f}%, 입구 평균 {r['inlet_mean_C']} 최고 {r['inlet_max_C']}, {r['wall_s']}s", flush=True)
             (a.out / "v1_result.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")  # 중간에도 저장
