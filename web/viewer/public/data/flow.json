@@ -1,6 +1,7 @@
 {
  "version": 1,
- "note": "시각화 목적. 질량 보존 퍼텐셜 흐름(점성, 난류, 부력 없음). 실제 CFD 결과가 아니다.",
+ "source": "openfoam",
+ "note": "시각화 목적. OpenFOAM(k-epsilon, 부력, 다공질 랙, 10 cm, 정상 상태, 랙 10 kW 균일)의 흐름을 20 cm로 줄였다. 실측이 아니다.",
  "shape": [
   55,
   68,
@@ -12,102 +13,75 @@
  "fields": [
   {
    "name": "all",
-   "max_ms": 5.21,
-   "supply_m3s": 57.6,
-   "leak_m3s": [
-    0.0,
-    0.0,
-    0.0,
-    0.0
-   ]
+   "max_ms": 7.67,
+   "openfoam": {
+    "iterations": 1077,
+    "converged": true
+   }
   },
   {
    "name": "off01",
-   "max_ms": 5.21,
-   "supply_m3s": 57.6,
-   "leak_m3s": [
-    0.0,
-    0.0,
-    0.0,
-    0.0
-   ]
+   "max_ms": 11.14,
+   "openfoam": {
+    "iterations": 1911,
+    "converged": true
+   }
   },
   {
    "name": "off02",
-   "max_ms": 5.89,
-   "supply_m3s": 48.0,
-   "leak_m3s": [
-    0.0,
-    9.6,
-    0.0,
-    0.0
-   ]
+   "max_ms": 11.72,
+   "openfoam": {
+    "iterations": 1317,
+    "converged": true
+   }
   },
   {
    "name": "off03",
-   "max_ms": 5.89,
-   "supply_m3s": 48.0,
-   "leak_m3s": [
-    0.0,
-    0.0,
-    9.6,
-    0.0
-   ]
+   "max_ms": 11.72,
+   "openfoam": {
+    "iterations": 1278,
+    "converged": true
+   }
   },
   {
    "name": "off04",
-   "max_ms": 5.21,
-   "supply_m3s": 57.6,
-   "leak_m3s": [
-    0.0,
-    0.0,
-    0.0,
-    0.0
-   ]
+   "max_ms": 11.14,
+   "openfoam": {
+    "iterations": 1600,
+    "converged": true
+   }
   },
   {
    "name": "off05",
-   "max_ms": 5.21,
-   "supply_m3s": 57.6,
-   "leak_m3s": [
-    0.0,
-    0.0,
-    0.0,
-    0.0
-   ]
+   "max_ms": 11.14,
+   "openfoam": {
+    "iterations": 1899,
+    "converged": true
+   }
   },
   {
    "name": "off06",
-   "max_ms": 5.89,
-   "supply_m3s": 48.0,
-   "leak_m3s": [
-    0.0,
-    9.6,
-    0.0,
-    0.0
-   ]
+   "max_ms": 11.72,
+   "openfoam": {
+    "iterations": 1258,
+    "converged": true
+   }
   },
   {
    "name": "off07",
-   "max_ms": 5.89,
-   "supply_m3s": 48.0,
-   "leak_m3s": [
-    0.0,
-    0.0,
-    9.6,
-    0.0
-   ]
+   "max_ms": 11.72,
+   "openfoam": {
+    "iterations": 1347,
+    "converged": true
+   }
   },
   {
    "name": "off08",
-   "max_ms": 5.21,
-   "supply_m3s": 57.6,
-   "leak_m3s": [
-    0.0,
-    0.0,
-    0.0,
-    0.0
-   ]
+   "max_ms": 11.14,
+   "openfoam": {
+    "iterations": 1992,
+    "converged": true
+   }
   }
  ]
 }

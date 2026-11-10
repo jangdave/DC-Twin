@@ -62,7 +62,8 @@ export class Airflow {
     this.age = new Float32Array(count);
     this.life = new Float32Array(count);
     this.heat = new Int16Array(count).fill(-1); // -1: 차가운 공기, 0 이상: 지나온 랙 번호
-    this.leak = LEAK_FRACTION; // 새는 입자 비율(0~1)
+    // 새는 입자 비율(0~1). 흐름장이 OpenFOAM이면(flow.json source) 격벽 위로 새고 도는 공기가 흐름장에 이미 들어 있어 흉내 입자를 쓰지 않는다
+    this.leak = flow.meta.source === 'openfoam' ? 0 : LEAK_FRACTION;
     this.mode = new Uint8Array(count); // 0: 속도장을 따름, 1: 새는 공기(위로 떠오름)
     this.geo = new THREE.BufferGeometry();
     this.vel = new Float32Array(count * 3);

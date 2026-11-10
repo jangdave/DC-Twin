@@ -153,8 +153,23 @@ export class HallScene {
       return mesh;
     };
     boxMesh(data.vents, new THREE.MeshBasicMaterial({ color: 0x1b5fb0 }));
-    const panels = boxMesh(data.panels, new THREE.MeshStandardMaterial({ color: 0x5a9bd8, transparent: true, opacity: 0.1, depthWrite: false }));
+    // 뜨거운 통로 격벽(HAC): 옆판은 옅게, 지붕은 조금 진하게, 모든 판에 테두리 선을 둘러 잘 보이게 한다(2026-11-10 사용자 요청)
+    const roofs = data.panels.filter((p) => p.name.endsWith('_Roof'));
+    const sides = data.panels.filter((p) => !p.name.endsWith('_Roof'));
+    const panels = boxMesh(sides, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
     panels.renderOrder = 2;
+    const roofMesh = boxMesh(roofs, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
+    roofMesh.renderOrder = 2;
+    const edgeGeos = data.panels.map((p) => {
+      const g = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
+      g.applyMatrix4(this._boxMatrix(p));
+      return g;
+    });
+    const edges = new THREE.LineSegments(mergeGeometries(edgeGeos, false), new THREE.LineBasicMaterial({ color: 0x8fc0f0, transparent: true, opacity: 0.85 }));
+    edgeGeos.forEach((g) => g.dispose());
+    edges.renderOrder = 3;
+    edges.name = 'containmentEdges';
+    this.hall.add(edges);
   }
 
   _boxMatrix(b, grow = 0) {

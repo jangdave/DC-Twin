@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Airflow } from '../src/airflow.js';
 
 // 작은 가짜 속도장: 4x4x4 칸, 장 2개(정상, 1번 CRAC 멈춤). 정상은 +x 방향 1 m/s, 멈춘 장은 -x 방향 1 m/s.
-function fake() {
+function fake(source) {
   const n = 4 * 4 * 4 * 3;
   const raw = new Int8Array(n * 2);
   const q = Math.round((1 / 4) * 127);
@@ -10,7 +10,7 @@ function fake() {
     raw[c] = q;
     raw[n + c] = -q;
   }
-  const meta = { shape: [4, 4, 4], cell_m: 1, vmax_ms: 4, fields: [{ name: 'all' }, { name: 'off01' }] };
+  const meta = { shape: [4, 4, 4], cell_m: 1, vmax_ms: 4, fields: [{ name: 'all' }, { name: 'off01' }], ...(source ? { source } : {}) };
   const data = { racks: [{ name: 'Rack_01', min: [100, 100, 0], max: [200, 200, 200] }], vents: [{ name: 'Vent_01', min: [100, 100, 0], max: [300, 300, 1] }] };
   const store = { metric: () => ({ value: 35 }) };
   return new Airflow({ meta, data: raw }, data, store, ['rack_01'], ['crac_01'], { count: 50, rng: seeded() });
@@ -22,6 +22,10 @@ function seeded() {
 }
 
 describe('Airflow', () => {
+  it('흐름장이 OpenFOAM이면 흉내 내던 새는 입자를 쓰지 않는다(격벽 위 순환이 흐름장에 들어 있음)', () => {
+    expect(fake('openfoam').leak).toBe(0);
+    expect(fake().leak).toBeGreaterThan(0);
+  });
   it('정상 장에서는 +x로, 팬 0이면 멈춘 장으로 바뀐다', () => {
     const a = fake();
     const u = [0, 0, 0];
