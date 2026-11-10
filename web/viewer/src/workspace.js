@@ -65,8 +65,8 @@ export function derive(ws) {
   return {
     rail: {
       hidden: ext,
-      // 눌린 단추는 하나. CCTV가 열려 있으면 CCTV, 아니면 데이터 출처(서버 조작 중이면 위쪽 "로컬 서버"가 눌리므로 없음)
-      active: ext ? null : cctv ? 'cctv' : ws.control ? null : ws.mode === 'rec' || ws.mode === 'lib' || ws.mode === 'sim' ? ws.mode : null,
+      // 눌린 단추는 하나. CCTV가 열려 있으면 CCTV, 서버 실시간 값이면 모니터링(docs/31: 모니터링 = 서버 실시간), 아니면 데이터 출처
+      active: ext ? null : cctv ? 'cctv' : ws.control ? 'rec' : ws.mode === 'rec' || ws.mode === 'lib' || ws.mode === 'sim' ? ws.mode : null,
     },
     serverOn: ws.control,
     cctvOpen: cctv,

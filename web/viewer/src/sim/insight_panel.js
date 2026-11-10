@@ -174,7 +174,7 @@ export class InsightPanel {
         row.append(d);
         box.append(row);
       }
-      box.append(el('p', 'muted small', `기준: ${SCENARIOS[this.base.scenario]?.title ?? '직접 조작'}에서 저장. 줄어드는 방향을 보는 값이며 실제 절감량이 아니다.`));
+      box.append(el('p', 'muted small', `기준: ${this.base.label ?? SCENARIOS[this.base.scenario]?.title ?? '직접 조작'}에서 저장. 줄어드는 방향을 보는 값이며 실제 절감량이 아니다.`));
     }
   }
 

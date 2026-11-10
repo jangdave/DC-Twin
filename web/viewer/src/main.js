@@ -157,6 +157,7 @@ async function main() {
   let dataSeq = 0; // 서버 데이터 연결 순번(서버를 연달아 바꿀 때 늦게 온 옛 응답을 버린다)
   let jobClient = null; // 서버 시뮬레이션 작업 연결(docs/31). 서버가 작업을 받을 때만 만든다
   let serverToken = null; // 서버 연결 창에서 넣은 접근 토큰(작업 연결에도 쓴다. 저장하지 않는다)
+  let serverConn = null; // 마지막으로 연결한 서버 { url, token }. 모니터링 메뉴가 이 서버의 실시간 값을 연다
   const staticLib = { index: null, groups: null }; // 사이트에 포함된 목록(서버 값을 받지 못하면 되돌린다)
   const restoreStaticLib = () => {
     if (!staticLib.index) return;
@@ -192,8 +193,11 @@ async function main() {
       // 왼쪽 메뉴 하나를 고르면 CCTV는 닫힌다. 이미 그 출처이면 출처는 다시 시작하지 않는다.
       dispatch({ type: 'overlay', value: null });
       if (!state.server && state.mode === m) return;
-      if (m === 'rec') return startRecording();
+      // 모니터링: 서버에 연결해 두었으면 서버 실시간 값, 아니면 녹화 재생(docs/31)
+      if (m === 'rec') return serverConn ? state.server || startLive(serverConn.url, true, serverConn.token) : startRecording();
       if (m === 'lib') return startLibrary();
+      // 간이 계산: 모니터링(녹화나 서버 실시간)에서 넘어오면 지금 값에서 시작하고, 그 값을 비교 기준으로 저장한다
+      if (state.mode === 'rec' || state.server) return startQuickFromMonitor();
       startSim(state.simScenario);
     },
     onCctv: () => dispatch({ type: 'overlay-toggle', value: 'cctv' }),
@@ -346,6 +350,35 @@ async function main() {
     }
     present(next);
     return true;
+  }
+  // 모니터링에 보이는 지금 값(랙 입구·출구 온도, 공조기 팬, 급기 온도). 간이 계산의 시작값이 된다.
+  function monitorSeed() {
+    const num = (e) => (e && Number.isFinite(e.value) ? e.value : undefined);
+    const inlet = {};
+    const outlet = {};
+    for (const k of rackKeys) {
+      inlet[k] = num(store.metric(k, 'temp_in'));
+      outlet[k] = num(store.metric(k, 'temp_out'));
+    }
+    const fan = {};
+    for (const c of layout.cracs) {
+      const f = num(store.metric(c, 'fan_speed'));
+      if (f !== undefined) fan[c] = Math.min(Math.max(f / 100, 0), 1);
+    }
+    // 급기 온도: 서버면 서버가 알려 준 설정값, 녹화면 팬이 정상인 공조기의 공급 온도 가운데 가장 낮은 값(공급 온도 = 급기 + 팬이 줄면 오르는 몫)
+    let supply = state.server ? serverModel.supply : null;
+    if (!Number.isFinite(supply)) {
+      const vals = layout.cracs.filter((c) => (fan[c] ?? 1) > 0.99).map((c) => num(store.metric(c, 'supply_temp'))).filter((v) => v !== undefined);
+      supply = vals.length ? Math.min(...vals) : null;
+    }
+    return { inlet, outlet, fan, supply };
+  }
+  async function startQuickFromMonitor() {
+    const seed = monitorSeed();
+    insight.saveBase(); // 바뀌기 전(모니터링 지금 값)을 비교 기준으로
+    if (insight.base) insight.base.label = '모니터링 지금 값';
+    state.simScenario = 'normal';
+    return useSource(simSource, { scenarioId: 'normal', seed });
   }
   const startSim = (id = 'normal') => {
     state.simScenario = SCENARIOS[id] ? id : 'normal';
@@ -503,6 +536,7 @@ async function main() {
   }
 
   function startLive(url, control = false, token = null) {
+    if (control) serverConn = { url, token }; // 연결 창이든 주소(?server=)든 마지막 서버를 기억한다(모니터링 메뉴가 다시 연다)
     const src = new LiveSource({
       store,
       url,
