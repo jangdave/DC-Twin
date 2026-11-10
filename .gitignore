@@ -91,3 +91,6 @@ experiments/openfoam_baseline/hb.txt
 
 # 실험 중 생기는 실행 기록(다시 만들 수 있다)
 experiments/**/*.log
+
+# 검증 실행 결과(V1~V4, docs/32). 요약은 experiments/results/에 둔다
+experiments/omniverse_probe/out/verify/
