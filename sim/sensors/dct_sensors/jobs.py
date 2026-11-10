@@ -31,7 +31,7 @@ DURATION_RANGE = (60, 1800)
 MAX_QUEUE = 3
 MAX_KEEP = 40  # 결과 폴더를 이 개수까지 남긴다(오래된 것부터 지움)
 
-STAGE_TITLES = {"usd": "조건을 USD 층으로", "transient": "시간 변화(Warp 열 계산)", "steady": "정상 상태(OpenFOAM)", "result": "결과 정리"}
+STAGE_TITLES = {"usd": "조건을 USD 층으로", "steady": "공기 흐름(OpenFOAM)", "transient": "시간 변화와 센서 값(Warp 온도 계산)", "result": "결과 정리"}
 
 
 # ---------------------------------------------------------------- 조건
@@ -205,6 +205,12 @@ def _r3(v):
     return round(v, 3) if isinstance(v, (int, float)) and math.isfinite(v) else None
 
 
+def datetime_ms(ts: str) -> float:
+    from datetime import datetime
+
+    return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp() * 1000
+
+
 def to_web_recording(msgs: list[dict], scenario_id: str, sensor_ids: list[str]) -> dict:
     """센서 생성기 메시지를 웹 녹화(`web/viewer/src/recording.js` parseRecording)로 바꾼다.
     `web/viewer/tools/build_data.mjs` convertRecording과 같은 규칙이다(시험이 같은지 확인)."""
@@ -350,13 +356,16 @@ class JobManager:
     """대기열과 작업 스레드. 단계 함수(stages)는 밖에서 넣는다(시험은 가짜 함수를, 서버는 실제 계산을)."""
 
     def __init__(self, manifest: Manifest, out_dir: Path, stages: dict[str, StageFn], *, max_queue: int = MAX_QUEUE,
-                 max_keep: int = MAX_KEEP, estimates: EstimateBook | None = None, steady_available: bool = True, clock=time.monotonic):
+                 max_keep: int = MAX_KEEP, estimates: EstimateBook | None = None, steady_available: bool = True, clock=time.monotonic,
+                 stage_scale: dict | None = None):
         self.m, self.out = manifest, Path(out_dir)
         self.out.mkdir(parents=True, exist_ok=True)
         self.stage_fns = stages
         self.max_queue, self.max_keep = max_queue, max_keep
         self.est = estimates or EstimateBook(self.out / "estimates.json")
         self.steady_available = steady_available
+        # 단계별 일의 양 배수(조건 -> 수). 예: 정확한 계산에서 OpenFOAM을 돌려야 하는 팬 상태 수. 예상 시간과 학습에 함께 쓴다
+        self.stage_scale = stage_scale or {}
         self.clock = clock
         self.jobs: dict[str, Job] = {}
         self.queue: list[str] = []
@@ -430,16 +439,26 @@ class JobManager:
 
     # -- 안쪽
     def _stages_for(self, cond: dict) -> list[str]:
-        s = ["usd", "transient"]
+        # 정확한 계산: OpenFOAM이 공기 흐름을 먼저 풀고, 우리 온도 계산이 그 흐름으로 시간 변화를 낸다(docs/32 V4-3)
         if cond["precise"] and self.steady_available:
-            s.append("steady")
-        return s + ["result"]
+            return ["usd", "steady", "transient", "result"]
+        return ["usd", "transient", "result"]
 
     def _position(self, j: Job) -> int | None:
         return self.queue.index(j.id) + 1 if j.id in self.queue else None
 
+    def _scale(self, stage: str, cond: dict) -> float:
+        fn = self.stage_scale.get(stage)
+        try:
+            return max(0.0, float(fn(cond))) if fn else 1.0
+        except Exception:  # noqa: BLE001 - 배수 계산이 틀려도 작업은 돈다
+            return 1.0
+
+    def _expect(self, stage: str, cond: dict) -> float:
+        return self.est.expect(stage, cond["duration"]) * self._scale(stage, cond)
+
     def _plan(self, j: Job) -> dict:
-        return j.plan or {s: self.est.expect(s, j.cond["duration"]) for s in j.stages}
+        return j.plan or {s: self._expect(s, j.cond) for s in j.stages}
 
     def _eta(self, j: Job) -> float:
         plan = self._plan(j)
@@ -488,7 +507,7 @@ class JobManager:
                     return
                 j = self.jobs[self.queue.pop(0)]
                 j.state, j.started = "running", time.time()
-                j.plan = {s: self.est.expect(s, j.cond["duration"]) for s in j.stages}
+                j.plan = {s: self._expect(s, j.cond) for s in j.stages}
             self._run(j)
 
     def _run(self, j: Job) -> None:
@@ -504,7 +523,9 @@ class JobManager:
                 self._progress(j, 0.0)
                 self.stage_fns[s](ctx)
                 spent = self.clock() - self._stage_t0
-                self.est.learn(s, j.cond["duration"], spent)
+                sc = self._scale(s, j.cond)
+                if sc > 0:  # 저장해 둔 결과만 쓴 단계(배수 0)는 배우지 않는다
+                    self.est.learn(s, j.cond["duration"], spent / sc)
                 if s == "transient" and (folder / "preview.json").exists():
                     j.preview = True
                 self._progress(j, 1.0)

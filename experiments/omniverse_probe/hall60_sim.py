@@ -667,9 +667,8 @@ class Sim:
             self.rack_cnt = wp.array(np.bincount(lay.intake_id[lay.intake_id >= 0], minlength=nr).astype(np.float32), dtype=float, device=d)
             self.kd = wp.array(np.full(lay.shape, K_DIFF, dtype=np.float32), dtype=float, device=d)
             # 다공질 랙(porous_rack_layout)이면 랙 칸 부피 발열 = P / (rho cp V_랙)
-            vol = np.bincount(lay.rack_id[lay.rack_id >= 0], minlength=nr).astype(np.float64) * DX ** 3
-            heat = (power_kw / (RHO_CP * np.maximum(vol, 1e-9))) if getattr(lay, "porous_racks", False) else np.zeros(nr)
-            self.rack_heat = wp.array(np.asarray(heat, dtype=np.float32) * np.ones(nr, dtype=np.float32), dtype=float, device=d)
+            heat = self._porous_heat() if getattr(lay, "porous_racks", False) else np.zeros(nr, dtype=np.float32)
+            self.rack_heat = wp.array(heat, dtype=float, device=d)
             self.kd_max = K_DIFF
         self.u = None
         self.vent_on = 1.0
@@ -679,6 +678,15 @@ class Sim:
         q_rack = np.array(self.lay.rack_flux, dtype=np.float32)
         # 랙 앞뒤 온도 차 P / (rho cp q). fv 이류는 이 값을 랙 뒷면에서 들어오는 공기에 더한다
         self.rack_rise = wp.array((np.asarray(kw, dtype=np.float32) / (RHO_CP * q_rack)).astype(np.float32), dtype=float, device=self.device)
+        self._rack_kw = np.asarray(kw, dtype=np.float64)
+        if getattr(self, "rack_heat", None) is not None and getattr(self.lay, "porous_racks", False):
+            self.rack_heat = wp.array(self._porous_heat(), dtype=float, device=self.device)
+
+    def _porous_heat(self) -> np.ndarray:
+        """다공질 랙의 부피 발열(K/s) = P / (rho cp V_랙)."""
+        nr = len(self._rack_kw)
+        vol = np.bincount(self.lay.rack_id[self.lay.rack_id >= 0], minlength=nr).astype(np.float64) * DX ** 3
+        return (self._rack_kw / (RHO_CP * np.maximum(vol, 1e-9))).astype(np.float32)
         # 랙을 지나는 공기의 온도 상승 = P / (rho cp q). 랙 안 머무는 시간 동안 균일하게 가열한다.
         q = np.array(self.lay.rack_flux, dtype=np.float32)
         depth_m = 1.0

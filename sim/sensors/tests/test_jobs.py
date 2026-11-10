@@ -134,7 +134,7 @@ def test_manager_runs_stages_and_reuses_result(manifest, tmp_path):
     mgr = jobs.JobManager(manifest, tmp_path, fs.all())
     try:
         s = mgr.submit({"precise": True})
-        assert [x["id"] for x in s["stages"]] == ["usd", "transient", "steady", "result"]
+        assert [x["id"] for x in s["stages"]] == ["usd", "steady", "transient", "result"]
         done = wait_state(mgr, s["id"], {"done"})
         assert done["progress"] == 1.0 and done["preview"] is True and done["etaS"] == 0.0
         assert mgr.result_path(s["id"]).exists()
@@ -203,3 +203,18 @@ def test_estimates_learn(tmp_path):
     book.learn("transient", 300, 30.0)
     assert book.expect("transient", 300) == pytest.approx(30.0)
     assert jobs.EstimateBook(tmp_path / "e.json").expect("transient", 300) == pytest.approx(30.0)  # 파일에 남는다
+
+
+def test_stage_scale_multiplies_estimate(manifest, tmp_path):
+    fs = FakeStages()
+    fs.gate.clear()
+    mgr = jobs.JobManager(manifest, tmp_path, fs.all(), stage_scale={"steady": lambda c: len(c["failures"]) + 1})
+    try:
+        one = mgr.submit({"supply": 18})
+        two = mgr.submit({"supply": 19, "failures": [{"crac": "crac_01", "t": 10}]})
+        # 고장이 있는 작업은 OpenFOAM을 두 번 돌리므로 단계 예상이 더 길다(앞 작업 대기 시간을 빼고 비교)
+        d = jobs.DEFAULT_SECONDS["steady"]
+        assert two["etaS"] - one["etaS"] >= d * 0.9
+    finally:
+        fs.gate.set()
+        mgr.stop()
