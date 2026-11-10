@@ -682,16 +682,17 @@ class Sim:
         if getattr(self, "rack_heat", None) is not None and getattr(self.lay, "porous_racks", False):
             self.rack_heat = wp.array(self._porous_heat(), dtype=float, device=self.device)
 
-    def _porous_heat(self) -> np.ndarray:
-        """다공질 랙의 부피 발열(K/s) = P / (rho cp V_랙)."""
-        nr = len(self._rack_kw)
-        vol = np.bincount(self.lay.rack_id[self.lay.rack_id >= 0], minlength=nr).astype(np.float64) * DX ** 3
-        return (self._rack_kw / (RHO_CP * np.maximum(vol, 1e-9))).astype(np.float32)
         # 랙을 지나는 공기의 온도 상승 = P / (rho cp q). 랙 안 머무는 시간 동안 균일하게 가열한다.
         q = np.array(self.lay.rack_flux, dtype=np.float32)
         depth_m = 1.0
         rate = (kw / (RHO_CP * q)) * (V_RACK / depth_m)  # K/s
         self.heat_rate = wp.array(rate.astype(np.float32), dtype=float, device=self.device)
+
+    def _porous_heat(self) -> np.ndarray:
+        """다공질 랙의 부피 발열(K/s) = P / (rho cp V_랙)."""
+        nr = len(self._rack_kw)
+        vol = np.bincount(self.lay.rack_id[self.lay.rack_id >= 0], minlength=nr).astype(np.float64) * DX ** 3
+        return (self._rack_kw / (RHO_CP * np.maximum(vol, 1e-9))).astype(np.float32)
 
     def set_fans(self, fan: np.ndarray):
         s, balance = source_field(self.lay, fan)
