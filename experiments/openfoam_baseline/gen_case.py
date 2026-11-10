@@ -101,6 +101,9 @@ def main() -> None:
     rack_kw = [a.power] * len(hall["racks"])
     if spec is not None:
         rack_kw = [float(spec["row_power_kw"][(int(r["name"].split("_")[1]) - 1) // 10]) for r in hall["racks"]]
+        for i, r in enumerate(hall["racks"]):  # 랙별 전력이 있으면 줄 전력보다 우선(시뮬레이션 작업, docs/31)
+            if r["name"] in spec.get("rack_power_kw", {}):
+                rack_kw[i] = float(spec["rack_power_kw"][r["name"]])
     q, leak = h.crac_returns(lay, fan)
     supply = float(q.sum())
     out = a.out

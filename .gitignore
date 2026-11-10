@@ -94,3 +94,6 @@ experiments/**/*.log
 
 # 검증 실행 결과(V1~V4, docs/32). 요약은 experiments/results/에 둔다
 experiments/omniverse_probe/out/verify/
+
+# 시뮬레이션 작업이 임시로 만드는 OpenFOAM 사례(끝나면 지움)
+experiments/openfoam_baseline/cases/job_*/
