@@ -68,10 +68,14 @@ def read_hall(path: Path) -> dict:
 def read_hall_from_stage(stage) -> dict:
     """열린 USD 장면에서 홀 정보(랙, CRAC, 급기구, 격벽, 센서 앵커, 홀 크기)를 읽는다."""
     cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
-    hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "anchors": [], "size_cm": None}
+    hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "anchors": [], "size_cm": None, "plenum": None}
     for prim in stage.Traverse():
         if prim.GetName().startswith("Hall") and prim.GetAttribute("dct:hallSizeCm"):
             hall["size_cm"] = tuple(float(v) for v in prim.GetAttribute("dct:hallSizeCm").Get())
+            d = prim.GetAttribute("dct:plenumDepthCm")
+            if d and d.HasAuthoredValue() and float(d.Get()) > 0:  # 이중 바닥과 바닥 아래 공간(build_scene.py raised_floor)
+                hall["plenum"] = {"depth_cm": float(d.Get()), "floor_cm": float(prim.GetAttribute("dct:floorThicknessCm").Get()),
+                                  "open_ratio": float(prim.GetAttribute("dct:tileOpenRatio").Get())}
         at = prim.GetAttribute("dct:assetType")
         if not at or not at.Get():
             continue
@@ -99,6 +103,20 @@ def read_hall_from_stage(stage) -> dict:
     return hall
 
 
+def shift_hall_z(hall: dict, dz_cm: float) -> dict:
+    """홀 정보의 z를 dz만큼 올린 복사본(이중 바닥 계산 격자용). 홀 높이도 그만큼 늘린다. 센서 앵커는 그대로 둔다(Sim.sensors가 더함)."""
+    import copy
+
+    h = copy.deepcopy(hall)
+    for k in ("racks", "cracs", "vents", "panels"):
+        for it in h[k]:
+            it["min"] = (it["min"][0], it["min"][1], it["min"][2] + dz_cm)
+            it["max"] = (it["max"][0], it["max"][1], it["max"][2] + dz_cm)
+    W, L, H = h["size_cm"]
+    h["size_cm"] = (W, L, H + dz_cm)
+    return h
+
+
 def rng(lo_cm: float, hi_cm: float, n: int) -> tuple[int, int]:
     """cm 범위를 셀 인덱스 범위로. 얇은 판도 최소 한 칸을 차지한다."""
     i0 = int(np.floor(lo_cm / 100.0 / DX + 1e-6))
@@ -110,6 +128,12 @@ class Layout:
     """장면에서 격자 위의 칸 종류와 흐름의 원천을 만든다."""
 
     def __init__(self, hall: dict):
+        # 이중 바닥(2026-11-11, docs/33): 바닥 아래 공간(깊이 D)과 바닥판(두께 ft)을 격자 아래쪽에 붙인다. 계산 좌표는 z를 (D + ft)만큼 올린다.
+        # 센서 앵커 위치도 같은 만큼 올려 읽어야 하므로 Sim.sensors가 z_off_cm를 더한다.
+        self.plenum = hall.get("plenum")
+        self.z_off_cm = (self.plenum["depth_cm"] + self.plenum["floor_cm"]) if self.plenum else 0.0
+        if self.z_off_cm:
+            hall = shift_hall_z(hall, self.z_off_cm)
         W, L, H = hall["size_cm"]
         self.shape = (int(round(W / 100.0 / DX)), int(round(L / 100.0 / DX)), int(round(H / 100.0 / DX)))
         nx, ny, nz = self.shape
@@ -149,7 +173,7 @@ class Layout:
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
             self.solid[xs:xe, ys:ye, zs:ze] = True
             axis, sign = c["front"]  # 회수면(앞면)이 향하는 방향
-            zr0, zr1 = rng(RETURN_Z_CM[0], RETURN_Z_CM[1], nz)
+            zr0, zr1 = rng(RETURN_Z_CM[0] + self.z_off_cm, RETURN_Z_CM[1] + self.z_off_cm, nz)  # 회수구 높이는 바닥(이중 바닥이면 그 윗면)에서 잰다
             if axis == 0:
                 xr = slice(xe, xe + 1) if sign > 0 else slice(xs - 1, xs)
                 self.ret_id[xr, ys:ye, zr0:zr1] = idx
@@ -165,6 +189,27 @@ class Layout:
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny)
             self.vent[xs:xe, ys:ye, 0:VENT_LAYERS] = True
             self.vent_id[xs:xe, ys:ye, 0:VENT_LAYERS] = vi
+        self.dis_id = np.full(self.shape, -1, dtype=np.int32)  # 이중 바닥: 공조기가 바닥 아래로 내보내는 칸(공조기 번호)
+        if self.plenum:
+            # 바닥판 층은 막고, 급기구(천공 타일) 자리만 연다. 급기구가 공기를 직접 내보내지 않고 바닥 아래 압력으로 올라온다.
+            kd0 = int(round(self.plenum["depth_cm"] / 100.0 / DX))
+            kf1 = int(round(self.z_off_cm / 100.0 / DX))
+            self.floor_k = (kd0, kf1)
+            self.solid[:, :, kd0:kf1] = True
+            self.tile = np.zeros(self.shape, dtype=bool)
+            for v in hall["vents"]:
+                (x0, y0, _), (x1, y1, _) = v["min"], v["max"]
+                xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny)
+                self.solid[xs:xe, ys:ye, kd0:kf1] = False
+                self.tile[xs:xe, ys:ye, kd0:kf1] = True
+            self.vent[:] = False
+            self.vent_id[:] = -1
+            # 공조기 아래 바닥 아래 공간 맨 윗층: 공조기가 찬 공기를 내려보내는 곳(하향 송풍)
+            for idx, c in enumerate(hall["cracs"]):
+                (x0, y0, _), (x1, y1, _) = c["min"], c["max"]
+                xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny)
+                self.dis_id[xs:xe, ys:ye, kd0 - 1] = idx
+            self.vent = self.dis_id >= 0  # 급기 온도로 들어오는 칸(덮어쓰기 이류와 fv의 들어오는 온도가 함께 쓴다)
         self.fluid = ~self.solid
         for a in ("intake", "exhaust", "vent"):
             setattr(self, a, getattr(self, a) & self.fluid)
@@ -183,6 +228,9 @@ class Layout:
                 xs, xe = rng(xa, xb, nx); ys, ye = rng(y - 60.0, y + 60.0, ny)
                 if kz < nz:
                     self.sigma[xs:xe, ys:ye, kz] = SIGMA_COLD_TOP
+        if self.plenum:
+            # 천공 타일은 바람이 지나기 어렵다(열린 비율만큼만 통과 쉬움). 퍼텐셜 흐름에서는 이 차이로 타일마다 나오는 양이 달라진다.
+            self.sigma[self.tile] = self.plenum["open_ratio"]
         # 뜨거운 통로: CRAC의 y 위치(뜨거운 통로 끝에 놓임)로 통로를 나누고, 랙은 뒷면이 닿는 통로에 배정한다.
         centers = sorted({round((c["min"][1] + c["max"][1]) / 2 / 10.0) * 10.0 for c in hall["cracs"]})
         self.n_aisles = len(centers)
@@ -255,7 +303,14 @@ def source_field(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, dict]:
         s[m] += sign * per_cell[ids[m]]
     # 급기: 켜진 CRAC들의 회수 유량 합(q.sum())을 차가운 통로별로, 그 통로를 향한 랙들의 유량 비율로 나눈다.
     # 통로 안에서는 그 통로의 급기구 칸이 똑같이 받는다. (예전에는 급기구 전체가 똑같이 받아서 먼 통로의 랙이 영향을 받았다)
-    if q.sum() > 0:
+    if getattr(lay, "plenum", None):
+        for idx in range(lay.n_cracs):
+            cells = lay.dis_id == idx
+            if q[idx] > 0:
+                if not cells.any():
+                    raise RuntimeError(f"CRAC {idx + 1}의 아래에 바닥 아래 공간 칸이 없다")
+                s[cells] += q[idx] / (cells.sum() * vol)
+    elif q.sum() > 0:
         demand = np.zeros(lay.n_cold)
         for r_idx, c in enumerate(lay.rack_cold):
             demand[c] += flux[r_idx]
@@ -775,7 +830,8 @@ class Sim:
         wp.launch(leak_apply_kernel, dim=self.lay.shape, inputs=[self.T, self.leak_src_id, self.leak_sums, self.leak_counts, self.leak_on], device=self.device)
 
     def sensors(self, anchors: list[dict]) -> np.ndarray:
-        pts = np.array([[a["pos_cm"][i] / 100.0 / DX - 0.5 for i in range(3)] for a in anchors], dtype=np.float32)
+        off = (0.0, 0.0, getattr(self.lay, "z_off_cm", 0.0))
+        pts = np.array([[(a["pos_cm"][i] + off[i]) / 100.0 / DX - 0.5 for i in range(3)] for a in anchors], dtype=np.float32)
         out = wp.zeros(len(anchors), dtype=float, device=self.device)
         wp.launch(sample_points, dim=len(anchors), inputs=[self.T, wp.array(pts, dtype=wp.vec3, device=self.device), out], device=self.device)
         return out.numpy()

@@ -97,3 +97,6 @@ experiments/omniverse_probe/out/verify/
 
 # 시뮬레이션 작업이 임시로 만드는 OpenFOAM 사례(끝나면 지움)
 experiments/openfoam_baseline/cases/job_*/
+
+# 시험용 장면 변형(build_scene.py로 다시 만든다. 예: 이중 바닥을 켠 _hall01_rf)
+usd/scenes/_*
