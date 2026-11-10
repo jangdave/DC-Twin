@@ -43,6 +43,20 @@ docker run --rm -p 127.0.0.1:8765:8765 -e DCT_TOKEN=<16자 이상 토큰> dct-si
 컨테이너 안에서는 `0.0.0.0`으로 열어야 해서 **토큰 없이는 시작하지 않는다**(종료 코드 2). 토큰은 이미지에 넣지 않고 실행할 때 준다. GPU 모델(L1, L2)은 이 이미지에 없다.
 **확인했다**(2026-11-04): WSL의 Docker Engine 29.1.3에서 빌드(280 MB), 실행, 헬스체크(healthy), 비루트(uid 10001), 읽기 전용에 권한 제거와 메모리 제한을 건 채로 Windows에서 접속, 토큰 없음과 약한 토큰의 시작 거부, 컨테이너 대상 WebSocket 인증. 첫 실행에서 컨테이너 안에서는 저장소 루트를 찾지 못해 서버가 시작하지 못하는 결함을 찾아 고쳤다. Docker Desktop은 쓰지 않았다(라이선스 약관이 있어 피함). Windows에서 같은 방법을 쓰려면 WSL 안에 Docker Engine(`apt install docker.io`)을 설치한다.
 
+## Omniverse Kit 안에서 띄우기와 시뮬레이션 작업 (2026-11-10)
+
+```
+.\server\run_local.ps1 -Kit            # Kit 앱이 장면 USD를 열고 같은 프로세스에서 서버를 돌린다(창 없음, 시작 약 15초)
+```
+
+- `server/kit_server.py`가 Kit 안에서 `dct_sensors.serve`를 별도 스레드로 돌린다. 실시간 센서 값(기본 L2)과 **시뮬레이션 작업**(`--jobs`)을 함께 준다.
+- 시뮬레이션 작업은 WebSocket 메시지로 주고받는다: `{"type":"job","action":"submit","conditions":{...}}` → 진행 알림 `{"type":"job","job":{state, stage, progress, etaS, ...}}`(모든 접속에 보냄) → `{"type":"job","action":"result","id":"..."}` → `{"type":"job_result","rec":{...}}`(웹 녹화 형식). `status`, `cancel`, `list`도 있다. 조건과 단계는 `docs/31` 3장, 4.1장.
+- `precise: true`(기본)면 팬 상태마다 WSL의 OpenFOAM으로 공기 흐름을 풀고(약 6~7분씩, 같은 조건이면 저장해 둔 흐름을 다시 씀) 우리 온도 계산으로 시간 변화를 낸다. `false`면 보정 모델(L2)로 바로 낸다(1분 이내).
+- Kit에 없는 파이썬 패키지(scipy, scikit-learn, joblib, threadpoolctl, cloudpickle, narwhals)는 저장소 밖 `D:/omniverse-kit/pydeps`에 Kit 파이썬(3.12)용으로 받는다: `uv pip install --target D:/omniverse-kit/pydeps --python-version 3.12 --python-platform windows --no-deps <이름>`.
+- Kit에는 websockets 12.0(옛 API)이 들어 있어 그것을 쓴다. 서버 코드는 옛 API와 새 API(13 이상)를 모두 받는다.
+- 끝내기: Ctrl+C(스크립트가 `sim/out/kit_server.stop`을 만들어 알리고 15초 뒤에도 안 끝나면 Kit을 끝낸다).
+- 확인(2026-11-10): Kit 안 서버에 접속(16초), 실시간 sample, `/api/meta`, 정확한 작업(저장한 흐름 재사용), 빠른 작업(L2) 결과 받기.
+
 ## 데이터 API (읽기 전용)
 | 경로 | 내용 |
 |---|---|
