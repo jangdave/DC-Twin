@@ -261,8 +261,9 @@ def source_field(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, dict]:
     return s, {"crac_return_m3s": [round(float(x), 2) for x in q], "aisle_leak_m3s": [round(float(x), 2) for x in leak], "supply_m3s": round(float(q.sum()), 2), "rack_m3s": round(q_rack, 2)}
 
 
-def solve_flow(lay: Layout, s: np.ndarray) -> tuple[np.ndarray, dict]:
-    """∇²φ = s 를 푼다(벽, 고체는 흐름이 드나들지 않음). u = ∇φ를 셀 중심 속도(m/s)로 돌려준다."""
+def solve_flow(lay: Layout, s: np.ndarray, faces_out: dict | None = None) -> tuple[np.ndarray, dict]:
+    """∇²φ = s 를 푼다(벽, 고체는 흐름이 드나들지 않음). u = ∇φ를 셀 중심 속도(m/s)로 돌려준다.
+    faces_out을 주면 축마다 면 속도(그 축으로 n+1칸, +방향이 양수)를 넣어 준다(열 보존 이류 fv가 쓴다)."""
     fluid = lay.fluid
     idx = -np.ones(fluid.shape, dtype=np.int64)
     idx[fluid] = np.arange(fluid.sum())
@@ -316,6 +317,14 @@ def solve_flow(lay: Layout, s: np.ndarray) -> tuple[np.ndarray, dict]:
             f = np.where(fluid & nb_fluid, w * (nb_phi - phi) / DX, 0.0)  # 이 칸에서 sign 방향 이웃으로 나가는 쪽의 기울기 x 쉬움
             flux.append(f * sign)  # +방향 속도로 환산: 이웃이 +쪽이면 그대로, -쪽이면 부호를 뒤집는다
         u[..., axis] = (0.5 * (flux[0] + flux[1])).astype(np.float32)
+        if faces_out is not None:
+            shp = list(fluid.shape)
+            shp[axis] += 1
+            fa = np.zeros(shp, dtype=np.float32)
+            hi = [slice(None)] * 3
+            hi[axis] = slice(1, None)
+            fa[tuple(hi)] = flux[0]  # 칸 i의 +쪽 면 = 면 i+1
+            faces_out[axis] = fa
     u[~fluid] = 0.0
     inside = lay.rack_id >= 0
     u[inside] = lay.rack_dir[inside]  # 랙 안은 정해 둔 통과 속도
@@ -451,6 +460,102 @@ def leak_apply_kernel(T: wp.array3d(dtype=float), src_id: wp.array3d(dtype=int),
 
 
 @wp.kernel
+def group_sum_kernel(T: wp.array3d(dtype=float), gid: wp.array3d(dtype=int), sums: wp.array(dtype=float)):
+    """칸 묶음(gid >= 0)별 온도 합. 랙 흡입면, 지붕 틈 아래 칸의 평균을 내는 데 쓴다."""
+    i, j, k = wp.tid()
+    g = gid[i, j, k]
+    if g >= 0:
+        wp.atomic_add(sums, g, T[i, j, k])
+
+
+@wp.func
+def upwind(f: float, here: float, there: float):
+    """면 속도 f(+방향 양수)에서 그 면을 지나는 온도: 바람 위쪽 칸의 값."""
+    if f > 0.0:
+        return here
+    return there
+
+
+@wp.kernel
+def fv_step_kernel(
+    T: wp.array3d(dtype=float), T_out: wp.array3d(dtype=float),
+    fx: wp.array3d(dtype=float), fy: wp.array3d(dtype=float), fz: wp.array3d(dtype=float),
+    fluid: wp.array3d(dtype=int), src: wp.array3d(dtype=float),
+    vent: wp.array3d(dtype=int), exhaust_id: wp.array3d(dtype=int), leak_src_id: wp.array3d(dtype=int),
+    rack_sum: wp.array(dtype=float), rack_cnt: wp.array(dtype=float), rack_rise: wp.array(dtype=float),
+    leak_sum: wp.array(dtype=float), leak_cnt: wp.array(dtype=float),
+    dt: float, dx: float, k_diff: float, t_supply: float,
+):
+    """열을 보존하는 유한 체적 이류(1차 풍상) + 원천항 + 확산 (V4, docs/32).
+
+    dT/dt = -(1/dx) x Σ 면(속도 x 바람 위쪽 온도) + max(s,0) x T_들어옴 + min(s,0) x T + 확산
+    - 들어오는 공기의 온도: 급기구 = 급기 온도, 랙 뒷면 = 그 랙 흡입면 평균 + 랙 온도 상승(P / (ρcp q)), 지붕 틈 위 = 틈 아래 평균
+    - 빨아들이는 칸(랙 흡입면, CRAC 회수, 틈 아래)은 그 칸의 온도로 내보낸다
+    - 확산은 공기 칸끼리만(벽과 고체로는 열이 드나들지 않음)
+    면 속도의 발산이 원천 s와 같으므로(흐름 풀이) 온도가 고르면 변하지 않고, 랙 발열은 랙 뒷면에서 정확히 들어온다."""
+    i, j, k = wp.tid()
+    if fluid[i, j, k] == 0:
+        T_out[i, j, k] = T[i, j, k]
+        return
+    nx = T.shape[0]
+    ny = T.shape[1]
+    nz = T.shape[2]
+    c = T[i, j, k]
+    xm = T[wp.max(i - 1, 0), j, k]
+    xp = T[wp.min(i + 1, nx - 1), j, k]
+    ym = T[i, wp.max(j - 1, 0), k]
+    yp = T[i, wp.min(j + 1, ny - 1), k]
+    zm = T[i, j, wp.max(k - 1, 0)]
+    zp = T[i, j, wp.min(k + 1, nz - 1)]
+    f_xp = fx[i + 1, j, k]
+    f_xm = fx[i, j, k]
+    f_yp = fy[i, j + 1, k]
+    f_ym = fy[i, j, k]
+    f_zp = fz[i, j, k + 1]
+    f_zm = fz[i, j, k]
+    adv = -f_xp * upwind(f_xp, c, xp) + f_xm * upwind(f_xm, xm, c)
+    adv = adv - f_yp * upwind(f_yp, c, yp) + f_ym * upwind(f_ym, ym, c)
+    adv = adv - f_zp * upwind(f_zp, c, zp) + f_zm * upwind(f_zm, zm, c)
+    rate = adv / dx
+    s = src[i, j, k]
+    if s > 0.0:
+        t_in = c
+        if vent[i, j, k] == 1:
+            t_in = t_supply
+        r = exhaust_id[i, j, k]
+        if r >= 0:
+            if rack_cnt[r] > 0.0:
+                t_in = rack_sum[r] / rack_cnt[r] + rack_rise[r]
+        a = leak_src_id[i, j, k]
+        if a >= 0:
+            if leak_cnt[a] > 0.0:
+                t_in = leak_sum[a] / leak_cnt[a]
+        rate = rate + s * t_in
+    if s < 0.0:
+        rate = rate + s * c
+    lap = float(0.0)
+    if i > 0:
+        if fluid[i - 1, j, k] == 1:
+            lap = lap + xm - c
+    if i < nx - 1:
+        if fluid[i + 1, j, k] == 1:
+            lap = lap + xp - c
+    if j > 0:
+        if fluid[i, j - 1, k] == 1:
+            lap = lap + ym - c
+    if j < ny - 1:
+        if fluid[i, j + 1, k] == 1:
+            lap = lap + yp - c
+    if k > 0:
+        if fluid[i, j, k - 1] == 1:
+            lap = lap + zm - c
+    if k < nz - 1:
+        if fluid[i, j, k + 1] == 1:
+            lap = lap + zp - c
+    T_out[i, j, k] = c + dt * (rate + k_diff * lap / (dx * dx))
+
+
+@wp.kernel
 def sample_points(T: wp.array3d(dtype=float), pts: wp.array(dtype=wp.vec3), out: wp.array(dtype=float)):
     n = wp.tid()
     out[n] = sample_T(T, pts[n], T.shape[0], T.shape[1], T.shape[2])
@@ -458,8 +563,8 @@ def sample_points(T: wp.array3d(dtype=float), pts: wp.array(dtype=wp.vec3), out:
 
 class Sim:
     def __init__(self, hall: dict, lay: Layout, power_kw: float, slow: float, device: str = "cuda:0", advection: str = "maccormack", t_supply: float = T_SUPPLY):
-        if advection not in ("linear", "maccormack"):
-            raise ValueError(f"advection은 linear 또는 maccormack이어야 한다: {advection}")
+        if advection not in ("linear", "maccormack", "fv"):
+            raise ValueError(f"advection은 linear, maccormack, fv여야 한다: {advection}")
         self.advection = advection  # linear: 거슬러 올라가 선형 보간(수치 확산이 큼), maccormack: 오차 보정 + 값 제한(확산이 작음)
         self.hall, self.lay, self.device, self.slow = hall, lay, device, slow
         # 급기 온도. 식이 온도에 대해 선형이라 급기를 올리면 장 전체가 같은 폭으로 오른다(초기 온도도 같은 폭으로 옮겨 과도 구간을 같게 한다).
@@ -486,11 +591,21 @@ class Sim:
         self.leak_counts = wp.array(np.array([float(lay.leak_sink[a].sum()) for a in range(lay.n_aisles)] or [0.0], dtype=np.float32), dtype=float, device=d)
         self.leak_on = wp.zeros(max(1, lay.n_aisles), dtype=float, device=d)
         self.set_power(np.full(len(hall["racks"]), power_kw, dtype=np.float32))
+        if advection == "fv":
+            self.fluid = wp.array(lay.fluid.astype(np.int32), dtype=int, device=d)
+            self.exhaust_id = wp.array(lay.exhaust_id, dtype=int, device=d)
+            self.intake_id = wp.array(lay.intake_id, dtype=int, device=d)
+            nr = len(hall["racks"])
+            self.rack_sum = wp.zeros(nr, dtype=float, device=d)
+            self.rack_cnt = wp.array(np.bincount(lay.intake_id[lay.intake_id >= 0], minlength=nr).astype(np.float32), dtype=float, device=d)
         self.u = None
         self.vent_on = 1.0
         self.flow_info = {}
 
     def set_power(self, kw: np.ndarray):
+        q_rack = np.array(self.lay.rack_flux, dtype=np.float32)
+        # 랙 앞뒤 온도 차 P / (rho cp q). fv 이류는 이 값을 랙 뒷면에서 들어오는 공기에 더한다
+        self.rack_rise = wp.array((np.asarray(kw, dtype=np.float32) / (RHO_CP * q_rack)).astype(np.float32), dtype=float, device=self.device)
         # 랙을 지나는 공기의 온도 상승 = P / (rho cp q). 랙 안 머무는 시간 동안 균일하게 가열한다.
         q = np.array(self.lay.rack_flux, dtype=np.float32)
         depth_m = 1.0
@@ -499,7 +614,16 @@ class Sim:
 
     def set_fans(self, fan: np.ndarray):
         s, balance = source_field(self.lay, fan)
-        u, info = solve_flow(self.lay, s)
+        faces = {} if self.advection == "fv" else None
+        u, info = solve_flow(self.lay, s, faces)
+        if faces is not None:
+            self.fx, self.fy, self.fz = (wp.array(faces[a], dtype=float, device=self.device) for a in range(3))
+            self.src = wp.array(s.astype(np.float32), dtype=float, device=self.device)
+            fmax = max(float(np.abs(faces[a]).max()) for a in range(3))
+            smax = float(np.abs(s).max())
+            # 풍상 이류의 안정 조건(면 속도 x dt / dx <= 0.5)과 원천항(|s| dt <= 0.5)을 지키도록 한 단계를 잘게 나눈다
+            self.fv_sub = max(1, int(np.ceil(max(fmax * self.dt / DX, smax * self.dt) / 0.5)))
+            info["fv_substeps"] = self.fv_sub
         info.update(balance)
         self.leak_on = wp.array(np.array([1.0 if x > 1e-9 else 0.0 for x in balance["aisle_leak_m3s"]] or [0.0], dtype=np.float32), dtype=float, device=self.device)
         self.vent_on = 1.0 if balance["supply_m3s"] > 0 else 0.0  # 켜진 CRAC가 하나도 없으면 급기구에서 찬 공기가 나오지 않는다
@@ -508,6 +632,18 @@ class Sim:
         self.u_np = u
 
     def step(self):
+        if self.advection == "fv":
+            h = self.dt / self.fv_sub
+            for _ in range(self.fv_sub):
+                self.rack_sum.zero_()
+                self.leak_sums.zero_()
+                wp.launch(group_sum_kernel, dim=self.lay.shape, inputs=[self.T, self.intake_id, self.rack_sum], device=self.device)
+                wp.launch(group_sum_kernel, dim=self.lay.shape, inputs=[self.T, self.leak_sink_id, self.leak_sums], device=self.device)
+                wp.launch(fv_step_kernel, dim=self.lay.shape, inputs=[self.T, self.T2, self.fx, self.fy, self.fz, self.fluid, self.src, self.vent,
+                                                                      self.exhaust_id, self.leak_src_id, self.rack_sum, self.rack_cnt, self.rack_rise,
+                                                                      self.leak_sums, self.leak_counts, h, DX, K_DIFF, self.t_supply], device=self.device)
+                self.T, self.T2 = self.T2, self.T
+            return
         self.leak_sums.zero_()
         wp.launch(leak_sum_kernel, dim=self.lay.shape, inputs=[self.T, self.leak_sink_id, self.leak_sums], device=self.device)
         if self.advection == "maccormack":
