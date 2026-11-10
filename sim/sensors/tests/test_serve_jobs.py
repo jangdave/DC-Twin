@@ -109,3 +109,18 @@ def test_process_request_legacy_api(manifest, tmp_path):
     status, headers, body = out
     assert status == 200 and json.loads(body)["name"] == "t" and isinstance(headers, list)
     assert asyncio.run(srv.process_request("/ws", LegacyHeaders({"Upgrade": "websocket"}))) is None
+
+
+def test_origin_check_in_process_request_legacy(manifest):
+    """출처 확인은 process_request가 한다(websockets 12의 origins는 정규식을 못 받아 localhost의 아무 포트를 허용할 수 없다)."""
+    engine = sv.Engine(manifest, Config(), "l0", "normal", seed=3)
+    srv = sv.Server(engine)
+
+    class H(dict):
+        pass
+
+    ok = asyncio.run(srv.process_request("/ws", H({"Upgrade": "websocket", "Origin": "http://127.0.0.1:5291"})))
+    bad = asyncio.run(srv.process_request("/ws", H({"Upgrade": "websocket", "Origin": "https://evil.example"})))
+    tool = asyncio.run(srv.process_request("/ws", H({"Upgrade": "websocket"})))  # 브라우저가 아닌 도구(Origin 없음)
+    assert ok is None and tool is None
+    assert bad[0] == 403

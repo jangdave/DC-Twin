@@ -141,6 +141,10 @@
         <button type="button" role="tab" id="tab-prep" data-tab="prep" aria-controls="pane-prep" aria-selected="false" hidden>이상 대비</button>
         <button type="button" role="tab" id="tab-alarms" data-tab="alarms" aria-controls="pane-alarms" aria-selected="false">알람 <span id="tab-alarm-count" class="count" hidden>0</span></button>
       </div>
+      <div id="job-cta" class="cta job-cta" hidden>
+        <p><b>조건을 정해 서버에서 계산</b> · 공조기, 급기 온도, 줄별 부하, 고장 시각</p>
+        <button type="button" id="job-cta-btn">조건 정하기</button>
+      </div>
 
       <div class="pane" id="pane-summary" role="tabpanel" aria-labelledby="tab-summary">
         <label class="field scenario-field">시나리오
@@ -235,9 +239,8 @@
   <dialog id="server-dialog">
     <h2>로컬 계산 서버에 연결</h2>
     <p>이 컴퓨터에서 계산 서버를 먼저 실행하세요. 서버가 계산한 값이 이 화면에 실시간으로 나오고, 슬라이더 조작이 서버로 전달됩니다.</p>
-    <pre><code>cd sim/sensors
-uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ../out/sensor_manifest.json --solver l0</code></pre>
-    <p class="muted">solver를 l2로 바꾸면 보정 모델(AI)의 90% 구간과 신뢰 막대도 나옵니다(Warp 환경 필요). 이 컴퓨터의 ws://와 wss://만 연결할 수 있습니다.</p>
+    <pre><code>.\server\run_local.ps1 -Kit</code></pre>
+    <p class="muted">Omniverse Kit 안에서 서버가 돌고(보정 모델 L2), 시뮬레이션 메뉴에서 조건을 정해 서버에서 정확하게 계산할 수 있습니다(OpenFOAM 흐름, WSL 필요). Kit이 없으면 <code>.\server\run_local.ps1</code>(L2) 또는 <code>-Solver l0</code>(GPU 없이)으로 띄웁니다. 이 컴퓨터의 ws://와 wss://만 연결할 수 있습니다.</p>
     <form id="server-form" method="dialog">
       <label class="field">주소 <input id="server-url" type="text" value="ws://127.0.0.1:8765/ws" size="30" autocomplete="off" /></label>
       <label class="field">접근 토큰 <input id="server-token" type="password" size="30" autocomplete="off" spellcheck="false" aria-describedby="server-token-note" /></label>
@@ -246,6 +249,39 @@ uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ../out
       <div><button type="button" id="server-connect">연결</button> <button value="cancel">취소</button></div>
     </form>
   </dialog>
+
+  <dialog id="job-dialog" aria-labelledby="job-title">
+    <h2 id="job-title">시뮬레이션 조건</h2>
+    <p class="muted small">서버가 계산합니다. 정확한 계산은 공조기 상태마다 OpenFOAM이 공기 흐름을 풀어 약 6~7분씩 걸립니다(같은 조건은 저장해 둔 흐름을 다시 써서 빠릅니다). 결과는 시각화 목적입니다.</p>
+    <form id="job-form" method="dialog">
+      <div class="job-grid">
+        <label class="field">길이(초) <input id="job-duration" type="number" min="60" max="1800" step="30" value="300" /></label>
+        <label class="field">급기 온도(°C) <input id="job-supply" type="number" min="14" max="27" step="0.5" value="18" /></label>
+      </div>
+      <fieldset><legend>공조기(CRAC): 켜기와 팬 속도</legend><div id="job-cracs" class="job-cracs"></div></fieldset>
+      <fieldset><legend>줄별 부하(기준 대비)</legend><div id="job-rows" class="job-rows"></div></fieldset>
+      <fieldset><legend>고장</legend>
+        <div class="job-grid">
+          <label class="field">공조기 <select id="job-fail-crac"><option value="">없음</option></select></label>
+          <label class="field">시각(초) <input id="job-fail-t" type="number" min="0" step="10" value="60" /></label>
+        </div>
+      </fieldset>
+      <label class="check"><input id="job-precise" type="checkbox" checked /> 정확하게(OpenFOAM 흐름 + 우리 온도 계산). 끄면 보정 모델로 1분 안에 계산</label>
+      <p id="job-summary" class="muted small"></p>
+      <p id="job-error" class="muted" role="alert" hidden></p>
+      <div><button type="button" id="job-submit">서버에서 계산</button> <button value="cancel">닫기</button></div>
+    </form>
+  </dialog>
+
+  <section id="job-progress" aria-live="polite" aria-label="서버 계산 진행" hidden>
+    <div class="job-head"><b id="job-p-title">서버 계산</b><button type="button" id="job-p-close" class="icon" aria-label="진행 창 닫기">×</button></div>
+    <p id="job-p-cond" class="muted small"></p>
+    <p id="job-p-stage"></p>
+    <div class="job-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="진행률"><i id="job-p-bar"></i></div>
+    <p id="job-p-eta" class="muted small"></p>
+    <p id="job-p-notes" class="muted small" hidden></p>
+    <div class="job-actions"><button type="button" id="job-p-view" hidden>결과 보기</button> <button type="button" id="job-p-cancel">취소</button></div>
+  </section>
 
   <dialog id="help-dialog">
     <h2>보는 방법</h2>

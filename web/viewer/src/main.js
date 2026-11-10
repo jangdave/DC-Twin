@@ -12,6 +12,8 @@ import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
 import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
 import { ServerData, apiBaseFromWs } from './server_data.js';
+import { JobClient, summarize as summarizeJob } from './sim/jobs.js';
+import { JobUI } from './sim/jobs_ui.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
 import { checkLiveUrl, parseParams } from './url.js';
 import { Boot, eventFraction } from './boot.js';
@@ -153,6 +155,8 @@ async function main() {
   // 미리 계산한 값은 서버에 연결되어 있으면 서버에서 받고, 안 되면 사이트에 포함된 파일을 쓴다(대체 경로).
   let serverData = null;
   let dataSeq = 0; // 서버 데이터 연결 순번(서버를 연달아 바꿀 때 늦게 온 옛 응답을 버린다)
+  let jobClient = null; // 서버 시뮬레이션 작업 연결(docs/31). 서버가 작업을 받을 때만 만든다
+  let serverToken = null; // 서버 연결 창에서 넣은 접근 토큰(작업 연결에도 쓴다. 저장하지 않는다)
   const staticLib = { index: null, groups: null }; // 사이트에 포함된 목록(서버 값을 받지 못하면 되돌린다)
   const restoreStaticLib = () => {
     if (!staticLib.index) return;
@@ -243,6 +247,28 @@ async function main() {
   );
   const layout = layoutFrom(sceneData.racks, sensors);
   panel.build(layout.cracs, simRows);
+  // 서버 시뮬레이션 작업: 조건 창과 진행 창(docs/31 5장)
+  const jobUI = new JobUI({
+    onSubmit: (c) => jobClient?.submit(c),
+    onCancel: (id) => jobClient?.cancel(id),
+    onView: (id) => jobClient?.result(id),
+  });
+  jobUI.build(layout.cracs, simRows);
+  const syncJobCta = () => jobUI.setAvailable(!!jobClient && jobClient.state !== 'idle' && (state.mode === 'lib' || state.server));
+  // 서버가 돌려준 결과 녹화를 미리 계산한 값과 같은 재생기로 연다(시뮬레이션 메뉴). 목록에는 이 결과 하나만 보인다.
+  async function playJobResult(id, rec) {
+    const job = jobClient?.jobs.get(id);
+    const precise = rec?.meta?.job?.model === 'openfoam_flow+fv';
+    const src = new LibSource({
+      store,
+      sensorIds,
+      index: [{ id: `job_${id}`, title: '서버 계산 결과', note: job?.conditions ? summarizeJob(job.conditions) : '' }],
+      loadJson: async () => rec,
+      cache: new Map(),
+      badgeText: precise ? '서버 계산 결과 · OpenFOAM 흐름 + Warp 온도 계산(시각화 목적)' : '서버 계산 결과 · Warp 열 계산 + 보정 모델(시각화 목적)',
+    });
+    await useSource(src, { scenarioId: `job_${id}`, t: 0 });
+  }
   const rackRow = new Map(sceneData.racks.map((r) => [r.name.toLowerCase(), r.row]));
   const insight = new InsightPanel({
     store,
@@ -277,6 +303,7 @@ async function main() {
   function presentMode(d) {
     ui.setMode(d.badge.mode, d.badge.text);
     dispatch({ type: 'mode', mode: d.badge.mode, control: d.control });
+    syncJobCta?.();
   }
   function present(src) {
     const d = src.describe();
@@ -470,6 +497,7 @@ async function main() {
     const r = checkLiveUrl(text);
     if (!r.ok) return r.reason;
     if (token && (token.length > 256 || /\s/.test(token))) return '접근 토큰은 공백 없이 256자 이하여야 한다';
+    serverToken = token;
     startLive(r.url, true, token);
     return true;
   }
@@ -503,6 +531,7 @@ async function main() {
       const lib = await sd.connect();
       if (mine !== dataSeq) return; // 그 사이에 다른 서버에 연결했다: 옛 응답은 버린다
       serverData = sd;
+      connectJobs(wsUrl, lib.meta);
       libSource.index = lib.index;
       if (lib.groups.length) libSource.groups = lib.groups;
       const ext = lib.index.filter((i) => i.source === 'external').length;
@@ -515,6 +544,23 @@ async function main() {
       console.warn('서버의 미리 계산한 값을 쓰지 않는다:', e.message);
       ui.setDataSource(e.status === 401 || e.status === 429 ? `이 사이트에 포함된 파일 (${e.message})` : '이 사이트에 포함된 파일 (서버에 데이터 API 없음)');
     }
+  }
+
+  // 서버가 시뮬레이션 작업을 받으면(/api/meta의 jobs.enabled) 작업 전용 연결을 연다. 메뉴를 바꿔도 진행 알림은 계속 받는다.
+  function connectJobs(wsUrl, meta) {
+    jobClient?.stop();
+    jobClient = null;
+    if (!meta?.jobs?.enabled) return syncJobCta();
+    const jc = new JobClient(wsUrl, {
+      token: serverToken,
+      onJob: (j) => jc === jobClient && jobUI.render(j),
+      onResult: (id, rec) => jc === jobClient && playJobResult(id, rec),
+      onError: (m) => jc === jobClient && jobUI.setError(m),
+      onState: () => jc === jobClient && syncJobCta(),
+    });
+    jobClient = jc;
+    jc.start();
+    syncJobCta();
   }
 
   let lastRefresh = { version: -1, at: 0 };
@@ -706,7 +752,7 @@ async function main() {
   Promise.race([settled, waitMax]).then(() => requestAnimationFrame(() => requestAnimationFrame(() => boot.done())));
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
-  window.__viewer = { getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, panel, flow, queue, dispatch: (c) => queue.push(c) };
+  window.__viewer = { jobs: () => ({ client: jobClient, ui: jobUI }), getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, panel, flow, queue, dispatch: (c) => queue.push(c) };
 }
 
 main().catch((e) => {
