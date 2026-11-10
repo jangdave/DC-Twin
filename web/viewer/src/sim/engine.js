@@ -46,6 +46,20 @@ export class SimEngine {
     this._fired = new Set();
   }
 
+  // 모니터링의 지금 값에서 시작한다(docs/31: 간이 계산 = 모니터링 상태에서 팬·급기만 바꿔 빠르게).
+  // seed: { inlet: {rack_01: 도}, outlet: {...}, fan: {crac_01: 0~1}, supply: 도 }. 없는 값은 기본값 그대로 둔다.
+  startFrom(seed) {
+    this.reset();
+    this.scenario = 'monitor';
+    this._events = [];
+    const ok = (v) => typeof v === 'number' && Number.isFinite(v);
+    if (ok(seed?.supply)) this.cfg.t_supply = Math.min(Math.max(seed.supply, SUPPLY_MIN), SUPPLY_MAX);
+    for (const [c, v] of Object.entries(seed?.fan ?? {})) if (c in this.fan && ok(v)) this.fan[c] = Math.min(Math.max(v, 0), 1);
+    for (const [r, v] of Object.entries(seed?.inlet ?? {})) if (this.solver.inlet.has(r) && ok(v)) this.solver.inlet.set(r, v);
+    for (const [r, v] of Object.entries(seed?.outlet ?? {})) if (this.solver.outlet.has(r) && ok(v)) this.solver.outlet.set(r, v);
+    return { kind: 'scenario', name: 'monitor', event: 'start', ts: this.ts() };
+  }
+
   // 시나리오를 처음부터 시작한다(상태를 모두 되돌린다).
   startScenario(name) {
     const sc = SCENARIOS[name];

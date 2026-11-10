@@ -48,6 +48,15 @@ export class SimRunner {
     this._apply(this.engine.step());
   }
 
+  // 모니터링의 지금 값에서 시작한다(엔진의 startFrom). 첫 값을 바로 보인다.
+  startFrom(seed) {
+    this.store.clear();
+    this.log = [];
+    this._acc = 0;
+    applyMessage(this.store, this.engine.startFrom(seed));
+    this._apply(this.engine.step());
+  }
+
   // 지난 실제 시간(초)만큼 진행한다. 반환: 진행한 단계 수
   advance(elapsedSec) {
     if (!this.playing) return 0;

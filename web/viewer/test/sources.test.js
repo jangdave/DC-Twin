@@ -71,6 +71,17 @@ describe('SimSource', () => {
     expect(d.scenarios.list.map((x) => x.id).sort()).toEqual(Object.keys(SCENARIOS).sort());
     expect(d.card.seekable).toBe(false);
   });
+  it('seed를 주면 모니터링 지금 값에서 시작하고 표시가 바뀐다(시나리오 선택 없음)', () => {
+    const { src } = mkSim();
+    src.open({ scenarioId: 'normal', seed: { supply: 22 } });
+    expect(src.engine.scenario).toBe('monitor');
+    expect(src.engine.cfg.t_supply).toBe(22);
+    const d = src.describe();
+    expect(d.badge.text).toContain('모니터링 지금 값에서 시작');
+    expect(d.scenarios.current).toBeNull();
+    src.open({ scenarioId: 'fan_fault' }); // seed 없이 다시 열면 시나리오로 돌아간다
+    expect(src.describe().badge.text).toBe('간이 계산 · 브라우저 간이 모델');
+  });
   it('엔진은 한 번만 만들고 다시 열면 같은 엔진으로 처음부터 시작', () => {
     const { src, made } = mkSim();
     src.open({ scenarioId: 'normal' });
@@ -118,9 +129,9 @@ describe('LiveSource', () => {
     let client;
     const s = new LiveSource({ store: new SensorStore(sensors), url: 'u', control: true, makeClient: () => (client = fakeClient()) });
     s.open();
-    expect(s.describe().badge).toEqual({ mode: 'connecting', text: '로컬 서버 연결 중' });
+    expect(s.describe().badge).toEqual({ mode: 'connecting', text: '실시간 · 로컬 서버 연결 중' });
     client.state = 'open';
-    expect(s.describe().badge).toEqual({ mode: 'open', text: '로컬 서버 연결됨' });
+    expect(s.describe().badge).toEqual({ mode: 'open', text: '실시간 · 로컬 서버 연결됨' });
     client.state = 'closed';
     client.retryInMs = 4000;
     expect(s.describe().badge).toEqual({ mode: 'closed', text: '연결 끊김, 4초 뒤 다시 시도' });

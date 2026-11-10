@@ -24,9 +24,9 @@ describe('왼쪽 메뉴는 눌린 단추가 하나뿐이다', () => {
             if (d.cctvOpen) expect(d.rail.active).toBe('cctv');
           }
   });
-  it('서버 조작 중에는 왼쪽 메뉴에 눌린 단추가 없고 위쪽 "로컬 서버"가 눌린다', () => {
+  it('서버 실시간 값을 볼 때는 왼쪽 메뉴의 "모니터링"이 눌리고 위쪽 "로컬 서버"도 켜짐으로 보인다(docs/31)', () => {
     const d = derive(run(hall, { type: 'mode', mode: 'open', control: true }));
-    expect(d.rail.active).toBeNull();
+    expect(d.rail.active).toBe('rec');
     expect(d.serverOn).toBe(true);
   });
 });

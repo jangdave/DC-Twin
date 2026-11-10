@@ -916,7 +916,8 @@ await pc.close();
   await lp.waitForFunction(() => window.__viewer?.state.live, { timeout: 15000 });
   await sleep(1500);
   const L = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, server: window.__viewer.state.server, badge: document.getElementById('mode-badge').textContent, player: window.__viewer.state.player, panel: !document.getElementById('sim-panel').hidden, it: document.getElementById('agg-it').textContent, serverOn: document.querySelector('[data-mode="server"]').classList.contains('on'), rail: [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').length, liveInfo: !document.getElementById('live-info').hidden }));
-  ok('LIVE 로컬 서버: 연결되고 스냅샷 값이 화면에 보이며 조작 패널이 열리고 "로컬 서버"만 눌림', L.mode === 'live' && L.server && /연결됨/.test(L.badge) && L.player === null && L.panel && L.it === '400.0 kW' && L.serverOn && L.rail === 0 && L.liveInfo, JSON.stringify(L));
+  // docs/31(2026-11-10 사용자 결정): 서버에 연결한 실시간 값이 "모니터링"이다. 왼쪽 메뉴의 모니터링 하나가 눌리고 위쪽 "로컬 서버"도 켜짐으로 보인다
+  ok('LIVE 로컬 서버: 연결되고 스냅샷 값이 화면에 보이며 조작 패널이 열리고 왼쪽 "모니터링"과 위쪽 "로컬 서버"가 눌림', L.mode === 'live' && L.server && /실시간 · 로컬 서버 연결됨/.test(L.badge) && L.player === null && L.panel && L.it === '400.0 kW' && L.serverOn && L.rail === 1 && L.liveInfo, JSON.stringify(L));
   await lp.evaluate(() => window.__viewer.panel.h.onFan('crac_01', 0.5));
   await sleep(300);
   ok('LIVE 슬라이더 조작이 서버로 전달됨', mock.received.some((m) => m.type === 'control' && m.target === 'crac_01'), JSON.stringify(mock.received.slice(-2)));
@@ -945,7 +946,10 @@ await pc.close();
   await lp.$eval('#rail [data-mode="rec"]', (e) => e.click());
   await sleep(600);
   const R = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, live: window.__viewer.state.live, server: window.__viewer.state.server, panel: !document.getElementById('sim-panel').hidden, serverOn: document.querySelector('[data-mode="server"]').classList.contains('on') }));
-  ok('LIVE 모니터링으로 돌아가면 녹화로 바뀌고 서버로 다시 연결하지 않음', R.mode === 'rec' && R.live === null && !R.server && !R.panel && !R.serverOn && mock.wss.clients.size === 0, JSON.stringify(R));
+  // docs/31: 서버에 연결해 둔 뒤 모니터링으로 돌아가면 녹화가 아니라 그 서버의 실시간 값으로 다시 연결한다
+  await lp.waitForFunction(() => window.__viewer.state.server, { timeout: 10000 }).catch(() => {});
+  const R2 = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, server: window.__viewer.state.server, badge: document.getElementById('mode-badge').textContent }));
+  ok('LIVE 모니터링으로 돌아가면 녹화가 아니라 서버 실시간 값으로 다시 연결함(docs/31)', R2.mode === 'live' && R2.server && /실시간 · 로컬 서버/.test(R2.badge) && mock.wss.clients.size === 1, JSON.stringify({ ...R2, clients: mock.wss.clients.size }));
   await lp.close();
   mock.wss.close();
   mock.http.close();
@@ -1183,6 +1187,25 @@ await pc.close();
   const d = await dp.evaluate(() => ({ label: [...document.querySelectorAll('#pane-energy .kv dt')].map((e) => e.textContent), bars: document.querySelectorAll('#pane-energy .day-chart i').length, now: document.querySelectorAll('#pane-energy .day-chart i.now').length, note: document.querySelector('#pane-energy .day-chart + .day-axis + p')?.textContent ?? '', kwh: [...document.querySelectorAll('#pane-energy .kv dd')][4]?.textContent }));
   ok('DAY 에너지·용량 탭에 "오늘 사용량(더미)" 값과 하루 막대 24칸(지금 시각 1칸 강조), 더미 데이터라는 안내가 있음', d.label.includes('오늘 사용량(더미)') && d.bars === 24 && d.now === 1 && /더미 데이터/.test(d.note) && /kWh$/.test(d.kwh), JSON.stringify(d));
   await dp.close();
+}
+
+// 간이 계산은 모니터링의 지금 값에서 시작하고, 그 값을 비교 기준으로 저장한다(docs/31)
+{
+  const qp = await browser.newPage();
+  await qp.setViewport({ width: 1440, height: 860 });
+  await qp.goto(`${base}?stage=hall&scenario=cooling_failure&t=200&panel=open&q=low&fx=off`, { waitUntil: 'networkidle0' });
+  await qp.waitForFunction(() => window.__viewer?.state.player, { timeout: 20000 });
+  await qp.evaluate(() => { window.__viewer.state.player.playing = false; });
+  await sleep(500);
+  const tin = () => qp.evaluate(() => Object.fromEntries([...window.__viewer.store.latest.entries()].filter(([k]) => k.endsWith('-TEMP-IN')).map(([k, e]) => [k, e.value])));
+  const before = await tin();
+  await qp.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
+  await sleep(1200);
+  const after = await tin();
+  const gap = Math.max(...Object.keys(before).map((k) => Math.abs(after[k] - before[k])));
+  const Q = await qp.evaluate(() => ({ badge: document.getElementById('mode-badge').textContent, title: document.getElementById('sc-title').textContent, cmp: document.querySelector('#pane-energy .cmp')?.textContent ?? '' }));
+  ok('QUICK 모니터링(녹화)에서 간이 계산으로 가면 지금 값에서 이어서 시작하고(입구 온도 차이 1도 미만) 그 값이 비교 기준으로 저장됨', /모니터링 지금 값에서 시작/.test(Q.badge) && Q.title === '모니터링 지금 값에서 시작' && gap < 1 && /기준: 모니터링 지금 값/.test(Q.cmp), JSON.stringify({ ...Q, cmp: Q.cmp.slice(0, 60), gap }));
+  await qp.close();
 }
 
 // 인터랙션 개편: 오른쪽 패널 기본 접힘, 건물 호버(외곽선+카드), 휴대폰 첫 터치는 정보

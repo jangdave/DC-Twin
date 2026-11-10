@@ -127,14 +127,17 @@ export class SimSource {
     return this.runner?.engine ?? null;
   }
 
-  open({ scenarioId = 'normal' } = {}) {
+  // seed가 있으면 모니터링의 지금 값에서 시작한다(docs/31). 없으면 시나리오를 처음부터.
+  open({ scenarioId = 'normal', seed = null } = {}) {
     if (!this.scenarios[scenarioId]) scenarioId = 'normal';
     this.scenarioId = scenarioId;
+    this.seeded = !!seed;
     if (!this.runner) {
       const engine = this.makeEngine();
       this.runner = new SimRunner(engine, this.store, { onEvent: (e) => this.onEvent(e, engine) });
     }
-    this.runner.start(scenarioId); // 엔진은 한 번만 만들고 다시 쓴다(조작 상태는 start가 되돌린다)
+    if (seed) this.runner.startFrom(seed);
+    else this.runner.start(scenarioId); // 엔진은 한 번만 만들고 다시 쓴다(조작 상태는 start가 되돌린다)
     this._clock.reset();
   }
 
@@ -153,10 +156,12 @@ export class SimSource {
     return {
       kind: 'sim',
       control: false,
-      badge: { mode: 'sim', text: '간이 계산 · 브라우저 간이 모델' },
+      badge: { mode: 'sim', text: this.seeded ? '간이 계산 · 모니터링 지금 값에서 시작(브라우저 간이 모델)' : '간이 계산 · 브라우저 간이 모델' },
       panel: 'sim',
-      scenarios: { list: this.list, current: this.scenarioId },
-      card: { title: s.title, desc: s.description, events: s.events, seekable: false },
+      scenarios: { list: this.list, current: this.seeded ? null : this.scenarioId },
+      card: this.seeded
+        ? { title: '모니터링 지금 값에서 시작', desc: '모니터링에서 보던 온도, 팬, 급기 값에서 시작했다. 조작 탭에서 팬 속도와 급기 온도를 바꾸면 바로 다시 계산하고, 에너지·용량 탭의 "기준과 비교"에 바뀌기 전과 차이가 보인다. 빠른 간이 모델이라 정확한 값은 시뮬레이션 메뉴의 서버 계산을 쓴다.', events: [], seekable: false }
+        : { title: s.title, desc: s.description, events: s.events, seekable: false },
       timebar: null,
     };
   }
@@ -182,7 +187,7 @@ export class LiveSource {
   }
 
   get label() {
-    return this.control ? '로컬 서버' : '라이브';
+    return this.control ? '실시간 · 로컬 서버' : '라이브';
   }
 
   open() {
@@ -229,7 +234,9 @@ export class LiveSource {
       scenarios: this.control ? { list: this.simList, current: this.current } : null,
       card: {
         title: this.label,
-        desc: this.control ? '이 컴퓨터의 계산 서버가 실제 시간으로 계산한 값을 보여 준다. 시나리오와 조작은 서버로 전달된다.' : '게이트웨이가 보내는 센서 값을 그대로 보여 준다.',
+        desc: this.control
+          ? '모니터링: 서버(Omniverse Kit 안의 센서 생성기)가 현장 역할을 하며 장비 상태에 따라 실제 시간으로 만든 값이다. 물리 센서는 없다. 시나리오와 장비 조작은 서버로 전달된다.'
+          : '게이트웨이가 보내는 센서 값을 그대로 보여 준다.',
         events: [],
         seekable: false,
       },

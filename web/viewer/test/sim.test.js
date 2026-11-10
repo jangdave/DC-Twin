@@ -67,6 +67,22 @@ describe('엔진 동작', () => {
     expect(b.step().filter((m) => m.kind === 'sample').map((m) => m.value)).toEqual(va);
     expect(c.step().filter((m) => m.kind === 'sample').map((m) => m.value)).not.toEqual(va);
   });
+  it('모니터링 지금 값에서 시작하면 첫 값이 그 값에서 이어지고, 없는 값은 기본으로 둔다(docs/31 간이 계산)', () => {
+    const e = mk();
+    const r = racks[4].name;
+    const start = e.startFrom({ inlet: { [r]: 26 }, outlet: { [r]: 38 }, fan: { [cracs[1]]: 0.3, nope: 0 }, supply: 21, bogus: 1 });
+    expect(start).toMatchObject({ kind: 'scenario', name: 'monitor', event: 'start' });
+    expect(e.cfg.t_supply).toBe(21);
+    expect(e.fan[cracs[1]]).toBe(0.3);
+    expect(e.fan[cracs[0]]).toBe(1);
+    const tin = e.step().find((m) => m.kind === 'sample' && m.sensorId === sensors.find((s) => s.equipment === r && s.metric === 'temp_in').sensorId).value;
+    expect(Math.abs(tin - 26)).toBeLessThan(1.5); // 1초 뒤에도 시작값 근처(1차 지연으로 목표를 향해 천천히 움직인다)
+    // 숫자가 아닌 값은 무시한다
+    const e2 = mk();
+    e2.startFrom({ supply: Number.NaN, fan: { [cracs[0]]: 'x' } });
+    expect(e2.cfg.t_supply).toBe(18);
+    expect(e2.fan[cracs[0]]).toBe(1);
+  });
   it('한 단계에 센서 204개와 집계 5개', () => {
     const m = mk().step();
     expect(m.filter((x) => x.kind === 'sample')).toHaveLength(204);
