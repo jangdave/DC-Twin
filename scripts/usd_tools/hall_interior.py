@@ -15,6 +15,7 @@ from pxr import Gf, Sdf, UsdGeom, UsdShade, Vt
 # --- 텍스처 실제 크기(cm) -----------------------------------------------------------
 FLOOR_TILE = 480.0       # T_HallFloor: 한 장에 타일 8 x 8장(타일 60 cm)
 FLOOR_ORIGIN = (10.0, 40.0)  # 타일 이음선이 (x0 = 250, 첫 줄 y = 100)의 랙 모서리와 맞도록 정한 시작점
+LIGHT_GAP = 3.0  # 뜨거운 통로 조명과 격벽 지붕 사이 틈(cm)
 WALL_TILE = (400.0, 200.0)   # T_HallWall: 4096 x 2048 픽셀
 CEIL_TILE = 360.0        # T_HallCeiling: 한 장에 타일 6 x 6장(60 cm)
 HAZARD_TILE = 40.0       # T_HallHazard
@@ -255,7 +256,8 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
     n = 0
     xs = [175.0 + 150.0 * k for k in range(6)]
     rz = cfg["containment"]["roof_z"]
-    spots = [((y0 + y1) / 2, H, 20.0, "Light") for (y0, y1) in lay.cold_aisles] + [((y0 + y1) / 2, rz, 15.0, "Light") for (y0, y1) in lay.hot_aisles]
+    # 뜨거운 통로 조명은 격벽 지붕 아래에 LIGHT_GAP만큼 띄워 매단다. 윗면이 지붕 아랫면과 같은 높이면 두 면이 겹쳐 깜빡인다(2026-11-11 사용자 보고).
+    spots = [((y0 + y1) / 2, H, 20.0, "Light") for (y0, y1) in lay.cold_aisles] + [((y0 + y1) / 2, rz - LIGHT_GAP, 15.0, "Light") for (y0, y1) in lay.hot_aisles]
     tri["Lights"] = 0
     for yc, ztop, w, _ in spots:
         for xc in xs:
