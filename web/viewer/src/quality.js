@@ -24,7 +24,9 @@ export function detectQuality(requested, env = {}) {
   if (TIERS.includes(requested)) return requested;
   const { width = 1280, coarsePointer = false, deviceMemory, cores, automated = false } = env;
   if (automated) return 'mid'; // 자동 시험 브라우저(소프트웨어 렌더링)는 보통으로 고정해 결과를 일정하게 한다
-  if (coarsePointer || width < 700) return 'low';
+  // 휴대폰과 태블릿(터치, 좁은 화면)은 보통이 기본이다(2026-11-11 사용자 요청). 확실히 느린 기기(메모리 2GB 이하, 코어 2개 이하)만 낮음.
+  // 실제로 느리면 main.js의 프레임 감시가 한 단계 낮춘다(22fps 아래).
+  if (coarsePointer || width < 700) return (deviceMemory != null && deviceMemory <= 2) || (cores != null && cores <= 2) ? 'low' : 'mid';
   if ((deviceMemory != null && deviceMemory <= 4) || (cores != null && cores <= 4)) return 'low';
   if ((deviceMemory == null || deviceMemory >= 8) && (cores == null || cores >= 8)) return 'high';
   return 'mid';

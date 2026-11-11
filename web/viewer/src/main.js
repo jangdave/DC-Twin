@@ -234,7 +234,7 @@ async function main() {
   });
   ui.setScenarios(index, state.scenarioId);
   // 3D가 주인공: 넓은 화면에서는 오른쪽 정보 패널을 접고 시작한다. 장비를 고르거나, 시뮬레이션 메뉴를 열거나, 위쪽 '정보 패널' 단추를 누르면 펼쳐진다.
-  if (params.panel !== 'open' && window.matchMedia('(min-width: 901px)').matches) ui.setSideOpen(false);
+  if (params.panel !== 'open' && window.matchMedia('(min-width: 901px) and (min-height: 501px)').matches) ui.setSideOpen(false);
 
   // ---- 직접 시뮬레이션(브라우저 간이 모델, docs/21) ----
   const simRows = [...new Set(sceneData.racks.map((r) => r.row))].sort((a, b) => a - b);

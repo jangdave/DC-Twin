@@ -54,7 +54,7 @@ const COLLECT = () => {
     if (hidden) continue;
     if (el.id === 'canvas') continue; // CCTV 화면에서는 3D 캔버스가 뒤에 깔리는 것이 정상
     let clipped = false; // 스크롤되는 칸 안에서 아직 안 보이는 요소(스크롤하면 보임)는 건너뜀
-    for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) { const s = getComputedStyle(n); if (/(auto|scroll|hidden)/.test(s.overflowY + s.overflowX)) { const pr = n.getBoundingClientRect(); if (r.bottom > pr.bottom + 1 || r.top < pr.top - 1) { clipped = true; break; } } }
+    for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) { const s = getComputedStyle(n); if (/(auto|scroll|hidden)/.test(s.overflowY + s.overflowX)) { const pr = n.getBoundingClientRect(); if (r.bottom > pr.bottom + 1 || r.top < pr.top - 1) { clipped = true; break; } if (n.scrollWidth > n.clientWidth + 1 && /(auto|scroll)/.test(s.overflowX) && (r.right > pr.right + 1 || r.left < pr.left - 1)) { clipped = true; break; } } } // 가로로 밀어 보는 줄(보기 도구, 탭)은 밀면 보인다
     if (clipped) continue;
     const label = (el.getAttribute('aria-label') || el.textContent || el.title || el.id || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 24);
     const cx = Math.min(Math.max(r.left + r.width / 2, 0), innerWidth - 1), cy = Math.min(Math.max(r.top + r.height / 2, 0), innerHeight - 1);
