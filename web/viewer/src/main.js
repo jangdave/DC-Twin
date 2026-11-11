@@ -98,6 +98,7 @@ async function main() {
     .loadAirflow(BASE)
     .then(() => {
       document.getElementById('flow-btn').hidden = false;
+      document.getElementById('under-btn').hidden = !scene.hasPlenum; // 흐름장에 이중 바닥이 있을 때만
       boot.set('flow', 'done');
     })
     .catch((e) => {
@@ -226,6 +227,11 @@ async function main() {
       scene.setModels(b);
     },
     onFlow: (b) => scene.setAirflow(b),
+    // 바닥 아래 보기는 공기 흐름과 함께 봐야 뜻이 있어서 켤 때 공기 흐름도 켠다
+    onUnderfloor: (b) => {
+      scene.setUnderfloor(b);
+      if (b && !scene.showAirflow) document.getElementById('flow-btn').click();
+    },
     onHeat: (on) => dispatch({ type: 'heat', on }),
     onSky: (n) => scene.setSky(n),
     onBackToRec: () => startRecording(),

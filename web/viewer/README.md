@@ -21,6 +21,7 @@ npm run build          # dist/ 만들기 + 용량 기준 점검
 - **서버 시뮬레이션 작업**(2026-11-10, [docs/31](../../docs/31_monitoring_simulation_quickcalc.md)): 서버를 `server/run_local.ps1 -Kit`(Omniverse Kit 안의 서버)로 띄우고 연결하면, 시뮬레이션 메뉴의 정보 패널 위쪽에 "조건 정하기" 단추가 나온다. 공조기 켜기·팬 속도, 급기 온도, 줄별 부하, 고장 시각을 정해 보내면 왼쪽 아래 진행 창에 단계, 진행률, 남은 시간이 보이고 끝나면 "결과 보기"로 재생한다. 코드는 `src/sim/jobs.js`(조건, 작업 연결), `src/sim/jobs_ui.js`(조건 창, 진행 창).
 - **모니터링과 간이 계산**(2026-11-10, docs/31): 서버에 연결해 두면 모니터링 메뉴는 서버 실시간 값, 아니면 녹화를 보여 준다. 간이 계산은 모니터링에서 넘어오면 지금 값에서 시작하고 그 값을 비교 기준으로 저장한다(`SimEngine.startFrom`).
 - **공기 흐름과 격벽**(2026-11-10): 공기 흐름 입자는 OpenFOAM 흐름장(`public/data/flow.bin`, `flow.json`의 `source: openfoam`)을 따른다. 다시 만들기: `experiments/omniverse_probe`에서 `PYTHONPATH=..\..\sim\sensors uv run --python 3.13 python export_web_flow_of.py`(WSL의 OpenFOAM, 처음 약 1시간, 이후 저장한 흐름 재사용). 예전 퍼텐셜 흐름은 `export_web_flow.py`. 뜨거운 통로 격벽은 옆판·지붕 반투명과 테두리 선으로 그린다.
+- **바닥 아래 보기**(2026-11-11, docs/33): 흐름장(`flow.json`)에 `plenum`과 `z0_m`이 있으면 표시 줄에 "바닥 아래" 단추가 나온다. 흐름장은 `encoding: diff`(둘째 장부터 정상과의 차이)로 저장한다. 다시 만들기: `export_web_flow_of.py --scene ../../usd/scenes/_hall01_rf.usda`(이중 바닥 장면, `build_scene.py`로 `raised_floor.enabled`를 켠 설정에서 만든다).
 - **라이브**: 게이트웨이를 띄우고 `?live=ws://127.0.0.1:8080/ws`로 연다. 이 컴퓨터의 `ws://`와 모든 `wss://`만 받는다.
   ```
   cd ../../gateway
