@@ -143,6 +143,7 @@ def main(argv: list[str] | None = None, env: str = "독립 실행") -> dict:
     ap.add_argument("--scene", type=Path, default=hs.ROOT / "usd" / "scenes" / "hall01.usda")
     ap.add_argument("--slow", type=float, default=SLOW)
     ap.add_argument("--advection", choices=["maccormack", "linear", "fv"], default="maccormack")
+    ap.add_argument("--flow-prefix", default="", help="--flow-dir 안의 흐름 파일 이름 앞에 붙는 말(예: rf_ -> rf_normal_dx10.npz)")
     ap.add_argument("--porous", action="store_true", help="--flow-dir와 함께: 랙을 OpenFOAM처럼 다공질(공기가 지나가는 칸 + 부피 발열)로")
     ap.add_argument("--turb", action="store_true", help="--flow-dir와 함께: OpenFOAM 난류 점성으로 확산 계수를 칸마다 정한다")
     ap.add_argument("--flow-dir", type=Path, default=None, help="OpenFOAM 흐름(.npz, export_flow.py) 폴더. 주면 조건마다 <조건>_dx10.npz의 흐름으로 온도만 푼다(fv, 10 cm)")
@@ -157,7 +158,7 @@ def main(argv: list[str] | None = None, env: str = "독립 실행") -> dict:
     a.out.mkdir(parents=True, exist_ok=True)
     for case in a.cases:
         for dx in a.dx:
-            fnpz = (a.flow_dir / f"{case}_dx10.npz") if a.flow_dir else None
+            fnpz = (a.flow_dir / f"{a.flow_prefix}{case}_dx10.npz") if a.flow_dir else None
             r = run_case(hall, CASES[case], dx, slow=a.slow, advection=a.advection, flow_npz=fnpz, turb=a.turb, porous=a.porous)
             res["cases"].setdefault(case, {})[f"{dx:g}"] = r
             print(f"[V1] {case} dx={dx:g}: 정상 {r['steady_at_s']}s, 열 수지 {r['heat_balance_pct']:+.2f}%, 입구 평균 {r['inlet_mean_C']} 최고 {r['inlet_max_C']}, {r['wall_s']}s", flush=True)
