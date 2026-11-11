@@ -70,6 +70,8 @@ uv run --python 3.13 python ../../web/viewer/tools/make_sim_fixture.py
 
 ## 화면 확인 도구 (헤드리스 Edge 또는 Chrome)
 
+- `tools/device_check.mjs`(2026-11-11): 갤럭시 S24·S24 울트라·Z 폴드, 아이폰 SE·15·15 프로 맥스, 아이패드 미니·에어·프로 12.9, 갤럭시 탭 S9를 세로와 가로로 띄워 상태 9개(외관, 홀, 정보 시트, 시뮬레이션, 간이 계산, CCTV, 도움말, 서버 연결 창, 조건 창)에서 화면 밖·겹침·가로 스크롤·글자 꺾임을 찾는다. 인자로 폴더를 주면 화면을 저장한다. 휴대폰과 태블릿의 기본 화질은 보통이다(`quality.js`).
+
 먼저 `npm run build`를 한다.
 
 ```

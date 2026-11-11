@@ -10,9 +10,13 @@ describe('detectQuality', () => {
     expect(detectQuality(null, { width: 390, coarsePointer: true, automated: true })).toBe('mid');
     expect(detectQuality('low', { automated: true })).toBe('low');
   });
-  it('모바일(터치, 좁은 화면)은 낮음', () => {
-    expect(detectQuality(null, { width: 390, coarsePointer: true })).toBe('low');
-    expect(detectQuality(null, { width: 600 })).toBe('low');
+  it('모바일과 태블릿(터치, 좁은 화면)은 보통, 확실히 느린 기기만 낮음(2026-11-11 사용자 요청)', () => {
+    expect(detectQuality(null, { width: 390, coarsePointer: true })).toBe('mid'); // iPhone(사파리는 메모리를 알려 주지 않음)
+    expect(detectQuality(null, { width: 412, coarsePointer: true, deviceMemory: 8, cores: 8 })).toBe('mid'); // 갤럭시: 사양이 높아도 보통
+    expect(detectQuality(null, { width: 1024, coarsePointer: true, deviceMemory: 8, cores: 8 })).toBe('mid'); // 태블릿
+    expect(detectQuality(null, { width: 600 })).toBe('mid');
+    expect(detectQuality(null, { width: 390, coarsePointer: true, deviceMemory: 2 })).toBe('low');
+    expect(detectQuality(null, { width: 390, coarsePointer: true, cores: 2 })).toBe('low');
   });
   it('메모리 4GB 이하나 코어 4개 이하는 낮음', () => {
     expect(detectQuality(null, { width: 1440, deviceMemory: 4 })).toBe('low');

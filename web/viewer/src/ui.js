@@ -161,7 +161,7 @@ export class UI {
 
   showTab(name) {
     this.tab = name;
-    if (this.ready && this.sheet === 'peek' && window.matchMedia('(max-width: 900px)').matches) this.setSheet('half'); // 휴대폰: 탭이나 선택으로 접힌 시트를 반으로 올림
+    if (this.ready && this.sheet === 'peek' && window.matchMedia('(max-width: 900px), (max-height: 500px) and (orientation: landscape)').matches) this.setSheet('half'); // 휴대폰: 탭이나 선택으로 접힌 시트를 반으로 올림
     if (document.getElementById('side').classList.contains('collapsed') && this._sideTouched !== false) this.setSideOpen(true);
     for (const t of document.querySelectorAll('#side-tabs [data-tab]')) {
       const on = t.dataset.tab === name;
