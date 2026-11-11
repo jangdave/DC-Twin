@@ -172,6 +172,41 @@ def build(cfg: dict, out: Path, flat: bool = False) -> tuple[Usd.Stage, Layout]:
         plen.CreateSizeAttr(1.0)
         _xform(plen, translate=(W / 2, L / 2, -ft - D / 2), scale=(W, L, D))
         plen.CreatePurposeAttr(UsdGeom.Tokens.guide)
+        # 바닥 아래 장애물(2026-11-11, 사용자: "바닥 아래가 텅 빈 건 말이 안 된다"). 실제 시설에는 받침 기둥, 케이블 트레이, 배관,
+        # 막지 않은 케이블 구멍이 있다. 모양은 가상 배치이며, 시뮬레이션은 dct:underfloorKind가 붙은 상자를 읽는다.
+        ob = rf.get("obstructions", {})
+        if ob.get("pedestal_pitch"):
+            hp.CreateAttribute("dct:pedestalPitchCm", Sdf.ValueTypeNames.Float, custom=True).Set(float(ob["pedestal_pitch"]))
+            hp.CreateAttribute("dct:pedestalWidthCm", Sdf.ValueTypeNames.Float, custom=True).Set(float(ob.get("pedestal_width", 3)))
+        uf = f"{hall_path}/Shell/Underfloor"
+        boxes = []
+        rk = cfg["rack"]
+        z_slab = -ft - D  # 바닥 아래 공간의 바닥(슬래브 윗면)
+        if ob.get("cable_trays"):
+            t = ob["cable_trays"]  # 랙 줄마다 랙 아래로 줄 방향(x)을 따라
+            for i, y0 in enumerate(lay.row_y0):
+                yc = y0 + rk["depth"] / 2
+                boxes.append(("cable_tray", f"CableTray_{i + 1:02d}", (lay.rack_x0 - 50, yc - t["width"] / 2, z_slab + t["z"]), (lay.rack_x1 + 50, yc + t["width"] / 2, z_slab + t["z"] + t["height"])))
+        if ob.get("pipes"):
+            p_ = ob["pipes"]  # 공조기 앞(토출구 쪽)을 따라 홀 길이 방향(y)으로 냉수 배관 한 쌍씩
+            for side, xc in enumerate((cfg["crac"]["depth"] + p_["offset"], W - cfg["crac"]["depth"] - p_["offset"])):
+                boxes.append(("pipe", f"Pipe_{side + 1:02d}", (xc - p_["size"] / 2, 20, z_slab), (xc + p_["size"] / 2, L - 20, z_slab + p_["size"])))
+        if ob.get("cutouts"):
+            c_ = ob["cutouts"]  # 랙 뒤(뜨거운 통로 쪽) 바닥판에 막지 않은 케이블 구멍
+            n = 0
+            for y0, plus in zip(lay.row_y0, lay.row_front_plus_y):
+                yb = y0 if plus else y0 + rk["depth"]  # 뒷면
+                ya, yb2 = (yb - c_["depth"], yb) if plus else (yb, yb + c_["depth"])
+                for k in range(cfg["rows"]["racks_per_row"]):
+                    n += 1
+                    xc = lay.rack_x0 + rk["width"] * (k + 0.5)
+                    boxes.append(("cutout", f"Cutout_{n:02d}", (xc - c_["width"] / 2, ya, -ft), (xc + c_["width"] / 2, yb2, 0)))
+        for kind, name, b_lo, b_hi in boxes:
+            c = UsdGeom.Cube.Define(stage, f"{uf}/{name}")
+            c.CreateSizeAttr(1.0)
+            _xform(c, translate=tuple((a + b) / 2 for a, b in zip(b_lo, b_hi)), scale=tuple(b - a for a, b in zip(b_lo, b_hi)))
+            c.CreatePurposeAttr(UsdGeom.Tokens.guide)
+            c.GetPrim().CreateAttribute("dct:underfloorKind", Sdf.ValueTypeNames.Token, custom=True).Set(kind)
     build.last_triangles = tri
     return stage, lay
 
