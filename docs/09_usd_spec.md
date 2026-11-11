@@ -193,8 +193,8 @@ Blender에서 사용자 속성으로 만들면 USD에는 string으로 나온다.
 | 항목 | 값 | 설명 |
 |---|---|---|
 | 홀 크기 | 11.0 x 13.6 x 4.0 m | 랙 6줄 x 10기 = 60기, CRAC 8기, 통로 포함. 값은 `usd/scenes/hall01.config.json`에서 정하고 이 문서를 고친다([ADR-009](decisions/ADR-009-hall-layout-and-cooling.md)). |
-| 차가운 통로 폭 | 120 cm 이상 | 두 랙 줄의 서버 앞면 사이 |
-| 뜨거운 통로 폭 | 100 cm 이상 | 두 랙 줄의 뒷면 사이 |
+| 냉기 통로 폭 | 120 cm 이상 | 두 랙 줄의 서버 앞면 사이 |
+| 열기 통로 폭 | 100 cm 이상 | 두 랙 줄의 뒷면 사이 |
 | 바닥 | 윗면에 타일 텍스처(60 cm 타일 이음선은 텍스처에 있다) | 이중 바닥 느낌은 텍스처로 표현. 급기구 천공 타일만 별도 형상 |
 | 벽, 천장 | 상자 | 열 시뮬레이션의 막힌 곳 정보로도 쓴다([13](13_omniverse_research.md) 3장). |
 | 조명 | 천장 조명 몇 개 | Unreal에서 설정해도 된다. |
@@ -204,13 +204,13 @@ Blender에서 사용자 속성으로 만들면 USD에는 string으로 나온다.
 | 그룹 | 내용 | `dct:assetType` |
 |---|---|---|
 | `Row01`..`Row06` | 랙 60기(`Rack_01`..`Rack_60`). 줄 방향은 x축 | `rack` |
-| `Cooling` | CRAC 8기. 짧은 벽 양쪽에 뜨거운 통로 끝과 같은 줄로 배치 | `crac` |
+| `Cooling` | CRAC 8기. 짧은 벽 양쪽에 열기 통로 끝과 같은 줄로 배치 | `crac` |
 | `Shell` | 바닥, 벽 4개, 천장, 걸레받이, 바닥 표시, 조명 `Lights` | `shell` |
-| `Containment` | 뜨거운 통로 격벽(지붕, 줄 끝 옆면 패널) | `containment` |
-| `Vents` | 차가운 통로 바닥 급기구 30개 | `vent` |
+| `Containment` | 열기 통로 격벽(지붕, 줄 끝 옆면 패널) | `containment` |
+| `Vents` | 냉기 통로 바닥 급기구 30개 | `vent` |
 | `Looks` | 재질(`UsdPreviewSurface`) 12개. 검증은 이름만 허용한다(U301) | (없음) |
 
-- 랙의 앞면은 차가운 통로 쪽이다. 홀 y축 방향으로 `뜨거운 통로 - 줄 - 차가운 통로 - 줄 - 뜨거운 통로 ...` 순서로 쌓는다.
+- 랙의 앞면은 냉기 통로 쪽이다. 홀 y축 방향으로 `열기 통로 - 줄 - 냉기 통로 - 줄 - 열기 통로 ...` 순서로 쌓는다.
 - 센서 앵커는 장비마다 `Anchors/Sensor_*` 로 두고 `dct:sensorId`는 장면에서 덮어쓴다(6장). 이번 장면의 센서는 랙 60 x 3 + CRAC 8 x 3 = 204개다.
 - 나중에 Unreal에서 랙 배치를 바꾸고 시뮬레이션을 다시 돌릴 수 있도록, 배치의 원본은 설정 파일이고 시뮬레이션 입력은 장면 USD에서 읽는다.
 
@@ -224,8 +224,8 @@ Blender에서 사용자 속성으로 만들면 USD에는 string으로 나온다.
 | `Shell/Wall_West/East/South/North` | 벽 상자 4개 | `M_HallWall` = CC0 PaintedPlaster017 (400 x 200 cm) |
 | `Shell/Ceiling` | 아랫면에 격자 텍스처 | `M_HallCeiling` = CC0 OfficeCeiling001 (360 cm 한 장에 6 x 6, 타일 60 cm) |
 | `Shell/Skirting` | 걸레받이 4띠(8 cm) | `M_HallSkirting` (단색) |
-| `Shell/Floor_Markings_Line`, `_Hazard` | 차가운 통로 양쪽 노란 선, CRAC 앞 줄무늬 띠(두께 0.6 cm) | `M_HallLine`(단색), `M_HallHazard` = 절차 생성 `T_HallHazard` (40 cm) |
-| `Shell/Lights/Light_01..42` | 틀 + 발광 패널(광원 prim 없음). 차가운 통로 18개, 뜨거운 통로 24개 | `M_LightFrame`, `M_LightPanel`(발광) |
+| `Shell/Floor_Markings_Line`, `_Hazard` | 냉기 통로 양쪽 노란 선, CRAC 앞 줄무늬 띠(두께 0.6 cm) | `M_HallLine`(단색), `M_HallHazard` = 절차 생성 `T_HallHazard` (40 cm) |
+| `Shell/Lights/Light_01..42` | 틀 + 발광 패널(광원 prim 없음). 냉기 통로 18개, 열기 통로 24개 | `M_LightFrame`, `M_LightPanel`(발광) |
 | `Containment/HotAisle_NN_*` | Xform(`containment`) 안에 `Frame`(알루미늄 틀)과 `Glass`(반투명 파란 패널) | `M_ContainFrame`, `M_ContainGlass`(불투명도 0.22) |
 | `Vents/Vent_NN` | 50 x 100 x 1 cm 천공 타일(`vent`) | `M_VentTile` = 절차 생성 `T_VentTile` (50 x 100 cm 한 장, 열린 면적 약 21 %) |
 
@@ -244,7 +244,7 @@ Blender에서 사용자 속성으로 만들면 USD에는 string으로 나온다.
 ```
 /DC/Hall01/Tour
  ├─ View_01   (정문에서 본 홀 전체)
- ├─ View_02   (차가운 통로)
+ ├─ View_02   (냉기 통로)
  └─ View_03   (냉각 장치 앞)
 ```
 

@@ -167,7 +167,7 @@ mergePatchPairs ();
         lo = (xs * dx + 0.01, ys * dx + 0.01, -0.01); hi = (xe * dx - 0.01, ye * dx - 0.01, 0.01)
         s += f"    {{ name vents_c{c}_f; type faceSet; action {'new' if first[c] else 'add'}; source boxToFace; sourceInfo {{ box {vec(lo)} {vec(hi)}; }} }}\n"
         first[c] = False
-    # 급기 유량은 차가운 통로별로, 그 통로를 향한 랙 유량 비율로 나눈다(hall60_sim.source_field와 같은 규칙)
+    # 급기 유량은 냉기 통로별로, 그 통로를 향한 랙 유량 비율로 나눈다(hall60_sim.source_field와 같은 규칙)
     demand = np.zeros(n_cold)
     for r_idx, c in enumerate(lay.rack_cold):
         demand[c] += lay.rack_flux[r_idx]

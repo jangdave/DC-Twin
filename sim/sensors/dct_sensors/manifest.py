@@ -69,10 +69,10 @@ def load_manifest(path: str | Path) -> Manifest:
 
 @dataclass(frozen=True)
 class Layout:
-    """줄 번호와 CRAC 번호로 뜨거운 통로(= 담당 CRAC)를 정한다. 09 규격 11장의 배치 규칙을 따른다.
+    """줄 번호와 CRAC 번호로 열기 통로(= 담당 CRAC)를 정한다. 09 규격 11장의 배치 규칙을 따른다.
 
-    줄 2개가 차가운 통로를 사이에 두고 마주 보고, 줄 사이와 바깥에 뜨거운 통로가 있다.
-    줄 r(1부터)의 뒷면은 뜨거운 통로 r // 2에 닿는다. CRAC는 뜨거운 통로마다 양쪽 벽에 1기씩이고,
+    줄 2개가 냉기 통로를 사이에 두고 마주 보고, 줄 사이와 바깥에 열기 통로가 있다.
+    줄 r(1부터)의 뒷면은 열기 통로 r // 2에 닿는다. CRAC는 열기 통로마다 양쪽 벽에 1기씩이고,
     번호는 서쪽 벽 통로 0..n-1, 동쪽 벽 통로 0..n-1 순서다.
     """
 
@@ -84,7 +84,7 @@ class Layout:
         per_side = max(1, len(m.cracs) // 2)
         lay = cls(m.n_rows, per_side)
         if m.n_rows // 2 + 1 != per_side:
-            raise ValueError(f"줄 {m.n_rows}개와 CRAC {len(m.cracs)}기가 배치 규칙과 맞지 않는다(뜨거운 통로 {m.n_rows // 2 + 1}개, 한쪽 CRAC {per_side}기)")
+            raise ValueError(f"줄 {m.n_rows}개와 CRAC {len(m.cracs)}기가 배치 규칙과 맞지 않는다(열기 통로 {m.n_rows // 2 + 1}개, 한쪽 CRAC {per_side}기)")
         return lay
 
     def aisle_of_row(self, row: int) -> int:

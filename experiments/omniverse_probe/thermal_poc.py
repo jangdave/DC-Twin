@@ -35,10 +35,10 @@ K_HEAT = 1.6       # 랙 전력 1 kW당 가열률 (K/s)
 T_SUPPLY = 18.0    # CRAC 공급 온도 (degC)
 T_INIT = 22.0      # 초기 공기 온도
 V_RACK = 0.8       # 랙 안 공기 속도 (m/s)
-V_AISLE = 0.8      # 찬 통로 공급 흐름 (m/s)
-V_UP = 0.4         # 뜨거운 통로 상승 흐름 (m/s)
+V_AISLE = 0.8      # 냉기 통로 공급 흐름 (m/s)
+V_UP = 0.4         # 열기 통로 상승 흐름 (m/s)
 V_CEIL = 0.4       # 천장층 흐름 (m/s)
-V_DESCEND = 0.10   # 찬 통로 위쪽 하강 흐름 (m/s)
+V_DESCEND = 0.10   # 냉기 통로 위쪽 하강 흐름 (m/s)
 SUPPLY_RATE = 6.0  # 공급 영역 냉각 속도 (1/s)
 RETURN_RATE = 1.5  # 회수 영역 냉각 속도 (1/s)
 
@@ -80,7 +80,7 @@ def _anchor(stage, path, pos, metric, unit):
 
 
 def build_scene(path: Path) -> None:
-    """랙 2줄 x 5기, 마주 보는 찬 통로(폭 120cm), 양 끝에 CRAC 1기씩."""
+    """랙 2줄 x 5기, 마주 보는 냉기 통로(폭 120cm), 양 끝에 CRAC 1기씩."""
     stage = Usd.Stage.CreateNew(str(path))
     UsdGeom.SetStageMetersPerUnit(stage, 0.01)
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
@@ -98,7 +98,7 @@ def build_scene(path: Path) -> None:
             name = f"Rack_{n:02d}"
             rp = f"/DC/Hall01/{row_name}/{name}"
             _equipment(stage, rp, RACK_SIZE_CM, (x, y_center), "rack")
-            # 센서 앵커(장비 기준 로컬 좌표): 앞면(찬 통로 쪽) 입구, 뒷면 출구. 앵커는 랙 바깥 10cm
+            # 센서 앵커(장비 기준 로컬 좌표): 앞면(냉기 통로 쪽) 입구, 뒷면 출구. 앵커는 랙 바깥 10cm
             UsdGeom.Xform.Define(stage, f"{rp}/Anchors")
             _anchor(stage, f"{rp}/Anchors/Sensor_TEMP_IN", (0.0, front_sign * (rd / 2 + 10), 120.0), "temp_in", "degC")
             _anchor(stage, f"{rp}/Anchors/Sensor_TEMP_OUT", (0.0, -front_sign * (rd / 2 + 10), 120.0), "temp_out", "degC")
@@ -208,16 +208,16 @@ def step_kernel(
     # 1) 이 칸의 정해 둔 공기 흐름 (m/s)
     r = region[i, j, k]
     u = wp.vec3(0.0, 0.0, 0.0)
-    if r == 1:  # 랙 A: 찬 통로(+y)에서 뒤(-y)로
+    if r == 1:  # 랙 A: 냉기 통로(+y)에서 뒤(-y)로
         u = wp.vec3(0.0, -v_rack, 0.0)
-    elif r == 2:  # 랙 B: 찬 통로(-y)에서 뒤(+y)로
+    elif r == 2:  # 랙 B: 냉기 통로(-y)에서 뒤(+y)로
         u = wp.vec3(0.0, v_rack, 0.0)
-    elif r == 3:  # 찬 통로: CRAC에서 멀어지는 x 방향. 위쪽(천장 근처)은 아래로 내려옴
+    elif r == 3:  # 냉기 통로: CRAC에서 멀어지는 x 방향. 위쪽(천장 근처)은 아래로 내려옴
         f = fan[aux_idx[i, j, k]]
         u = wp.vec3(aux_dir[i, j, k] * v_aisle * f, 0.0, -v_descend)
-    elif r == 4:  # 뜨거운 통로: 위로
+    elif r == 4:  # 열기 통로: 위로
         u = wp.vec3(0.0, 0.0, v_up)
-    elif r == 5:  # 천장층: 찬 통로 중심(y)과 가까운 CRAC(x) 쪽으로
+    elif r == 5:  # 천장층: 냉기 통로 중심(y)과 가까운 CRAC(x) 쪽으로
         u = wp.vec3(aux_dir[i, j, k] * v_ceil, 0.0, 0.0)
         yc = 0.5 * float(ny - 1)
         if float(j) > yc:

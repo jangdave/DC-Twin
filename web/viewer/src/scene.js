@@ -153,7 +153,7 @@ export class HallScene {
       return mesh;
     };
     boxMesh(data.vents, new THREE.MeshBasicMaterial({ color: 0x1b5fb0 }));
-    // 뜨거운 통로 격벽(HAC): 옆판은 옅게, 지붕은 조금 진하게, 모든 판에 테두리 선을 둘러 잘 보이게 한다(2026-11-10 사용자 요청)
+    // 열기 통로 격벽(HAC): 옆판은 옅게, 지붕은 조금 진하게, 모든 판에 테두리 선을 둘러 잘 보이게 한다(2026-11-10 사용자 요청)
     const roofs = data.panels.filter((p) => p.name.endsWith('_Roof'));
     const sides = data.panels.filter((p) => !p.name.endsWith('_Roof'));
     const panels = boxMesh(sides, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
@@ -1018,7 +1018,7 @@ export class HallScene {
     this._dirty = true;
   }
 
-  // 통로 이름: 차가운 통로는 급기구 열의 가운데, 뜨거운 통로는 지붕 패널의 가운데
+  // 통로 이름: 냉기 통로는 급기구 열의 가운데, 열기 통로는 지붕 패널의 가운데
   _buildLabels(data) {
     const items = [];
     const cold = new Map();
@@ -1030,11 +1030,11 @@ export class HallScene {
     });
     [...cold.values()]
       .sort((a, b) => a.y - b.y)
-      // 이름은 통로 가운데(랙 위에 겹쳐 보인다)가 아니라 통로 끝에 둔다: 차가운 통로는 동쪽 끝, 뜨거운 통로는 서쪽 끝, 바닥에서 3 m 위
-      .forEach((e, i) => items.push({ text: `차가운 통로 ${i + 1}`, pos: toThree(Math.max(...e.xs) + 120, e.y, 300), cls: 'cold' }));
+      // 이름은 통로 가운데(랙 위에 겹쳐 보인다)가 아니라 통로 끝에 둔다: 냉기 통로는 동쪽 끝, 열기 통로는 서쪽 끝, 바닥에서 3 m 위
+      .forEach((e, i) => items.push({ text: `냉기 통로 ${i + 1}`, pos: toThree(Math.max(...e.xs) + 120, e.y, 300), cls: 'cold' }));
     data.panels
       .filter((p) => p.name.endsWith('_Roof'))
-      .forEach((p) => items.push({ text: `뜨거운 통로 ${Number(/HotAisle_(\d+)/.exec(p.name)?.[1])}`, pos: toThree(p.min[0] - 60, (p.min[1] + p.max[1]) / 2, 300), cls: 'hot' }));
+      .forEach((p) => items.push({ text: `열기 통로 ${Number(/HotAisle_(\d+)/.exec(p.name)?.[1])}`, pos: toThree(p.min[0] - 60, (p.min[1] + p.max[1]) / 2, 300), cls: 'hot' }));
     for (const it of items) {
       const el = document.createElement('div');
       el.className = `aisle-label ${it.cls}`;
