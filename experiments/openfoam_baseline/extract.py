@@ -55,7 +55,9 @@ for c in range(3):
     Uf = np.full(kf.size, np.nan); Uf[kf] = U[:, c]
     Ug[..., c] = Uf.reshape(shape, order="F")
 
-anch = {a["equipment"]: a["pos_cm"] for a in hall["anchors"] if a["metric"] == "temp_in"}
+_meta0 = json.loads((run / "case_meta.json").read_text(encoding="utf-8")) if (run / "case_meta.json").exists() else {}
+ZOFF = float(_meta0.get("z_off_cm") or 0.0)  # 이중 바닥이면 계산 좌표의 z가 바닥 아래 공간만큼 올라가 있다(docs/33)
+anch = {a["equipment"]: (a["pos_cm"][0], a["pos_cm"][1], a["pos_cm"][2] + ZOFF) for a in hall["anchors"] if a["metric"] == "temp_in"}
 racks = hall["racks"]
 ids, t_anchor, t_front, v_rack, t_back = [], [], [], [], []
 for r in racks:
@@ -66,7 +68,7 @@ for r in racks:
     axis, sign = r["front"]
     xs, xe = int(round(x0 / 100 / dx)), int(round(x1 / 100 / dx))
     ys, ye = int(round(y0 / 100 / dx)), int(round(y1 / 100 / dx))
-    zs, ze = 0, int(round(z1 / 100 / dx))
+    zs, ze = int(round(ZOFF / 100 / dx)), int(round((z1 + ZOFF) / 100 / dx))
     jf = ye if sign > 0 else ys - 1      # 앞면 바로 앞 칸 줄
     jb = ys - 1 if sign > 0 else ye      # 뒷면 바로 뒤 칸 줄
     t_front.append(np.nanmean(Tg[xs:xe, jf, zs:ze]))
@@ -94,7 +96,7 @@ for c in hall["cracs"]:
     ys, ye = int(round(y0 / 100 / dx)), int(round(y1 / 100 / dx))
     xs, xe = int(round(x0 / 100 / dx)), int(round(x1 / 100 / dx))
     xi = xe if sign > 0 else xs - 1
-    tret = np.nanmean(Tg[xi, ys:ye, int(0.1 / dx):int(1.9 / dx)])
+    tret = np.nanmean(Tg[xi, ys:ye, int((0.1 + ZOFF / 100) / dx):int((1.9 + ZOFF / 100) / dx)])
     out_kw += 1.2 * q * (tret - 18.0)
 summary = {
     "result_time": tdir.name, "dx_m": dx,

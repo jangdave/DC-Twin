@@ -87,6 +87,9 @@ def main() -> None:
     hall = h.read_hall(scene)
     lay = h.Layout(hall)
     nx, ny, nz = lay.shape
+    plenum = hall.get("plenum")
+    z_off = lay.z_off_cm
+    hall_g = h.shift_hall_z(hall, z_off) if plenum else hall  # 칸 위치를 정할 때 쓰는 홀(이중 바닥이면 z를 올린 것)
     dx = a.dx
     names = [c["name"] for c in hall["cracs"]]
     fan = np.ones(len(names), dtype=np.float32)
@@ -127,7 +130,7 @@ mergePatchPairs ();
     open_roofs = [aisle for aisle in range(lay.n_aisles) if leak[aisle] > 1e-9]
     roofs = sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
     open_names = {roofs[i]["name"] for i in open_roofs}  # 새는 통로의 지붕은 열어 둔다(우리 모델의 '지붕 틈' 대응)
-    solids = [c for c in hall["cracs"]] + [p for p in hall["panels"] if p["name"] not in open_names]
+    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names]
 
     def cell_action(name, kind, action, bx):
         return f"""    {{ name {name}; type {kind}; action {action}; source boxToCell; sourceInfo {{ box {vec(bx.lo)} {vec(bx.hi)}; }} }}\n"""
@@ -135,17 +138,30 @@ mergePatchPairs ();
     s = head("dictionary", "topoSetDict") + "\nactions\n(\n"
     for i, it in enumerate(solids):
         s += cell_action("solid", "cellSet", "new" if i == 0 else "add", Box(*voxel(it, dx, lay.shape), dx))
+    if plenum:
+        # 이중 바닥: 바닥판 층(바닥 아래 공간 위)을 막고 천공 타일 자리만 다시 연다(docs/33)
+        kd0, kf1 = lay.floor_k
+        s += cell_action("solid", "cellSet", "add", Box(0, nx, 0, ny, kd0, kf1, dx))
+        for v in hall_g["vents"]:
+            xs, xe, ys, ye, _, _ = voxel(v, dx, lay.shape)
+            s += cell_action("solid", "cellSet", "delete", Box(xs, xe, ys, ye, kd0, kf1, dx))
     s += "    { name fluid; type cellSet; action new; source cellToCell; sourceInfo { set solid; } }\n"
     s += "    { name fluid; type cellSet; action invert; }\n);\n"
     (out / "system/topoSetDict.solid").write_text(s, encoding="utf-8")
 
     # 랙 영역(cellZone), 급기구 면, CRAC 회수 면
     s = head("dictionary", "topoSetDict") + "\nactions\n(\n"
-    for i, r in enumerate(hall["racks"]):
+    for i, r in enumerate(hall_g["racks"]):
         s += cell_action(f"rack_{i+1:02d}", "cellZoneSet", "new", Box(*voxel(r, dx, lay.shape), dx))
+    if plenum:
+        # 천공 타일 칸(다공질 저항을 준다)
+        kd0, kf1 = lay.floor_k
+        for vi, v in enumerate(hall_g["vents"]):
+            xs, xe, ys, ye, _, _ = voxel(v, dx, lay.shape)
+            s += cell_action("tiles", "cellZoneSet", "new" if vi == 0 else "add", Box(xs, xe, ys, ye, kd0, kf1, dx))
     n_cold = lay.n_cold
     first = [True] * n_cold
-    for vi, v in enumerate(hall["vents"]):
+    for vi, v in enumerate([] if plenum else hall["vents"]):
         c = lay.vent_cold[vi]
         xs, xe, ys, ye, _, _ = voxel(v, dx, lay.shape)
         lo = (xs * dx + 0.01, ys * dx + 0.01, -0.01); hi = (xe * dx - 0.01, ye * dx - 0.01, 0.01)
@@ -156,18 +172,26 @@ mergePatchPairs ();
     for r_idx, c in enumerate(lay.rack_cold):
         demand[c] += lay.rack_flux[r_idx]
     vent_q = [supply * demand[c] / demand.sum() if demand.sum() > 0 else 0.0 for c in range(n_cold)]
+    if plenum:
+        vent_q = []  # 급기구가 아니라 공조기 아래(바닥 아래 공간)로 들어온다
     # decomposePar가 병렬 계산용 경계값을 유효숫자 7자리(writePrecision)로 다시 쓰므로, 풍량은 소수 4자리로 맞추고
     # 마지막 급기구가 나머지를 받게 해서 급기 합과 회수 합이 정확히 같게 한다(안 맞으면 첫 반복에서 연속 오류로 멈춘다).
-    if demand.sum() > 0:
+    if demand.sum() > 0 and not plenum:
         vent_q = [round(x, 4) for x in vent_q]
         vent_q[-1] = round(sum(round(float(x), 4) for x in q) - sum(vent_q[:-1]), 4)
     crac_ret = []
-    for i, c in enumerate(hall["cracs"]):
+    crac_sup = []  # 이중 바닥: 공조기 아래 바닥판 밑면(바닥 아래 공간 맨 위)으로 찬 공기가 들어오는 면
+    for i, c in enumerate(hall_g["cracs"]):
         if q[i] <= 0:
             continue
         xs, xe, ys, ye, zs, ze = voxel(c, dx, lay.shape)
         axis, sign = c["front"]
-        zr0, zr1 = h.rng(h.RETURN_Z_CM[0], h.RETURN_Z_CM[1], nz)
+        if plenum:
+            zb = lay.floor_k[0] * dx
+            nm_s = f"crac_sup_{i+1:02d}"
+            s += f"    {{ name {nm_s}_f; type faceSet; action new; source boxToFace; sourceInfo {{ box {vec((xs * dx + 0.01, ys * dx + 0.01, zb - 0.01))} {vec((xe * dx - 0.01, ye * dx - 0.01, zb + 0.01))}; }} }}\n"
+            crac_sup.append((nm_s, float(q[i])))
+        zr0, zr1 = h.rng(h.RETURN_Z_CM[0] + z_off, h.RETURN_Z_CM[1] + z_off, nz)
         plane = (xe if sign > 0 else xs) * dx if axis == 0 else (ye if sign > 0 else ys) * dx
         if axis == 0:
             lo = (plane - 0.01, ys * dx + 0.01, zr0 * dx + 0.01); hi = (plane + 0.01, ye * dx - 0.01, zr1 * dx - 0.01)
@@ -180,12 +204,17 @@ mergePatchPairs ();
     (out / "system/topoSetDict.zones").write_text(s, encoding="utf-8")
 
     s = head("dictionary", "createPatchDict") + "\npointSync false;\npatches\n(\n"
-    for c in range(lay.n_cold):
+    for c in range(0 if plenum else lay.n_cold):  # 이중 바닥이면 급기구 면이 없다(공기는 바닥 아래로 들어온다)
         s += f"    {{ name vents_c{c}; patchInfo {{ type patch; }} constructFrom set; set vents_c{c}_f; }}\n"
-    for nm, _ in crac_ret:
+    for nm, _ in crac_ret + crac_sup:
         s += f"    {{ name {nm}; patchInfo {{ type patch; }} constructFrom set; set {nm}_f; }}\n"
     s += ");\n"
     (out / "system/createPatchDict").write_text(s, encoding="utf-8")
+    if plenum:
+        # 바닥 아래 공급 합 = 회수 합이 정확히 같게(소수 4자리, 마지막이 나머지를 받음. 위 급기구와 같은 이유)
+        sup = [round(x, 4) for _, x in crac_sup]
+        sup[-1] = round(sum(round(qq, 4) for _, qq in crac_ret) - sum(sup[:-1]), 4)
+        crac_sup = [(n, v) for (n, _), v in zip(crac_sup, sup)]
 
     # ---- 물성, 난류, 중력 ----
     (out / "constant/transportProperties").write_text(head("dictionary", "transportProperties") + """
@@ -238,6 +267,26 @@ RAS { RASModel kEpsilon; turbulence on; printCoeffs on; }
     scalarSemiImplicitSourceCoeffs {{ selectionMode cellZone; cellZone {z}; volumeMode specific; injectionRateSuSp {{ T ({rate:.6g} 0); }} }}
 }}
 """
+    if plenum:
+        # 천공 타일: 열린 비율 25 %인 판의 압력 손실 계수 K ≈ ((1/σ)(1 + 0.707 √(1−σ)) − 1)²를 바닥판 두께로 나눈 Forchheimer 계수(관성 저항)
+        sig = plenum["open_ratio"]
+        k_loss = ((1.0 / sig) * (1.0 + 0.707 * (1.0 - sig) ** 0.5) - 1.0) ** 2
+        f_tile = k_loss / (plenum["floor_cm"] / 100.0)
+        fo += f"""tiles_por
+{{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {{
+        selectionMode cellZone; cellZone tiles; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {{
+            d d [0 -2 0 0 0 0 0] (0 0 0);
+            f f [0 -1 0 0 0 0 0] ({f_tile * 20:.6g} {f_tile * 20:.6g} {f_tile:.6g});
+            coordinateSystem {{ type cartesian; origin (0 0 0); coordinateRotation {{ type axesRotation; e1 (1 0 0); e2 (0 1 0); }} }}
+        }}
+    }}
+}}
+"""
     (out / "constant/fvOptions").write_text(fo, encoding="utf-8")
 
     # ---- 초기값과 경계 ----
@@ -246,13 +295,15 @@ RAS { RASModel kEpsilon; turbulence on; printCoeffs on; }
         return head(cls, obj, loc) + f"\ndimensions {dims};\ninternalField {internal};\nboundaryField\n{{\n{b}}}\n"
 
     walls = ("floor", "ceiling", "fixedWalls", "solidWalls")
-    inlets = [f"vents_c{c}" for c in range(lay.n_cold)]
+    inlets = [] if plenum else [f"vents_c{c}" for c in range(lay.n_cold)]
+    inlets += [n for n, _ in crac_sup]
+    inlet_q = {**{f"vents_c{c}": vent_q[c] for c in range(len(vent_q))}, **dict(crac_sup)}
     outs = [n for n, _ in crac_ret]
     uvals = {}
     for w in walls:
         uvals[w] = "        type noSlip;"
-    for c, nm in enumerate(inlets):
-        uvals[nm] = f"        type flowRateInletVelocity;\n        volumetricFlowRate {vent_q[c]:.4f};\n        value uniform (0 0 0);"
+    for nm in inlets:
+        uvals[nm] = f"        type flowRateInletVelocity;\n        volumetricFlowRate {inlet_q[nm]:.4f};\n        value uniform (0 0 0);"
     for n, qq in crac_ret:
         uvals[n] = f"        type flowRateInletVelocity;\n        volumetricFlowRate {-round(qq, 4):.4f};\n        value uniform (0 0 0);"
     (out / "0.orig/U").write_text(field("volVectorField", "U", "[0 1 -1 0 0 0 0]", "uniform (0 0 0)", uvals), encoding="utf-8")
@@ -356,12 +407,19 @@ runTimeModifiable false;
     for it in solids:
         xs, xe, ys, ye, zs, ze = voxel(it, dx, lay.shape)
         solid_only[xs:xe, ys:ye, zs:ze] = True
+    if plenum:
+        kd0, kf1 = lay.floor_k
+        solid_only[:, :, kd0:kf1] = True
+        for v in hall_g["vents"]:
+            xs, xe, ys, ye, _, _ = voxel(v, dx, lay.shape)
+            solid_only[xs:xe, ys:ye, kd0:kf1] = False
     np.savez_compressed(out / "case_voxels.npz", shape=np.array(lay.shape), dx=dx, solid=np.packbits(solid_only.ravel(order="F")))
     meta = {
         "scenario": a.scenario or fail, "fail": fail, "scene": str(scene), "racks": len(hall["racks"]), "vent_supply_m3s_per_cold_aisle": [round(x, 3) for x in vent_q], "dx": dx, "cells_total": int(np.prod(lay.shape)), "cells_fluid": int(lay.fluid.sum()),
         "crac_return_m3s": {n: round(float(x), 3) for n, x in zip(names, q)}, "supply_m3s": round(supply, 3),
         "open_roofs": sorted(open_names), "power_kw": a.power, "total_power_kw": float(sum(rack_kw)), "fan": {n: float(v) for n, v in zip(names, fan)}, "sample": spec["id"] if spec else None, "buoyancy": not a.no_buoyancy, "conservative_relaxation": a.conservative, "scheme": a.scheme,
         "darcy_d_flow_1_m2": D_FLOW, "darcy_d_cross_1_m2": D_CROSS,
+        "plenum": plenum, "z_off_cm": z_off, "crac_supply_m3s": dict(crac_sup) if plenum else None,
     }
     import json
     (out / "case_layout.json").write_text(json.dumps(hall, ensure_ascii=False, default=float), encoding="utf-8")

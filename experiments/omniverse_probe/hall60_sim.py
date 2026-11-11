@@ -45,7 +45,10 @@ V_RACK = 0.8         # 랙 안 공기 속도 (m/s)
 T_SUPPLY = 18.0      # 급기 온도 (degC)
 T_INIT = 24.0        # 초기 공기 온도 (degC)
 VENT_LAYERS = 3      # 급기구 위 공기를 내보내는 층 수(30cm). 너무 얇으면 속도가 지나치게 커진다
-RETURN_Z_CM = (10.0, 190.0)  # CRAC 회수면의 높이 범위
+RETURN_Z_CM = (10.0, 190.0)
+# 천공 타일의 통과 쉬움(퍼텐셜 흐름의 sigma). 열린 비율(25 %)을 그대로 쓰면 타일 저항이 너무 약해 타일마다 바람이 2배 차이 났다.
+# 실제 타일은 압력 손실이 커서(K≈30) 바닥 아래 압력이 고르다. OpenFOAM 이중 바닥 3개 사례의 타일별 바람에 맞춘 보정값(docs/33 5장).
+TILE_SIGMA = 0.002  # CRAC 회수면의 높이 범위
 
 
 # =====================================================================
@@ -229,8 +232,8 @@ class Layout:
                 if kz < nz:
                     self.sigma[xs:xe, ys:ye, kz] = SIGMA_COLD_TOP
         if self.plenum:
-            # 천공 타일은 바람이 지나기 어렵다(열린 비율만큼만 통과 쉬움). 퍼텐셜 흐름에서는 이 차이로 타일마다 나오는 양이 달라진다.
-            self.sigma[self.tile] = self.plenum["open_ratio"]
+            # 천공 타일은 바람이 지나기 어렵다(통과 쉬움 TILE_SIGMA). 퍼텐셜 흐름에서는 이 저항으로 타일마다 나오는 양이 정해진다.
+            self.sigma[self.tile] = TILE_SIGMA
         # 뜨거운 통로: CRAC의 y 위치(뜨거운 통로 끝에 놓임)로 통로를 나누고, 랙은 뒷면이 닿는 통로에 배정한다.
         centers = sorted({round((c["min"][1] + c["max"][1]) / 2 / 10.0) * 10.0 for c in hall["cracs"]})
         self.n_aisles = len(centers)
