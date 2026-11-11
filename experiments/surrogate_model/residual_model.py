@@ -36,8 +36,8 @@ class Geometry:
     row: np.ndarray             # 줄 번호(앞면 방향 축에 직각인 좌표로 묶음)
     pos_from_end: np.ndarray    # 줄 끝에서 떨어진 칸 수(0 = 끝 랙)
     row_len: np.ndarray
-    hot_aisle: np.ndarray       # 뒷면이 닿는 뜨거운 통로
-    cold_aisle: np.ndarray      # 앞면이 닿는 차가운 통로
+    hot_aisle: np.ndarray       # 뒷면이 닿는 열기 통로
+    cold_aisle: np.ndarray      # 앞면이 닿는 냉기 통로
     n_hot: int
     n_cold: int
 
@@ -77,7 +77,7 @@ def load_geometry(layout_json: Path | None = None) -> Geometry:
 
 
 def crac_aisle(n_aisles: int = 4) -> list[int]:
-    """CRAC_nn이 맡는 뜨거운 통로: 통로 a의 CRAC는 a+1, a+5(장면 규칙, 8기 4통로)."""
+    """CRAC_nn이 맡는 열기 통로: 통로 a의 CRAC는 a+1, a+5(장면 규칙, 8기 4통로)."""
     return [(i % n_aisles) for i in range(8)]
 
 
@@ -100,7 +100,7 @@ def sample_features(geo: Geometry, sample: dict, ours: dict[str, float], ours_in
             continue
         i = idx_by_name[n]
         r = geo.row[i]
-        # 같은 줄에서 가까운 제거 랙(2칸 이내) 수와 같은 차가운 통로에서 제거된 랙 수
+        # 같은 줄에서 가까운 제거 랙(2칸 이내) 수와 같은 냉기 통로에서 제거된 랙 수
         near_removed = 0
         cold_removed = 0
         for m in removed:
@@ -118,7 +118,7 @@ def sample_features(geo: Geometry, sample: dict, ours: dict[str, float], ours_in
             1.0 if geo.pos_from_end[i] == 0 else 0.0,
             geo.row_len[i],
             r,
-            aisle_fan[ha],                            # 이 랙 뒤 뜨거운 통로의 CRAC 가동 정도
+            aisle_fan[ha],                            # 이 랙 뒤 열기 통로의 CRAC 가동 정도
             leak[ha],                                 # 그 통로에서 새는 양
             leak.sum(),
             supply / 57.6,

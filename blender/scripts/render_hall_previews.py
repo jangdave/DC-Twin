@@ -5,7 +5,7 @@
 
 만드는 그림(hall_<이름>.png, 1600 x 900):
     section(홀 전체 절단도: 천장, 남쪽 벽, 조명을 숨기고 위에서 비스듬히), aisle(통로 눈높이), rack_close(랙 앞문 근접), rack_servers(문을 숨기고 서버 앞면),
-    hot_aisle(뜨거운 통로 격벽 안쪽), vent_floor(급기구 바닥), crac(CRAC 회수면), crac_top(CRAC 상단 덮개와 팬), rack_back(랙 뒷면)
+    hot_aisle(열기 통로 격벽 안쪽), vent_floor(급기구 바닥), crac(CRAC 회수면), crac_top(CRAC 상단 덮개와 팬), rack_back(랙 뒷면)
 - Blender는 USD를 미터 단위로 읽는다. 이 스크립트의 좌표는 cm로 쓰고 S=0.01을 곱한다.
 - 조명은 Blender 안에서만 놓는다(USD에는 광원이 없다). 조명 패널 위치에 면광원을 둔다.
 - 장면 경로는 절대 경로여야 한다(Blender가 상대 경로를 드라이브 루트에서 찾는다).
