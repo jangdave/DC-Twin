@@ -61,7 +61,7 @@ def test_normal_has_no_alarms(manifest):
 
 
 def test_cooling_failure_heats_only_the_affected_aisle(manifest):
-    # 줄 2개: 줄 1은 뜨거운 통로 0(CRAC_01, CRAC_03), 줄 2는 통로 1(CRAC_02, CRAC_04). CRAC_02 정지 -> 줄 2 랙만 영향
+    # 줄 2개: 줄 1은 열기 통로 0(CRAC_01, CRAC_03), 줄 2는 통로 1(CRAC_02, CRAC_04). CRAC_02 정지 -> 줄 2 랙만 영향
     msgs = run(manifest, "cooling_failure", 300)
     t4 = dict(values(msgs, "rack_04/temp_in"))
     assert t4["2026-10-15T09:04:50.000Z"] - t4["2026-10-15T09:00:50.000Z"] > 8

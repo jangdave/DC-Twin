@@ -7,7 +7,7 @@
 - 온도: Warp로 이류(반 라그랑지안, 기본은 MacCormack 오차 보정) + 확산 + 랙 발열. 급기구 온도는 공급 온도로 고정한다.
 - 새는 공기: 용량을 넘는 뜨거운 공기는 격벽 지붕 틈 아래에서 빨려 들어가 위에서 나온다. 나오는 칸의 온도는 빨려 들어간 칸의 평균으로 맞춰
   열이 사라지지 않게 한다(예전에는 주변 온도로 바뀌어 약 140 kW가 사라졌다. E0 2.21장).
-- 차가운 통로 윗면: 퍼텐셜 흐름은 통로 윗면과 양끝을 구분하지 못해 윗면으로 공기가 너무 많이 들어온다(OpenFOAM은 양끝이 더 많다).
+- 냉기 통로 윗면: 퍼텐셜 흐름은 통로 윗면과 양끝을 구분하지 못해 윗면으로 공기가 너무 많이 들어온다(OpenFOAM은 양끝이 더 많다).
   랙 위 한 겹의 통과 쉬움 `SIGMA_COLD_TOP`(기본 0.1)을 줄여 양끝 유입을 늘린다. OpenFOAM 사례 B에 맞춘 **보정 상수**다(E0 2.23장).
 - 시간 응답: 공기만 있는 모델은 실제보다 훨씬 빨리 변한다. `--slow`로 응답을 늦춘다(측정값이 아니라 조절값).
 - 수치 확산: `--advection linear`(선형 보간)는 유효 확산 계수가 대략 u x dx / 2다. 격자 0.1 m에서 흐름 1 m/s이면 0.05 m2/s로
@@ -39,7 +39,7 @@ ROOT = HERE.parent.parent
 OUT = HERE / "out" / "hall60"
 DX = 0.10            # 격자 간격 (m)
 K_DIFF = 0.02        # 확산 계수 (m^2/s, 난류 혼합을 흉내 낸 값)
-SIGMA_COLD_TOP = 0.1  # 차가운 통로 윗면(랙 높이 바로 위 한 겹)의 통과 쉬움(0~1). 1이면 퍼텐셜 흐름 그대로, 작을수록 윗면으로 들어오는 공기가 줄고 양끝으로 더 들어온다
+SIGMA_COLD_TOP = 0.1  # 냉기 통로 윗면(랙 높이 바로 위 한 겹)의 통과 쉬움(0~1). 1이면 퍼텐셜 흐름 그대로, 작을수록 윗면으로 들어오는 공기가 줄고 양끝으로 더 들어온다
 RHO_CP = 1.2         # 공기의 밀도 x 비열 (kJ/(m^3 K))
 V_RACK = 0.8         # 랙 안 공기 속도 (m/s)
 T_SUPPLY = 18.0      # 급기 온도 (degC)
@@ -220,7 +220,7 @@ class Layout:
             getattr(self, a)[~self.fluid] = -1
         self.ret_id[~self.fluid] = -1
         self.n_cracs = len(hall["cracs"])
-        # 차가운 통로 윗면 한 겹(랙 위): 통과 쉬움 sigma를 줄여 윗면으로 들어오는 공기를 줄인다(SIGMA_COLD_TOP). 퍼텐셜 흐름은 윗면과 양끝을 구분하지 못해서 윗면으로 너무 많이 들어온다.
+        # 냉기 통로 윗면 한 겹(랙 위): 통과 쉬움 sigma를 줄여 윗면으로 들어오는 공기를 줄인다(SIGMA_COLD_TOP). 퍼텐셜 흐름은 윗면과 양끝을 구분하지 못해서 윗면으로 너무 많이 들어온다.
         self.sigma = np.ones(self.shape)
         if SIGMA_COLD_TOP != 1.0 and hall["vents"] and hall["racks"]:
             cy = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
@@ -234,7 +234,7 @@ class Layout:
         if self.plenum:
             # 천공 타일은 바람이 지나기 어렵다(통과 쉬움 TILE_SIGMA). 퍼텐셜 흐름에서는 이 저항으로 타일마다 나오는 양이 정해진다.
             self.sigma[self.tile] = TILE_SIGMA
-        # 뜨거운 통로: CRAC의 y 위치(뜨거운 통로 끝에 놓임)로 통로를 나누고, 랙은 뒷면이 닿는 통로에 배정한다.
+        # 열기 통로: CRAC의 y 위치(열기 통로 끝에 놓임)로 통로를 나누고, 랙은 뒷면이 닿는 통로에 배정한다.
         centers = sorted({round((c["min"][1] + c["max"][1]) / 2 / 10.0) * 10.0 for c in hall["cracs"]})
         self.n_aisles = len(centers)
         near = lambda y: int(np.argmin([abs(y - c) for c in centers]))
@@ -244,7 +244,7 @@ class Layout:
             axis, sign = r["front"]
             back_y = r["min"][1] if sign > 0 else r["max"][1]
             self.aisle_exhaust[near(back_y)] += q
-        # 차가운 통로: 급기구가 놓인 y 위치(통로 가운데)로 나누고, 랙은 앞면이 닿는 통로, 급기구는 가장 가까운 통로에 배정한다.
+        # 냉기 통로: 급기구가 놓인 y 위치(통로 가운데)로 나누고, 랙은 앞면이 닿는 통로, 급기구는 가장 가까운 통로에 배정한다.
         cold_centers = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
         self.n_cold = len(cold_centers)
         near_cold = lambda y: int(np.argmin([abs(y - c) for c in cold_centers]))
@@ -304,7 +304,7 @@ def source_field(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, dict]:
         per_cell = np.divide(flux, cnt, out=np.zeros_like(flux), where=cnt > 0) / vol
         m = ids >= 0
         s[m] += sign * per_cell[ids[m]]
-    # 급기: 켜진 CRAC들의 회수 유량 합(q.sum())을 차가운 통로별로, 그 통로를 향한 랙들의 유량 비율로 나눈다.
+    # 급기: 켜진 CRAC들의 회수 유량 합(q.sum())을 냉기 통로별로, 그 통로를 향한 랙들의 유량 비율로 나눈다.
     # 통로 안에서는 그 통로의 급기구 칸이 똑같이 받는다. (예전에는 급기구 전체가 똑같이 받아서 먼 통로의 랙이 영향을 받았다)
     if getattr(lay, "plenum", None):
         for idx in range(lay.n_cracs):
@@ -322,7 +322,7 @@ def source_field(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, dict]:
                 continue
             cells = (lay.vent_id >= 0) & (np.array(lay.vent_cold)[np.maximum(lay.vent_id, 0)] == c)
             if not cells.any():
-                raise RuntimeError(f"차가운 통로 {c}에 랙이 있는데 급기구가 없다")
+                raise RuntimeError(f"냉기 통로 {c}에 랙이 있는데 급기구가 없다")
             s[cells] += q.sum() * (demand[c] / demand.sum()) / (cells.sum() * vol)
     for a in range(lay.n_aisles):
         if leak[a] > 1e-9:

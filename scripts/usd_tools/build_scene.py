@@ -5,10 +5,10 @@
 
 만드는 것 (09 규격):
 - 랙 N기: 에셋 참조, 줄 6개(Row01..), 번호는 홀 안에서 이어서 매김, 센서 앵커에 센서 ID 덮어쓰기
-- CRAC 8기: 짧은 벽 양쪽, 뜨거운 통로 끝과 같은 줄
+- CRAC 8기: 짧은 벽 양쪽, 열기 통로 끝과 같은 줄
 - 홀 외피(Shell): 바닥, 벽 4개, 천장, 걸레받이, 바닥 표시, 조명 패널. 재질과 UV가 있는 Mesh(hall_interior.py)
-- 뜨거운 통로 격벽(Containment): 지붕과 줄 끝 옆면 패널(알루미늄 틀 + 반투명 유리)
-- 바닥 급기구(Vents): 차가운 통로 바닥의 천공 타일
+- 열기 통로 격벽(Containment): 지붕과 줄 끝 옆면 패널(알루미늄 틀 + 반투명 유리)
+- 바닥 급기구(Vents): 냉기 통로 바닥의 천공 타일
 - 재질: /DC/Hall01/Looks (UsdPreviewSurface, 텍스처는 ../assets/textures/hall/)
 - `--flat`을 주면 이전 방식(상자와 표시 색만)으로 만든다
 
@@ -50,9 +50,9 @@ def compute_layout(cfg: dict) -> Layout:
     row_y0, front_plus, hot_aisles, cold_aisles = [], [], [], []
     for _ in range(pairs):
         hot_aisles.append((y, y + hot)); y += hot
-        row_y0.append(y); front_plus.append(True); y += d      # 앞면이 +y(차가운 통로 쪽)
+        row_y0.append(y); front_plus.append(True); y += d      # 앞면이 +y(냉기 통로 쪽)
         cold_aisles.append((y, y + cold)); y += cold
-        row_y0.append(y); front_plus.append(False); y += d     # 앞면이 -y(차가운 통로 쪽)
+        row_y0.append(y); front_plus.append(False); y += d     # 앞면이 -y(냉기 통로 쪽)
     hot_aisles.append((y, y + hot)); y += hot
     crac_d = cfg["crac"]["depth"]
     x0 = crac_d + r["end_clearance"]
@@ -126,7 +126,7 @@ def build(cfg: dict, out: Path, flat: bool = False) -> tuple[Usd.Stage, Layout]:
             override_sensors(stage, p, hall, "RK", rack_no, ["temp_in", "temp_out", "power"])
             rack_prims.append(p)
 
-    # CRAC: 뜨거운 통로마다 양쪽 벽에 1기씩
+    # CRAC: 열기 통로마다 양쪽 벽에 1기씩
     cr = cfg["crac"]
     cooling = f"{hall_path}/Cooling"
     UsdGeom.Xform.Define(stage, cooling)

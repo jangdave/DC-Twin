@@ -18,7 +18,7 @@
 | ovrtx 센서 | 카메라, 라이다, 레이더와 센서 처리 그래프를 지원한다고 문서에 나온다. | 웹으로만 확인 |
 | Omniverse Flow | 연기와 불을 그리는 유체 시뮬레이션. Kit 확장(`omni.flowusd`)으로 제공된다. **Kit 110.4.0에서 확장이 켜지고 `Fire` 프리셋의 OpenVDB 내보내기(연기, 온도, 속도)가 실제로 동작한다.** USD에 `FlowEmitterNanoVdb`(NanoVDB를 발생원으로)와 `FlowSparseNanoVdbExportParams` 스키마가 있다. 다만 용량이 매우 크고(프레임당 3채널 약 31MB) 내보내는 동안 속도가 약 10배 떨어진다. | **직접 확인**(내보내기). 우리 장면 연결과 Unreal 읽기는 미확인 (R2 부분 성공) |
 | NVIDIA Warp | GPU에서 도는 Python 시뮬레이션 프레임워크. `wp.Volume`으로 NanoVDB 부피 데이터를 다루고 `.nvdb`로 저장한다(zip 압축 지원). 문서에 OpenVDB(`.vdb`) 쓰기는 없다. **Warp 1.18.0이 RTX 5090(sm_120)에서 동작하고 Kit 안에서도(Warp 1.17.0) 동작한다.** USD 장면에서 읽은 형상으로 열 시뮬레이션과 가상 센서를 만들었다. | **직접 확인** (R5 중간 결과) |
-| DSX Blueprint | NVIDIA의 AI 데이터센터 디지털 트윈 참고 구현. OpenUSD 기반이고 **열(CFD 핫아일 시뮬레이션)과 전기 부하 시뮬레이션**을 포함한다. Kit 앱, 스트리밍 서버, 웹 프런트엔드로 구성된다. 문서는 "바로 쓸 수 있는 제품이 아니라 확장해서 쓰는 예제"라고 밝힌다. | 웹으로만 확인. 참고 자료로 쓴다 (연구 R3) |
+| DSX Blueprint | NVIDIA의 AI 데이터센터 디지털 트윈 참고 구현. OpenUSD 기반이고 **열(CFD 열기 통로 시뮬레이션)과 전기 부하 시뮬레이션**을 포함한다. Kit 앱, 스트리밍 서버, 웹 프런트엔드로 구성된다. 문서는 "바로 쓸 수 있는 제품이 아니라 확장해서 쓰는 예제"라고 밝힌다. | 웹으로만 확인. 참고 자료로 쓴다 (연구 R3) |
 
 **출처**
 - [Kit App Template (GitHub)](https://github.com/NVIDIA-Omniverse/kit-app-template), [Kit SDK 개요](https://docs.omniverse.nvidia.com/kit/docs/kit-app-template/latest/docs/kit_sdk_overview.html), [Kit SDK Windows PB 26h1 (NGC)](https://catalog.ngc.nvidia.com/orgs/nvidia/omniverse/resources/kit-sdk-windows-pb26h1/-)

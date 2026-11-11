@@ -20,7 +20,7 @@ description: 이 프로젝트의 USD 에셋/씬 작성 규칙(prim 경로, 단�
     /Power/PDU_01 ...                 (배전, 센서 앵커 포함)
     /Shell/...                        (바닥, 벽, 천장, 걸레받이, 표시, Lights)
     /Looks/M_...                      (재질, UsdPreviewSurface)
-    /Containment/...                  (뜨거운 통로 격벽)
+    /Containment/...                  (열기 통로 격벽)
     /Vents/Vent_01 ...                (바닥 급기구)
     /Tour/View_01 ...                 (투어 지점, 예정)
   /Building01                         (건물 외관, assetType = building)

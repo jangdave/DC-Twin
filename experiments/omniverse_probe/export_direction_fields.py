@@ -142,16 +142,16 @@ def main() -> None:
         a, b = u_before[sl].reshape(-1, 3).mean(axis=0), u_after[sl].reshape(-1, 3).mean(axis=0)
         return {"zone": name, "mean_u_before": [round(float(x), 3) for x in a], "mean_u_after": [round(float(x), 3) for x in b]}
 
-    cold_east = (slice(55, 75), slice(25, 35), slice(2, 18))   # 찬 통로 동쪽(고장난 CRAC_02 쪽), x 5.5~7.5m
-    cold_west = (slice(5, 25), slice(25, 35), slice(2, 18))    # 찬 통로 서쪽(정상 CRAC_01 쪽)
-    hot_aisle = (slice(30, 55), slice(5, 13), slice(2, 20))    # 뜨거운 통로
+    cold_east = (slice(55, 75), slice(25, 35), slice(2, 18))   # 냉기 통로 동쪽(고장난 CRAC_02 쪽), x 5.5~7.5m
+    cold_west = (slice(5, 25), slice(25, 35), slice(2, 18))    # 냉기 통로 서쪽(정상 CRAC_01 쪽)
+    hot_aisle = (slice(30, 55), slice(5, 13), slice(2, 20))    # 열기 통로
     reached = arrival >= 0
     east_cells = reached[hall.nx // 2:]
     west_cells = reached[: hall.nx // 2]
     stats = {
         "grid": [hall.nx, hall.ny, hall.nz],
         "velocity_ms": {"max_before": round(float(np.linalg.norm(u_before, axis=-1).max()), 3), "max_after": round(float(np.linalg.norm(u_after, axis=-1).max()), 3)},
-        "zones": [zone("찬 통로 동쪽(고장 CRAC_02 쪽)", cold_east), zone("찬 통로 서쪽(정상 CRAC_01 쪽)", cold_west), zone("뜨거운 통로", hot_aisle)],
+        "zones": [zone("냉기 통로 동쪽(고장 CRAC_02 쪽)", cold_east), zone("냉기 통로 서쪽(정상 CRAC_01 쪽)", cold_west), zone("열기 통로", hot_aisle)],
         "arrival_27C": {
             "cells_reached_percent_total": round(float(reached.mean() * 100), 1),
             "cells_reached_percent_east_half": round(float(east_cells.mean() * 100), 1),

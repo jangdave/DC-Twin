@@ -15,7 +15,7 @@ from pxr import Gf, Sdf, UsdGeom, UsdShade, Vt
 # --- 텍스처 실제 크기(cm) -----------------------------------------------------------
 FLOOR_TILE = 480.0       # T_HallFloor: 한 장에 타일 8 x 8장(타일 60 cm)
 FLOOR_ORIGIN = (10.0, 40.0)  # 타일 이음선이 (x0 = 250, 첫 줄 y = 100)의 랙 모서리와 맞도록 정한 시작점
-LIGHT_GAP = 3.0  # 뜨거운 통로 조명과 격벽 지붕 사이 틈(cm)
+LIGHT_GAP = 3.0  # 열기 통로 조명과 격벽 지붕 사이 틈(cm)
 WALL_TILE = (400.0, 200.0)   # T_HallWall: 4096 x 2048 픽셀
 CEIL_TILE = 360.0        # T_HallCeiling: 한 장에 타일 6 x 6장(60 cm)
 HAZARD_TILE = 40.0       # T_HallHazard
@@ -239,7 +239,7 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
     # 바닥 표시: 두께 0.6 cm 판(윗면 z=0.6, 바닥 윗면과 0.5 cm보다 떨어져 깜빡이지 않는다)
     th = 0.6
     line = MeshB()
-    for (ya, yb) in lay.cold_aisles:  # 차가운 통로 양쪽 노란 선(폭 5 cm, 랙 앞면에서 2 cm 안쪽)
+    for (ya, yb) in lay.cold_aisles:  # 냉기 통로 양쪽 노란 선(폭 5 cm, 랙 앞면에서 2 cm 안쪽)
         for y0 in (ya + 2.0, yb - 7.0):
             line.box((lay.rack_x0, y0, 0), (lay.rack_x1, y0 + 5.0, th), "line", planar(100.0), skip=("-z",))
     put("Floor_Markings_Line", line)
@@ -250,13 +250,13 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
             haz.box((x0, ya + 5.0, 0), (x0 + 12.0, yb - 5.0, th), "hazard", planar(HAZARD_TILE), skip=("-z",))
     put("Floor_Markings_Hazard", haz)
 
-    # 조명: 발광 재질 패널(광원 prim 없음. 실제 빛은 Unreal이 따로 둔다). 차가운 통로 위(천장 아래)와 뜨거운 통로 위(격벽 지붕 아래)
+    # 조명: 발광 재질 패널(광원 prim 없음. 실제 빛은 Unreal이 따로 둔다). 냉기 통로 위(천장 아래)와 열기 통로 위(격벽 지붕 아래)
     lights = f"{shell}/Lights"
     UsdGeom.Xform.Define(stage, lights).GetPrim().CreateAttribute("dct:assetType", Sdf.ValueTypeNames.Token, custom=True).Set("shell")
     n = 0
     xs = [175.0 + 150.0 * k for k in range(6)]
     rz = cfg["containment"]["roof_z"]
-    # 뜨거운 통로 조명은 격벽 지붕 아래에 LIGHT_GAP만큼 띄워 매단다. 윗면이 지붕 아랫면과 같은 높이면 두 면이 겹쳐 깜빡인다(2026-11-11 사용자 보고).
+    # 열기 통로 조명은 격벽 지붕 아래에 LIGHT_GAP만큼 띄워 매단다. 윗면이 지붕 아랫면과 같은 높이면 두 면이 겹쳐 깜빡인다(2026-11-11 사용자 보고).
     spots = [((y0 + y1) / 2, H, 20.0, "Light") for (y0, y1) in lay.cold_aisles] + [((y0 + y1) / 2, rz - LIGHT_GAP, 15.0, "Light") for (y0, y1) in lay.hot_aisles]
     tri["Lights"] = 0
     for yc, ztop, w, _ in spots:
@@ -275,7 +275,7 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
 
 
 def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) -> dict:
-    """뜨거운 통로 격벽. 각 prim(dct:assetType=containment)은 Xform이고 자식으로 Frame(알루미늄 틀)과 Glass(반투명 패널)를 둔다.
+    """열기 통로 격벽. 각 prim(dct:assetType=containment)은 Xform이고 자식으로 Frame(알루미늄 틀)과 Glass(반투명 패널)를 둔다.
     prim 전체의 경계 상자는 이전 Cube와 같다(틀이 바깥 가장자리를 채운다)."""
     ct, cr = cfg["containment"], cfg["crac"]
     t, rz = ct["panel_thickness"], ct["roof_z"]

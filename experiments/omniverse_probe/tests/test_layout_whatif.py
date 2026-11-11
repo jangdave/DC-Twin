@@ -89,7 +89,7 @@ def test_bad_edits_are_rejected(tmp_path, edits, error):
 
 
 def test_removing_a_rack_does_not_change_sources_of_other_cold_aisles(hall):
-    """랙 하나를 빼도 다른 차가운 통로의 급기, 다른 랙의 흡입, 배기 원천은 그대로여야 한다(예전에는 홀 전체가 똑같이 나눠 가져 먼 곳도 바뀌었다)."""
+    """랙 하나를 빼도 다른 냉기 통로의 급기, 다른 랙의 흡입, 배기 원천은 그대로여야 한다(예전에는 홀 전체가 똑같이 나눠 가져 먼 곳도 바뀌었다)."""
     lay = hs.Layout(hall)
     s0, _ = hs.source_field(lay, fans_all(lay))
     names = [r["name"] for r in hall["racks"]]
@@ -101,13 +101,13 @@ def test_removing_a_rack_does_not_change_sources_of_other_cold_aisles(hall):
     assert abs(s1.sum()) / np.abs(s1).sum() < 1e-9  # 질량 보존은 그대로
     assert bal["rack_m3s"] == pytest.approx(56.64, abs=0.1)
     cold_gone = lay.rack_cold[gone]
-    # 다른 차가운 통로의 급기구 칸은 같다
+    # 다른 냉기 통로의 급기구 칸은 같다
     for c in range(lay.n_cold):
         if c == cold_gone:
             continue
         cells = (lay.vent_id >= 0) & (np.array(lay.vent_cold)[np.maximum(lay.vent_id, 0)] == c)
         # 제거한 랙의 통로가 아닌 통로에서도 CRAC 회수 합이 줄면 급기가 비례해 줄 수 있다. 다만 그 변화는 작아야 한다.
-        assert np.allclose(s1[cells], s0[cells], rtol=0.03), f"차가운 통로 {c}의 급기가 크게 달라졌다"
+        assert np.allclose(s1[cells], s0[cells], rtol=0.03), f"냉기 통로 {c}의 급기가 크게 달라졌다"
     # 다른 랙의 흡입, 배기 원천은 그대로
     for i, n in enumerate(names):
         if i == gone:
