@@ -22,6 +22,19 @@ function seeded() {
 }
 
 describe('Airflow', () => {
+  it('차이 저장(encoding diff): 둘째 장이 정상과의 차이여도 같은 속도가 나온다', () => {
+    const a = fake();
+    const n = 4 * 4 * 4 * 3;
+    const raw = new Int8Array(n * 2);
+    const q = Math.round((1 / 4) * 127);
+    for (let c = 0; c < n; c += 3) { raw[c] = q; raw[n + c] = -2 * q; } // 차이 = 멈춘 장(-q) - 정상(q)
+    const meta = { shape: [4, 4, 4], cell_m: 1, vmax_ms: 4, fields: [{ name: 'all' }, { name: 'off01' }], encoding: 'diff' };
+    const b = new Airflow({ meta, data: raw }, a.data, a.store, ['rack_01'], ['crac_01'], { count: 10 });
+    const ua = [0, 0, 0], ub = [0, 0, 0];
+    a.setFans([0]); b.setFans([0]);
+    a.sample(1.5, 1.5, 1.5, ua); b.sample(1.5, 1.5, 1.5, ub);
+    expect(ub[0]).toBeCloseTo(ua[0], 6);
+  });
   it('흐름장이 OpenFOAM이면 흉내 내던 새는 입자를 쓰지 않는다(격벽 위 순환이 흐름장에 들어 있음)', () => {
     expect(fake('openfoam').leak).toBe(0);
     expect(fake().leak).toBeGreaterThan(0);

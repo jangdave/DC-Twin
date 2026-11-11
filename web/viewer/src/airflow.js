@@ -11,6 +11,7 @@ const MAX_VISUAL_SPEED = 2.2; // m/s. 급기구 가까이의 큰 값은 화면�
 // 시각화 가정(실측 아님): 차가운 통로 급기의 일부는 랙 틈, 랙 위, 통로 끝으로 새어 랙을 거치지 않고 위로 오른다.
 // 퍼텐셜 흐름은 질량이 모두 랙을 지나므로 그대로 두면 새는 공기가 하나도 없어 비현실적이다. 새는 입자는 속도장 대신 천천히 떠오른다.
 export const LEAK_FRACTION = 0.1;
+export const PLENUM_SPAWN = 0.3; // 이중 바닥일 때 바닥 아래(공조기 밑)에서 출발하는 입자 비율
 const LEAK_CEILING = 3.6; // m. 이 높이를 넘으면 사라진다(천장 근처에서 되돌아가는 공기에 섞인다고 본다)
 const LEAK_WARM = [1.0, 0.72, 0.38]; // 올라가며 뜨거운 공기와 섞여 따뜻해지는 색
 
@@ -38,6 +39,9 @@ export class Airflow {
     this.raw = flow.data;
     [this.nx, this.ny, this.nz] = flow.meta.shape;
     this.cell = flow.meta.cell_m;
+    // 이중 바닥(docs/33): 격자가 바닥 아래 공간까지 내려가면 격자 z=0이 장면 z = z0(음수, m)다
+    this.z0 = flow.meta.z0_m ?? 0;
+    this.plenum = flow.meta.plenum ?? null;
     this.scale = flow.meta.vmax_ms / 127;
     this.data = data;
     this.store = store;
@@ -47,6 +51,7 @@ export class Airflow {
     this.count = count;
     this.active = count; // 계산하고 그리는 입자 수. 화질을 낮추면 줄어든다
     this.nField = flow.meta.fields.length;
+    this.diff = flow.meta.encoding === 'diff';
     this.fan = new Array(this.nField - 1).fill(1);
     this.u = new Float32Array(this.nx * this.ny * this.nz * 3);
     this._compose();
@@ -112,10 +117,10 @@ export class Airflow {
   _mark(box, id) {
     const i0 = Math.floor((box.min[0] * CM) / this.cell), i1 = Math.ceil((box.max[0] * CM) / this.cell);
     const j0 = Math.floor((box.min[1] * CM) / this.cell), j1 = Math.ceil((box.max[1] * CM) / this.cell);
-    const k1 = Math.ceil((box.max[2] * CM) / this.cell);
+    const k0 = Math.floor((box.min[2] * CM - this.z0) / this.cell), k1 = Math.ceil((box.max[2] * CM - this.z0) / this.cell);
     for (let i = Math.max(0, i0); i < Math.min(this.nx, i1); i++)
       for (let j = Math.max(0, j0); j < Math.min(this.ny, j1); j++)
-        for (let k = 0; k < Math.min(this.nz, k1); k++) this.rackId[(i * this.ny + j) * this.nz + k] = id;
+        for (let k = Math.max(0, k0); k < Math.min(this.nz, k1); k++) this.rackId[(i * this.ny + j) * this.nz + k] = id;
   }
 
   // 켜진 CRAC 비율(0~1) 목록. 값이 바뀐 때만 속도장을 다시 겹친다.
@@ -135,7 +140,9 @@ export class Airflow {
     for (let c = 0; c < n; c++) {
       const base = this.raw[c];
       let v = base;
-      for (let m = 0; m < w.length; m++) if (w[m] > 0) v += w[m] * (this.raw[(m + 1) * n + c] - base);
+      // encoding diff(2026-11-11): 둘째 장부터 정상과의 차이가 저장되어 있다. 아니면 각 장의 값이라 정상을 뺀다
+      if (this.diff) for (let m = 0; m < w.length; m++) { if (w[m] > 0) v += w[m] * this.raw[(m + 1) * n + c]; }
+      else for (let m = 0; m < w.length; m++) if (w[m] > 0) v += w[m] * (this.raw[(m + 1) * n + c] - base);
       this.u[c] = v * s;
     }
   }
@@ -144,7 +151,7 @@ export class Airflow {
   sample(x, y, z, out) {
     const gx = Math.min(Math.max(x / this.cell - 0.5, 0), this.nx - 1.001);
     const gy = Math.min(Math.max(y / this.cell - 0.5, 0), this.ny - 1.001);
-    const gz = Math.min(Math.max(z / this.cell - 0.5, 0), this.nz - 1.001);
+    const gz = Math.min(Math.max((z - this.z0) / this.cell - 0.5, 0), this.nz - 1.001);
     const i = Math.floor(gx), j = Math.floor(gy), k = Math.floor(gz);
     const fx = gx - i, fy = gy - j, fz = gz - k;
     out[0] = out[1] = out[2] = 0;
@@ -161,12 +168,21 @@ export class Airflow {
   }
 
   _spawn(p) {
-    const vents = this.data.vents;
-    const v = vents[Math.floor(this.rng() * vents.length)];
     const o = p * 3;
-    this.pos[o] = (v.min[0] + this.rng() * (v.max[0] - v.min[0])) * CM;
-    this.pos[o + 1] = (v.min[1] + this.rng() * (v.max[1] - v.min[1])) * CM;
-    this.pos[o + 2] = 0.15 + this.rng() * 0.3;
+    if (this.plenum && this.rng() < PLENUM_SPAWN) {
+      // 이중 바닥: 일부는 공조기 아래 바닥 아래 공간에서 출발한다(공조기가 아래로 불어 넣는 찬 공기). 타일로 올라와 방으로 나간다
+      const c = this.data.cracs[Math.floor(this.rng() * this.data.cracs.length)];
+      const floorTop = -this.plenum.floor_cm * CM;
+      this.pos[o] = (c.min[0] + this.rng() * (c.max[0] - c.min[0])) * CM;
+      this.pos[o + 1] = (c.min[1] + this.rng() * (c.max[1] - c.min[1])) * CM;
+      this.pos[o + 2] = floorTop - 0.05 - this.rng() * 0.15;
+    } else {
+      const vents = this.data.vents;
+      const v = vents[Math.floor(this.rng() * vents.length)];
+      this.pos[o] = (v.min[0] + this.rng() * (v.max[0] - v.min[0])) * CM;
+      this.pos[o + 1] = (v.min[1] + this.rng() * (v.max[1] - v.min[1])) * CM;
+      this.pos[o + 2] = 0.15 + this.rng() * 0.3;
+    }
     this.vel[o] = this.vel[o + 1] = this.vel[o + 2] = 0;
     this.age[p] = 0;
     this.heat[p] = -1;
@@ -219,7 +235,7 @@ export class Airflow {
       this.pos[o] += (u[0] * k + (this.rng() - 0.5) * 0.12) * dt;
       this.pos[o + 1] += (u[1] * k + (this.rng() - 0.5) * 0.12) * dt;
       this.pos[o + 2] += (u[2] * k + (this.rng() - 0.5) * 0.08) * dt;
-      const gi = Math.floor(this.pos[o] / this.cell), gj = Math.floor(this.pos[o + 1] / this.cell), gk = Math.floor(this.pos[o + 2] / this.cell);
+      const gi = Math.floor(this.pos[o] / this.cell), gj = Math.floor(this.pos[o + 1] / this.cell), gk = Math.floor((this.pos[o + 2] - this.z0) / this.cell);
       const out = gi < 0 || gj < 0 || gk < 0 || gi >= this.nx || gj >= this.ny || gk >= this.nz;
       if (out || this.age[p] > this.life[p] || sp < 0.03) {
         this._spawn(p);

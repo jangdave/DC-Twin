@@ -59,8 +59,11 @@ def fan_states(cond: dict) -> list[tuple[int, dict]]:
     return out
 
 
-def flow_key(fan: dict, rack_kw: dict) -> str:
-    blob = json.dumps({"fan": {k: round(v, 3) for k, v in sorted(fan.items())}, "kw": {k: round(v, 2) for k, v in sorted(rack_kw.items())}}, sort_keys=True)
+def flow_key(fan: dict, rack_kw: dict, scene: str | None = None) -> str:
+    d = {"fan": {k: round(v, 3) for k, v in sorted(fan.items())}, "kw": {k: round(v, 2) for k, v in sorted(rack_kw.items())}}
+    if scene:
+        d["scene"] = scene  # 기본 장면이 아니면 키에 넣는다(기본 장면의 키는 예전과 같게)
+    blob = json.dumps(d, sort_keys=True)
     return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
@@ -89,8 +92,9 @@ class OpenFOAMRunner:
     def _wsl(self, cmd: str, **kw) -> subprocess.CompletedProcess:
         return subprocess.run([self.wsl, "-e", "bash", "-lc", cmd], capture_output=True, text=True, encoding="utf-8", errors="replace", **kw)
 
-    def flow(self, fan: dict, rack_kw: dict, progress=lambda f, note=None: None, check=lambda: None) -> tuple[Path, dict]:
-        key = flow_key(fan, rack_kw)
+    def flow(self, fan: dict, rack_kw: dict, progress=lambda f, note=None: None, check=lambda: None, scene: Path | None = None) -> tuple[Path, dict]:
+        """scene: 다른 장면(예: 이중 바닥을 켠 _hall01_rf.usda)으로 풀 때. 저장 키에 장면 이름이 들어간다."""
+        key = flow_key(fan, rack_kw, Path(scene).stem if scene else None)
         npz = self.cache / f"{key}.npz"
         meta_p = self.cache / f"{key}.json"
         if npz.exists() and meta_p.exists():
@@ -103,7 +107,7 @@ class OpenFOAMRunner:
                                     "rack_power_kw": rack_kw, "remove": []}, ensure_ascii=False), encoding="utf-8")
         t0 = time.time()
         progress(0.0, "사례 만들기")
-        r = subprocess.run([self.uv, "run", "--python", "3.13", "python", str(OFB / "gen_case.py"), "--spec", str(spec), "--out", str(case)],
+        r = subprocess.run([self.uv, "run", "--python", "3.13", "python", str(OFB / "gen_case.py"), "--spec", str(spec), "--out", str(case), *(["--scene", str(Path(scene).resolve())] if scene else [])],
                            cwd=OMNI, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
             raise RuntimeError(f"OpenFOAM 사례 만들기 실패: {r.stderr[-400:]}")

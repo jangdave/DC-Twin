@@ -276,6 +276,44 @@ export class HallScene {
     this._dirty = true;
   }
 
+  // 바닥 아래 보기(docs/33): 바닥을 반투명하게 하고 바닥 아래 공간의 윤곽과 바닥판 밑면을 그린다. 흐름장에 이중 바닥 정보가 있을 때만 쓴다.
+  get hasPlenum() {
+    return !!this.airflow?.plenum;
+  }
+
+  setUnderfloor(on) {
+    this.underfloor = on;
+    const pl = this.airflow?.plenum;
+    if (on && pl && !this._plenumGroup) {
+      const [sx, sy] = this.data.size;
+      const g = new THREE.Group();
+      g.name = 'plenum';
+      const top = -pl.floor_cm, bot = -(pl.floor_cm + pl.depth_cm);
+      const box = this._boxMatrix({ min: [0, 0, bot], max: [sx, sy, top] });
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0x6fb6ff, transparent: true, opacity: 0.8 }));
+      edges.applyMatrix4(box);
+      const slab = new THREE.Mesh(new THREE.PlaneGeometry(sx * CM, sy * CM), new THREE.MeshBasicMaterial({ color: 0x0d1626, transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
+      slab.rotation.x = -Math.PI / 2;
+      slab.position.set(this.center.x, bot * CM, this.center.z);
+      // 바닥판(두께)의 아랫면: 바닥 아래 공간의 천장. 아주 옅게
+      const under = new THREE.Mesh(new THREE.PlaneGeometry(sx * CM, sy * CM), new THREE.MeshBasicMaterial({ color: 0x6fb6ff, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false }));
+      under.rotation.x = -Math.PI / 2;
+      under.position.set(this.center.x, top * CM, this.center.z);
+      g.add(edges, slab, under);
+      this.hall.add(g);
+      this._plenumGroup = g;
+    }
+    if (this._plenumGroup) this._plenumGroup.visible = on;
+    for (const f of [this.shellParts?.get('floor'), ...(this._plainHall ?? []).filter((o) => o.isMesh)]) {
+      if (!f) continue;
+      f.material.transparent = on;
+      f.material.opacity = on ? 0.18 : 1;
+      f.material.depthWrite = !on;
+      f.material.needsUpdate = true;
+    }
+    this._dirty = true;
+  }
+
   setAirflow(on) {
     this.showAirflow = on;
     if (this.airflow) this.airflow.points.visible = on;

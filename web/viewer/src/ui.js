@@ -66,6 +66,11 @@ export class UI {
       e.currentTarget.setAttribute('aria-pressed', String(on));
       this.h.onFlow(on);
     });
+    $('under-btn').addEventListener('click', (e) => {
+      const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+      e.currentTarget.setAttribute('aria-pressed', String(on));
+      this.h.onUnderfloor?.(on);
+    });
     this.timelineOn = false;
     $('timeline-btn').addEventListener('click', () => this.h.onTimeline(!this.timelineOn));
     $('cctv-btn').addEventListener('click', () => this.h.onCctv());

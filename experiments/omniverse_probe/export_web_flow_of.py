@@ -21,6 +21,18 @@ from export_web_flow import BLOCK, VMAX, downsample
 from dct_sensors.precise import OpenFOAMRunner
 
 
+def encode_diff(fields: list[np.ndarray]) -> tuple[np.ndarray, float]:
+    """웹 용량을 줄이는 저장 방식(encoding "diff", 2026-11-11): 눈금을 VMAX/63.5(약 0.063 m/s)로 두고,
+    첫 장(정상)은 값 그대로, 나머지(CRAC 1대 정지)는 정상과의 차이만 저장한다. 차이가 눈금 1칸 이하면 0으로 둔다.
+    gzip 용량이 약 1.4 MB에서 0.63 MB로 준다. 반환: (int8 배열, 한 눈금의 m/s)."""
+    raw = np.stack(fields).astype(np.int16)  # 원래 눈금(VMAX/127)
+    e = np.round(raw / 2.0).astype(np.int16)  # 눈금 두 배
+    out = e.copy()
+    out[1:] = e[1:] - e[0]
+    out[1:][np.abs(out[1:]) <= 1] = 0
+    return np.clip(out, -127, 127).astype(np.int8), 2.0 * VMAX / 127.0
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scene", type=Path, default=hs.ROOT / "usd" / "scenes" / "hall01.usda")
@@ -38,7 +50,8 @@ def main() -> None:
     cases = [("all", None)] + [(f"off{i + 1:02d}", c) for i, c in enumerate(cracs)]
     for name, off in cases:
         fan = {c: (0.0 if c == off else 1.0) for c in cracs}
-        npz, m = runner.flow(fan, kw, lambda f, note=None, name=name: print(f"  {name} {f * 100:5.1f}% {note or ''}", flush=True))
+        npz, m = runner.flow(fan, kw, lambda f, note=None, name=name: print(f"  {name} {f * 100:5.1f}% {note or ''}", flush=True),
+                             scene=a.scene if hall.get("plenum") else None)
         z = np.load(npz)
         u = z["U"].astype(np.float64)
         sp = np.linalg.norm(u, axis=-1)
@@ -47,13 +60,16 @@ def main() -> None:
         meta.append({"name": name, "max_ms": round(float(sp.max()), 2), "openfoam": {"iterations": m.get("iterations"), "converged": m.get("converged")}})
         print(name, meta[-1], flush=True)
     shape = list(fields[0].shape[:3])
-    blob = np.stack(fields).astype(np.int8)
+    blob, unit = encode_diff(fields)
     a.out.mkdir(parents=True, exist_ok=True)
     (a.out / "flow.bin").write_bytes(blob.tobytes())
     (a.out / "flow.json").write_text(json.dumps({
         "version": 1, "source": "openfoam",
         "note": "시각화 목적. OpenFOAM(k-epsilon, 부력, 다공질 랙, 10 cm, 정상 상태, 랙 10 kW 균일)의 흐름을 20 cm로 줄였다. 실측이 아니다.",
-        "shape": shape, "cell_m": hs.DX * BLOCK, "vmax_ms": VMAX, "layout": "field,x,y,z,component int8 (scene axes, z up)",
+        "shape": shape, "cell_m": hs.DX * BLOCK, "vmax_ms": unit * 127.0, "encoding": "diff",
+        "layout": "field,x,y,z,component int8 (scene axes, z up). encoding diff: 첫 장은 값, 나머지는 첫 장과의 차이",
+        # 이중 바닥이면 격자가 바닥 아래 공간까지 내려간다: 격자 z=0은 장면 z = z0_m(음수)이다(docs/33)
+        "z0_m": -lay.z_off_cm / 100.0, "plenum": hall.get("plenum"),
         "fields": meta,
     }, indent=1, ensure_ascii=False), encoding="utf-8")
     print("저장:", a.out / "flow.bin", blob.nbytes)
