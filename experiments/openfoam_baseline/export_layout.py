@@ -7,6 +7,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "omniverse_probe"))
 import hall60_sim as h
 
-hall = h.read_hall(h.ROOT / "usd" / "scenes" / "hall01.usda")
-(HERE / "layout.json").write_text(json.dumps(hall, indent=1, ensure_ascii=False, default=float), encoding="utf-8")
+# 인자: [장면 USD] [저장 파일 이름]. 기본은 hall01.usda -> layout.json. CAC 보기용: _hall01_cac.usda layout_cac.json (docs/34)
+scene = Path(sys.argv[1]) if len(sys.argv) > 1 else h.ROOT / "usd" / "scenes" / "hall01.usda"
+out_name = sys.argv[2] if len(sys.argv) > 2 else "layout.json"
+hall = h.read_hall(scene)
+(HERE / out_name).write_text(json.dumps(hall, indent=1, ensure_ascii=False, default=float), encoding="utf-8")
 print({k: (len(v) if isinstance(v, list) else v) for k, v in hall.items()})

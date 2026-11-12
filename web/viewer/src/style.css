@@ -612,3 +612,6 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   #main:has(#side[data-sheet="half"]) #alarm-chip { bottom: calc(46% + 8px); }
   #main:has(#side[data-sheet="full"]) #alarm-chip { display: none; }
 }
+
+/* 격벽 방식(HAC/CAC) 보기 안내(docs/34) */
+.tool-note { font-size: 11px; color: var(--warning); align-self: center; white-space: nowrap; }

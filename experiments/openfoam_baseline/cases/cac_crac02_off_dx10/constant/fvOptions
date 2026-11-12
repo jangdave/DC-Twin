@@ -1,0 +1,1491 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      fvOptions;
+}
+
+rack_01_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_01; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_01_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_01; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_01_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_01; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_02_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_02; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_02_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_02; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_02_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_02; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_03_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_03; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_03_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_03; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_03_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_03; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_04_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_04; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_04_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_04; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_04_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_04; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_05_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_05; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_05_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_05; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_05_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_05; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_06_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_06; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_06_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_06; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_06_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_06; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_07_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_07; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_07_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_07; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_07_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_07; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_08_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_08; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_08_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_08; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_08_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_08; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_09_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_09; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_09_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_09; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_09_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_09; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_10_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_10; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_10_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_10; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_10_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_10; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_11_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_11; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_11_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_11; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_11_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_11; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_12_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_12; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_12_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_12; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_12_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_12; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_13_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_13; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_13_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_13; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_13_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_13; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_14_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_14; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_14_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_14; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_14_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_14; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_15_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_15; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_15_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_15; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_15_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_15; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_16_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_16; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_16_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_16; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_16_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_16; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_17_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_17; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_17_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_17; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_17_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_17; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_18_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_18; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_18_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_18; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_18_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_18; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_19_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_19; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_19_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_19; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_19_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_19; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_20_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_20; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_20_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_20; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_20_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_20; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_21_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_21; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_21_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_21; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_21_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_21; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_22_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_22; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_22_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_22; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_22_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_22; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_23_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_23; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_23_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_23; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_23_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_23; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_24_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_24; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_24_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_24; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_24_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_24; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_25_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_25; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_25_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_25; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_25_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_25; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_26_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_26; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_26_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_26; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_26_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_26; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_27_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_27; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_27_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_27; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_27_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_27; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_28_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_28; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_28_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_28; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_28_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_28; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_29_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_29; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_29_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_29; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_29_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_29; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_30_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_30; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_30_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_30; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_30_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_30; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_31_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_31; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_31_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_31; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_31_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_31; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_32_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_32; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_32_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_32; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_32_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_32; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_33_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_33; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_33_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_33; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_33_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_33; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_34_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_34; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_34_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_34; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_34_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_34; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_35_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_35; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_35_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_35; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_35_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_35; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_36_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_36; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_36_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_36; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_36_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_36; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_37_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_37; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_37_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_37; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_37_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_37; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_38_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_38; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_38_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_38; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_38_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_38; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_39_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_39; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_39_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_39; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_39_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_39; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_40_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_40; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_40_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_40; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_40_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_40; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_41_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_41; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_41_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_41; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_41_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_41; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_42_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_42; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_42_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_42; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_42_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_42; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_43_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_43; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_43_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_43; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_43_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_43; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_44_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_44; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_44_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_44; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_44_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_44; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_45_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_45; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_45_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_45; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_45_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_45; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_46_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_46; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_46_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_46; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_46_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_46; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_47_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_47; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_47_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_47; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_47_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_47; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_48_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_48; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_48_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_48; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_48_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_48; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_49_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_49; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_49_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_49; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_49_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_49; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_50_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_50; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_50_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_50; volumeMode specific; injectionRateSuSp { U ((0 -240 0) 0); } }
+}
+rack_50_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_50; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_51_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_51; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_51_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_51; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_51_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_51; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_52_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_52; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_52_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_52; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_52_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_52; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_53_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_53; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_53_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_53; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_53_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_53; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_54_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_54; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_54_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_54; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_54_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_54; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_55_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_55; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_55_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_55; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_55_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_55; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_56_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_56; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_56_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_56; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_56_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_56; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_57_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_57; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_57_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_57; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_57_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_57; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_58_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_58; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_58_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_58; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_58_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_58; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_59_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_59; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_59_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_59; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_59_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_59; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+rack_60_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone rack_60; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (4e+08 2e+07 4e+08);
+            f f [0 -1 0 0 0 0 0] (0 0 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+rack_60_flow
+{
+    type vectorSemiImplicitSource; active yes;
+    vectorSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_60; volumeMode specific; injectionRateSuSp { U ((0 240 0) 0); } }
+}
+rack_60_heat
+{
+    type scalarSemiImplicitSource; active yes;
+    scalarSemiImplicitSourceCoeffs { selectionMode cellZone; cellZone rack_60; volumeMode specific; injectionRateSuSp { T (6.94444 0); } }
+}
+tiles_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone tiles; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (0 0 0);
+            f f [0 -1 0 0 0 0 0] (2969.29 2969.29 148.465);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+cac_roof_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone cac_roof; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (0 0 0);
+            f f [0 -1 0 0 0 0 0] (70551.1 70551.1 70551.1);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}
+pedestals_por
+{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {
+        selectionMode cellZone; cellZone pedestals; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {
+            d d [0 -2 0 0 0 0 0] (0 0 0);
+            f f [0 -1 0 0 0 0 0] (0.1 0.1 0);
+            coordinateSystem { type cartesian; origin (0 0 0); coordinateRotation { type axesRotation; e1 (1 0 0); e2 (0 1 0); } }
+        }
+    }
+}

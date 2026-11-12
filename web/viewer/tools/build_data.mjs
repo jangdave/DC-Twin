@@ -22,7 +22,8 @@ const AGGREGATES = ['it_power', 'cooling_power', 'facility_power', 'pue', 'energ
 const round3 = (v) => (Number.isFinite(v) ? Math.round(v * 1000) / 1000 : null);
 
 // ---- 장면 ----
-export function buildScene(layout) {
+// cac: 냉기 통로 격리(CAC) 장면의 layout(있으면). 격벽만 다르므로 그 판 목록과 CAC용 껍데기, 흐름 파일 이름만 넣는다(docs/34)
+export function buildScene(layout, cac = null) {
   const box = (o) => ({ name: o.name, min: o.min.map(round3), max: o.max.map(round3) });
   return {
     version: 1,
@@ -35,6 +36,7 @@ export function buildScene(layout) {
     // 이중 바닥(docs/33): 바닥 아래 공간 설정과 장애물(케이블 트레이, 배관, 케이블 구멍). 없는 장면이면 넣지 않는다
     ...(layout.plenum ? { plenum: layout.plenum } : {}),
     ...(layout.underfloor?.length ? { underfloor: layout.underfloor.map((u) => ({ ...box(u), kind: u.kind })) } : {}),
+    ...(cac ? { variants: { cac: { panels: cac.panels.map(box), shell: 'hall_shell_cac.glb', flow: 'flow_cac' } } } : {}),
   };
 }
 
@@ -153,7 +155,8 @@ async function main() {
   const manifest = JSON.parse(await readFile(path.join(ROOT, 'sim/out/sensor_manifest.json'), 'utf8'));
   const sensors = buildSensors(manifest);
   const ids = sensors.map((s) => s.sensorId);
-  await writeFile(path.join(out, 'scene.json'), JSON.stringify(buildScene(layout)));
+  const cacLayout = JSON.parse(await readFile(path.join(ROOT, 'experiments/openfoam_baseline/layout_cac.json'), 'utf8').catch(() => 'null'));
+  await writeFile(path.join(out, 'scene.json'), JSON.stringify(buildScene(layout, cacLayout)));
   await writeFile(path.join(out, 'sensors.json'), JSON.stringify(sensors));
   const index = [];
   for (const sc of SCENARIOS) {

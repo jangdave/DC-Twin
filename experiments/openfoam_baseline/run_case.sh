@@ -8,6 +8,9 @@ SRC=/mnt/d/Test/experiments/openfoam_baseline/cases/$NAME
 RUN=$HOME/foam_runs/$NAME
 rm -rf "$RUN"; mkdir -p "$RUN"; cp -r "$SRC"/* "$RUN"/; cd "$RUN"
 sed -i "s/numberOfSubdomains .*/numberOfSubdomains $NP;/" system/decomposeParDict
+# 나누는 모양도 코어 수에 맞춘다(16이 아니면 (2 4 2)가 맞지 않아 decomposePar가 멈춘다)
+case $NP in 4) N="2 2 1";; 8) N="2 2 2";; 16) N="2 4 2";; 32) N="4 4 2";; *) N="";; esac
+[ -n "$N" ] && sed -i "s/n ([0-9 ]*);/n ($N);/" system/decomposeParDict
 T0=$(date +%s)
 blockMesh > log.blockMesh 2>&1
 topoSet -dict system/topoSetDict.solid > log.topoSet.solid 2>&1

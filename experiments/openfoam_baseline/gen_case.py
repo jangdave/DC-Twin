@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
+CAC_ROOF_OPEN = 0.02  # 냉기 통로 격리 지붕의 틈 비율(가상 값, docs/34)
 sys.path.insert(0, str(HERE.parent / "omniverse_probe"))
 import hall60_sim as h  # noqa: E402
 
@@ -130,7 +131,10 @@ mergePatchPairs ();
     open_roofs = [aisle for aisle in range(lay.n_aisles) if leak[aisle] > 1e-9]
     roofs = sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
     open_names = {roofs[i]["name"] for i in open_roofs}  # 새는 통로의 지붕은 열어 둔다(우리 모델의 '지붕 틈' 대응)
-    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names]
+    # 냉기 통로 격리(CAC, docs/34): 냉기 통로 지붕은 틈이 있는 판(다공질 저항), 끝 문은 막힘
+    cac = any(p["name"].startswith("ColdAisle_") for p in hall["panels"])
+    cac_roofs = [p for p in hall_g["panels"] if cac and p["name"].startswith("ColdAisle_") and p["name"].endswith("_Roof")]
+    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names and p not in cac_roofs]
     # 바닥 아래 장애물(docs/33 6장): 케이블 트레이와 배관은 막힌 칸, 케이블 구멍은 바닥판에서 저항 없이 열린 칸
     under = hall_g.get("underfloor", []) if plenum else []
     solids += [u for u in under if u["kind"] != "cutout"]
@@ -165,6 +169,8 @@ mergePatchPairs ();
             s += cell_action("tiles", "cellZoneSet", "new" if vi == 0 else "add", Box(xs, xe, ys, ye, kd0, kf1, dx))
         if plenum.get("pedestal_pitch_cm"):
             s += cell_action("pedestals", "cellZoneSet", "new", Box(0, nx, 0, ny, 0, kd0, dx))
+    for i, rf in enumerate(cac_roofs):
+        s += cell_action("cac_roof", "cellZoneSet", "new" if i == 0 else "add", Box(*voxel(rf, dx, lay.shape), dx))
     n_cold = lay.n_cold
     first = [True] * n_cold
     for vi, v in enumerate([] if plenum else hall["vents"]):
@@ -288,6 +294,26 @@ RAS { RASModel kEpsilon; turbulence on; printCoeffs on; }
         {{
             d d [0 -2 0 0 0 0 0] (0 0 0);
             f f [0 -1 0 0 0 0 0] ({f_tile * 20:.6g} {f_tile * 20:.6g} {f_tile:.6g});
+            coordinateSystem {{ type cartesian; origin (0 0 0); coordinateRotation {{ type axesRotation; e1 (1 0 0); e2 (0 1 0); }} }}
+        }}
+    }}
+}}
+"""
+    if cac_roofs:
+        # 냉기 통로 지붕 틈: 열린 비율 2 %(가상 값)인 판의 손실 계수 K를 칸 두께로 나눈 Forchheimer 계수. 모든 방향으로 같게
+        sg = CAC_ROOF_OPEN
+        k_roof = ((1.0 / sg) * (1.0 + 0.707 * (1.0 - sg) ** 0.5) - 1.0) ** 2
+        f_roof = k_roof / dx
+        fo += f"""cac_roof_por
+{{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {{
+        selectionMode cellZone; cellZone cac_roof; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {{
+            d d [0 -2 0 0 0 0 0] (0 0 0);
+            f f [0 -1 0 0 0 0 0] ({f_roof:.6g} {f_roof:.6g} {f_roof:.6g});
             coordinateSystem {{ type cartesian; origin (0 0 0); coordinateRotation {{ type axesRotation; e1 (1 0 0); e2 (0 1 0); }} }}
         }}
     }}
