@@ -228,7 +228,12 @@ def _build_flat(stage: Usd.Stage, hall_path: str, cfg: dict, lay: Layout) -> Non
     cont = f"{hall_path}/Containment"
     UsdGeom.Xform.Define(stage, cont)
     xa, xb = cr["depth"], W - cr["depth"]
-    for k, (ya, yb) in enumerate(lay.hot_aisles, start=1):
+    if hi.containment_type(cfg) == "cold":  # 냉기 통로 격리(CAC): hall_interior.build_containment와 같은 상자
+        for k, (ya, yb) in enumerate(lay.cold_aisles, start=1):
+            add_box(stage, f"{cont}/ColdAisle_{k:02d}_Roof", (lay.rack_x0, ya, rz), (lay.rack_x1, yb, rz + t), col["containment"], "containment")
+            add_box(stage, f"{cont}/ColdAisle_{k:02d}_Door_W", (lay.rack_x0 - t, ya, 0), (lay.rack_x0, yb, rz + t), col["containment"], "containment")
+            add_box(stage, f"{cont}/ColdAisle_{k:02d}_Door_E", (lay.rack_x1, ya, 0), (lay.rack_x1 + t, yb, rz + t), col["containment"], "containment")
+    for k, (ya, yb) in enumerate([] if hi.containment_type(cfg) == "cold" else lay.hot_aisles, start=1):
         add_box(stage, f"{cont}/HotAisle_{k:02d}_Roof", (xa, ya, rz), (xb, yb, rz + t), col["containment"], "containment")
         for edge, outward in ((ya, -1), (yb, 1)):
             if (k == 1 and outward == -1) or (k == len(lay.hot_aisles) and outward == 1):

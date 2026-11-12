@@ -48,7 +48,10 @@ VENT_LAYERS = 3      # 급기구 위 공기를 내보내는 층 수(30cm). 너�
 RETURN_Z_CM = (10.0, 190.0)
 # 천공 타일의 통과 쉬움(퍼텐셜 흐름의 sigma). 열린 비율(25 %)을 그대로 쓰면 타일 저항이 너무 약해 타일마다 바람이 2배 차이 났다.
 # 실제 타일은 압력 손실이 커서(K≈30) 바닥 아래 압력이 고르다. OpenFOAM 이중 바닥 3개 사례의 타일별 바람에 맞춘 보정값(docs/33 5장).
-TILE_SIGMA = 0.002  # CRAC 회수면의 높이 범위
+TILE_SIGMA = 0.002
+# 냉기 통로 격리(CAC, docs/34): 지붕은 막힌 판이 아니라 틈이 있는 판으로 본다. 공급이 랙 흡입보다 모자라면 여기로 방 공기(뜨거운 공기)가 들어온다.
+# 통과 쉬움 값은 근거 없는 가상 값이다(OpenFOAM과 비교해 맞출 예정)
+CAC_ROOF_SIGMA = 0.0005  # CRAC 회수면의 높이 범위
 
 
 # =====================================================================
@@ -193,9 +196,15 @@ class Layout:
             else:
                 yr = slice(ye, ye + 1) if sign > 0 else slice(ys - 1, ys)
                 self.ret_id[xs:xe, yr, zr0:zr1] = idx
+        # 격벽 방식: 이름이 ColdAisle_*이면 냉기 통로 격리(CAC). 지붕은 틈이 있는 판(통과 쉬움 CAC_ROOF_SIGMA), 끝 문은 막힘
+        self.cac = any(p["name"].startswith("ColdAisle_") for p in hall["panels"])
+        self.cac_roof = np.zeros(self.shape, dtype=bool)
         for p in hall["panels"]:
             (x0, y0, z0), (x1, y1, z1) = p["min"], p["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
+            if self.cac and p["name"].endswith("_Roof"):
+                self.cac_roof[xs:xe, ys:ye, zs:ze] = True
+                continue
             self.solid[xs:xe, ys:ye, zs:ze] = True
         for vi, v in enumerate(hall["vents"]):
             (x0, y0, z0), (x1, y1, z1) = v["min"], v["max"]
@@ -243,7 +252,7 @@ class Layout:
         self.n_cracs = len(hall["cracs"])
         # 냉기 통로 윗면 한 겹(랙 위): 통과 쉬움 sigma를 줄여 윗면으로 들어오는 공기를 줄인다(SIGMA_COLD_TOP). 퍼텐셜 흐름은 윗면과 양끝을 구분하지 못해서 윗면으로 너무 많이 들어온다.
         self.sigma = np.ones(self.shape)
-        if SIGMA_COLD_TOP != 1.0 and hall["vents"] and hall["racks"]:
+        if SIGMA_COLD_TOP != 1.0 and hall["vents"] and hall["racks"] and not self.cac:
             cy = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
             xa, xb = min(r["min"][0] for r in hall["racks"]), max(r["max"][0] for r in hall["racks"])
             ztop = max(r["max"][2] for r in hall["racks"])
@@ -259,6 +268,8 @@ class Layout:
                 # 받침 기둥: 바닥 아래 공간 전체에 고르게 퍼진 작은 저항(가린 단면 비율만큼 통과 쉬움을 낮춘다)
                 block = self.plenum["pedestal_width_cm"] / self.plenum["pedestal_pitch_cm"]
                 self.sigma[:, :, : self.floor_k[0]] *= 1.0 - block
+        if self.cac:
+            self.sigma[self.cac_roof] = CAC_ROOF_SIGMA
         # 열기 통로: CRAC의 y 위치(열기 통로 끝에 놓임)로 통로를 나누고, 랙은 뒷면이 닿는 통로에 배정한다.
         centers = sorted({round((c["min"][1] + c["max"][1]) / 2 / 10.0) * 10.0 for c in hall["cracs"]})
         self.n_aisles = len(centers)
@@ -282,7 +293,7 @@ class Layout:
         # CRAC는 모두 같은 장비라고 보고, 용량은 가장 바쁜 통로를 정상 상태에서 감당하는 값으로 둔다
         self.q_cap = float(max(self.aisle_exhaust[a] / max(1, n_per_aisle[a]) for a in range(self.n_aisles)))
         # 격벽 지붕 틈: 용량을 넘는 뜨거운 공기가 새는 곳(지붕 바로 아래 칸 -> 지붕 바로 위 칸)
-        roofs = sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
+        roofs = [] if self.cac else sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
         self.leak_sink = [np.zeros(self.shape, dtype=bool) for _ in range(self.n_aisles)]
         self.leak_src = [np.zeros(self.shape, dtype=bool) for _ in range(self.n_aisles)]
         for a, p in enumerate(roofs[: self.n_aisles]):
@@ -309,6 +320,8 @@ def crac_returns(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             for i in idx:
                 q[i] = min(lay.q_cap * float(fan[i]), share)
         leak[a] = max(0.0, lay.aisle_exhaust[a] - q[[i for i in range(lay.n_cracs) if lay.crac_aisle[i] == a]].sum())
+    if getattr(lay, "cac", False):
+        leak[:] = 0.0  # 냉기 통로 격리: 열기 통로가 방으로 열려 있어 남는 배기는 방으로 퍼진다(새는 길을 따로 두지 않는다)
     return q, leak
 
 

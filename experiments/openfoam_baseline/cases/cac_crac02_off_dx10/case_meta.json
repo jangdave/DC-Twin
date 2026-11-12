@@ -1,0 +1,57 @@
+{
+ "scenario": "crac02_off",
+ "fail": "CRAC_02",
+ "scene": "..\\..\\usd\\scenes\\_hall01_cac.usda",
+ "racks": 60,
+ "vent_supply_m3s_per_cold_aisle": [],
+ "dx": 0.1,
+ "cells_total": 718080,
+ "cells_fluid": 597912,
+ "crac_return_m3s": {
+  "CRAC_01": 4.8,
+  "CRAC_02": 0.0,
+  "CRAC_03": 9.6,
+  "CRAC_04": 4.8,
+  "CRAC_05": 4.8,
+  "CRAC_06": 9.6,
+  "CRAC_07": 9.6,
+  "CRAC_08": 4.8
+ },
+ "supply_m3s": 48.0,
+ "open_roofs": [],
+ "power_kw": 10.0,
+ "total_power_kw": 600.0,
+ "fan": {
+  "CRAC_01": 1.0,
+  "CRAC_02": 0.0,
+  "CRAC_03": 1.0,
+  "CRAC_04": 1.0,
+  "CRAC_05": 1.0,
+  "CRAC_06": 1.0,
+  "CRAC_07": 1.0,
+  "CRAC_08": 1.0
+ },
+ "sample": null,
+ "buoyancy": true,
+ "conservative_relaxation": false,
+ "scheme": "upwind",
+ "darcy_d_flow_1_m2": 20000000.0,
+ "darcy_d_cross_1_m2": 400000000.0,
+ "plenum": {
+  "depth_cm": 60.0,
+  "floor_cm": 20.0,
+  "open_ratio": 0.25,
+  "pedestal_pitch_cm": 60.0,
+  "pedestal_width_cm": 3.0
+ },
+ "z_off_cm": 80.0,
+ "crac_supply_m3s": {
+  "crac_sup_01": 4.8,
+  "crac_sup_03": 9.6,
+  "crac_sup_04": 4.8,
+  "crac_sup_05": 4.8,
+  "crac_sup_06": 9.6,
+  "crac_sup_07": 9.6,
+  "crac_sup_08": 4.8
+ }
+}

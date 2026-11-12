@@ -1,0 +1,30 @@
+{
+  "_comment": "냉기 통로 격리(CAC) 보기용 홀 설정(docs/34). hall01.config.json과 containment.type만 다르다. 장면: build_scene.py hall01_cac.config.json _hall01_cac.usda(저장소에 올리지 않음)",
+  "hall": { "index": 1, "ceiling_height": 400, "floor_thickness": 20, "wall_thickness": 20 },
+  "rack": { "asset": "../assets/rack.usda", "width": 60, "depth": 100, "height": 200 },
+  "rows": {
+    "count": 6,
+    "racks_per_row": 10,
+    "cold_aisle": 120,
+    "hot_aisle": 100,
+    "end_clearance": 150,
+    "_note": "줄 2개가 냉기 통로를 사이에 두고 마주 본다. 바깥쪽 두 통로 폭 포함, 열기 통로는 줄 사이와 양 바깥쪽에 모두 4개"
+  },
+  "crac": { "asset": "../assets/crac.usda", "width": 90, "depth": 100, "height": 220, "per_side": 4 },
+  "containment": { "type": "cold", "panel_thickness": 5, "roof_z": 200 },
+  "raised_floor": {
+    "enabled": true, "plenum_depth": 60, "tile_open_ratio": 0.25,
+    "_note": "이중 바닥 아래 공간(가상 값: 깊이 60 cm, 타일 열린 비율 25 %). 공조기가 바닥 아래로 불어 넣는다. 2026-11-11 기본값으로 켬(docs/33 C단계)",
+    "obstructions": {
+      "_note": "바닥 아래 장애물(가상 값). 받침 기둥 60 cm 간격·폭 3 cm, 줄마다 랙 아래 케이블 트레이(폭 30, 높이 10, 바닥 아래 공간 바닥에서 30 cm), 공조기 앞 냉수 배관 2줄(20 cm). 케이블 구멍(cutouts)은 막아 둔 것으로 보고 넣지 않는다(docs/33 6장)",
+      "pedestal_pitch": 60, "pedestal_width": 3,
+      "cable_trays": { "width": 30, "height": 10, "z": 30 },
+      "pipes": { "size": 20, "offset": 40 }
+    }
+  },
+  "vent": { "width": 50, "depth": 100, "thickness": 1 },
+  "colors": {
+    "floor": [0.55, 0.55, 0.58], "wall": [0.85, 0.85, 0.87], "ceiling": [0.9, 0.9, 0.92],
+    "containment": [0.35, 0.6, 0.85], "vent": [0.1, 0.35, 0.7]
+  }
+}

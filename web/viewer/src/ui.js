@@ -66,6 +66,12 @@ export class UI {
       e.currentTarget.setAttribute('aria-pressed', String(on));
       this.h.onFlow(on);
     });
+    for (const b of document.querySelectorAll('#containment-group [data-cont]')) {
+      b.addEventListener('click', () => {
+        for (const x of document.querySelectorAll('#containment-group [data-cont]')) x.setAttribute('aria-pressed', String(x === b));
+        this.h.onContainment?.(b.dataset.cont);
+      });
+    }
     $('under-btn').addEventListener('click', (e) => {
       const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
       e.currentTarget.setAttribute('aria-pressed', String(on));

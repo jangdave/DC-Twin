@@ -1,0 +1,121 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+
+actions
+(
+    { name rack_01; type cellZoneSet; action new; source boxToCell; sourceInfo { box (2.51 1.01 0.81) (3.09 1.99 2.79); } }
+    { name rack_02; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.11 1.01 0.81) (3.69 1.99 2.79); } }
+    { name rack_03; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.71 1.01 0.81) (4.29 1.99 2.79); } }
+    { name rack_04; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.31 1.01 0.81) (4.89 1.99 2.79); } }
+    { name rack_05; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.91 1.01 0.81) (5.49 1.99 2.79); } }
+    { name rack_06; type cellZoneSet; action new; source boxToCell; sourceInfo { box (5.51 1.01 0.81) (6.09 1.99 2.79); } }
+    { name rack_07; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.11 1.01 0.81) (6.69 1.99 2.79); } }
+    { name rack_08; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.71 1.01 0.81) (7.29 1.99 2.79); } }
+    { name rack_09; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.31 1.01 0.81) (7.89 1.99 2.79); } }
+    { name rack_10; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.91 1.01 0.81) (8.49 1.99 2.79); } }
+    { name rack_11; type cellZoneSet; action new; source boxToCell; sourceInfo { box (2.51 3.21 0.81) (3.09 4.19 2.79); } }
+    { name rack_12; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.11 3.21 0.81) (3.69 4.19 2.79); } }
+    { name rack_13; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.71 3.21 0.81) (4.29 4.19 2.79); } }
+    { name rack_14; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.31 3.21 0.81) (4.89 4.19 2.79); } }
+    { name rack_15; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.91 3.21 0.81) (5.49 4.19 2.79); } }
+    { name rack_16; type cellZoneSet; action new; source boxToCell; sourceInfo { box (5.51 3.21 0.81) (6.09 4.19 2.79); } }
+    { name rack_17; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.11 3.21 0.81) (6.69 4.19 2.79); } }
+    { name rack_18; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.71 3.21 0.81) (7.29 4.19 2.79); } }
+    { name rack_19; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.31 3.21 0.81) (7.89 4.19 2.79); } }
+    { name rack_20; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.91 3.21 0.81) (8.49 4.19 2.79); } }
+    { name rack_21; type cellZoneSet; action new; source boxToCell; sourceInfo { box (2.51 5.21 0.81) (3.09 6.19 2.79); } }
+    { name rack_22; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.11 5.21 0.81) (3.69 6.19 2.79); } }
+    { name rack_23; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.71 5.21 0.81) (4.29 6.19 2.79); } }
+    { name rack_24; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.31 5.21 0.81) (4.89 6.19 2.79); } }
+    { name rack_25; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.91 5.21 0.81) (5.49 6.19 2.79); } }
+    { name rack_26; type cellZoneSet; action new; source boxToCell; sourceInfo { box (5.51 5.21 0.81) (6.09 6.19 2.79); } }
+    { name rack_27; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.11 5.21 0.81) (6.69 6.19 2.79); } }
+    { name rack_28; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.71 5.21 0.81) (7.29 6.19 2.79); } }
+    { name rack_29; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.31 5.21 0.81) (7.89 6.19 2.79); } }
+    { name rack_30; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.91 5.21 0.81) (8.49 6.19 2.79); } }
+    { name rack_31; type cellZoneSet; action new; source boxToCell; sourceInfo { box (2.51 7.41 0.81) (3.09 8.39 2.79); } }
+    { name rack_32; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.11 7.41 0.81) (3.69 8.39 2.79); } }
+    { name rack_33; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.71 7.41 0.81) (4.29 8.39 2.79); } }
+    { name rack_34; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.31 7.41 0.81) (4.89 8.39 2.79); } }
+    { name rack_35; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.91 7.41 0.81) (5.49 8.39 2.79); } }
+    { name rack_36; type cellZoneSet; action new; source boxToCell; sourceInfo { box (5.51 7.41 0.81) (6.09 8.39 2.79); } }
+    { name rack_37; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.11 7.41 0.81) (6.69 8.39 2.79); } }
+    { name rack_38; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.71 7.41 0.81) (7.29 8.39 2.79); } }
+    { name rack_39; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.31 7.41 0.81) (7.89 8.39 2.79); } }
+    { name rack_40; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.91 7.41 0.81) (8.49 8.39 2.79); } }
+    { name rack_41; type cellZoneSet; action new; source boxToCell; sourceInfo { box (2.51 9.41 0.81) (3.09 10.39 2.79); } }
+    { name rack_42; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.11 9.41 0.81) (3.69 10.39 2.79); } }
+    { name rack_43; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.71 9.41 0.81) (4.29 10.39 2.79); } }
+    { name rack_44; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.31 9.41 0.81) (4.89 10.39 2.79); } }
+    { name rack_45; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.91 9.41 0.81) (5.49 10.39 2.79); } }
+    { name rack_46; type cellZoneSet; action new; source boxToCell; sourceInfo { box (5.51 9.41 0.81) (6.09 10.39 2.79); } }
+    { name rack_47; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.11 9.41 0.81) (6.69 10.39 2.79); } }
+    { name rack_48; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.71 9.41 0.81) (7.29 10.39 2.79); } }
+    { name rack_49; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.31 9.41 0.81) (7.89 10.39 2.79); } }
+    { name rack_50; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.91 9.41 0.81) (8.49 10.39 2.79); } }
+    { name rack_51; type cellZoneSet; action new; source boxToCell; sourceInfo { box (2.51 11.61 0.81) (3.09 12.59 2.79); } }
+    { name rack_52; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.11 11.61 0.81) (3.69 12.59 2.79); } }
+    { name rack_53; type cellZoneSet; action new; source boxToCell; sourceInfo { box (3.71 11.61 0.81) (4.29 12.59 2.79); } }
+    { name rack_54; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.31 11.61 0.81) (4.89 12.59 2.79); } }
+    { name rack_55; type cellZoneSet; action new; source boxToCell; sourceInfo { box (4.91 11.61 0.81) (5.49 12.59 2.79); } }
+    { name rack_56; type cellZoneSet; action new; source boxToCell; sourceInfo { box (5.51 11.61 0.81) (6.09 12.59 2.79); } }
+    { name rack_57; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.11 11.61 0.81) (6.69 12.59 2.79); } }
+    { name rack_58; type cellZoneSet; action new; source boxToCell; sourceInfo { box (6.71 11.61 0.81) (7.29 12.59 2.79); } }
+    { name rack_59; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.31 11.61 0.81) (7.89 12.59 2.79); } }
+    { name rack_60; type cellZoneSet; action new; source boxToCell; sourceInfo { box (7.91 11.61 0.81) (8.49 12.59 2.79); } }
+    { name tiles; type cellZoneSet; action new; source boxToCell; sourceInfo { box (2.51 2.11 0.61) (3.09 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (3.11 2.11 0.61) (3.69 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (3.71 2.11 0.61) (4.29 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (4.31 2.11 0.61) (4.89 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (4.91 2.11 0.61) (5.49 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (5.51 2.11 0.61) (6.09 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (6.11 2.11 0.61) (6.69 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (6.71 2.11 0.61) (7.29 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (7.31 2.11 0.61) (7.89 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (7.91 2.11 0.61) (8.49 3.09 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (2.51 6.31 0.61) (3.09 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (3.11 6.31 0.61) (3.69 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (3.71 6.31 0.61) (4.29 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (4.31 6.31 0.61) (4.89 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (4.91 6.31 0.61) (5.49 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (5.51 6.31 0.61) (6.09 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (6.11 6.31 0.61) (6.69 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (6.71 6.31 0.61) (7.29 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (7.31 6.31 0.61) (7.89 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (7.91 6.31 0.61) (8.49 7.29 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (2.51 10.51 0.61) (3.09 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (3.11 10.51 0.61) (3.69 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (3.71 10.51 0.61) (4.29 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (4.31 10.51 0.61) (4.89 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (4.91 10.51 0.61) (5.49 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (5.51 10.51 0.61) (6.09 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (6.11 10.51 0.61) (6.69 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (6.71 10.51 0.61) (7.29 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (7.31 10.51 0.61) (7.89 11.49 0.79); } }
+    { name tiles; type cellZoneSet; action add; source boxToCell; sourceInfo { box (7.91 10.51 0.61) (8.49 11.49 0.79); } }
+    { name pedestals; type cellZoneSet; action new; source boxToCell; sourceInfo { box (0.01 0.01 0.01) (10.99 13.59 0.59); } }
+    { name cac_roof; type cellZoneSet; action new; source boxToCell; sourceInfo { box (2.51 2.01 2.81) (8.49 3.19 2.89); } }
+    { name cac_roof; type cellZoneSet; action add; source boxToCell; sourceInfo { box (2.51 6.21 2.81) (8.49 7.39 2.89); } }
+    { name cac_roof; type cellZoneSet; action add; source boxToCell; sourceInfo { box (2.51 10.41 2.81) (8.49 11.59 2.89); } }
+    { name crac_sup_01_f; type faceSet; action new; source boxToFace; sourceInfo { box (0.01 0.01 0.59) (0.99 0.99 0.61); } }
+    { name crac_ret_01_f; type faceSet; action new; source boxToFace; sourceInfo { box (0.99 0.01 0.91) (1.01 0.99 2.69); } }
+    { name crac_sup_02_f; type faceSet; action new; source boxToFace; sourceInfo { box (0.01 4.21 0.59) (0.99 5.19 0.61); } }
+    { name crac_ret_02_f; type faceSet; action new; source boxToFace; sourceInfo { box (0.99 4.21 0.91) (1.01 5.19 2.69); } }
+    { name crac_sup_03_f; type faceSet; action new; source boxToFace; sourceInfo { box (0.01 8.41 0.59) (0.99 9.39 0.61); } }
+    { name crac_ret_03_f; type faceSet; action new; source boxToFace; sourceInfo { box (0.99 8.41 0.91) (1.01 9.39 2.69); } }
+    { name crac_sup_04_f; type faceSet; action new; source boxToFace; sourceInfo { box (0.01 12.61 0.59) (0.99 13.59 0.61); } }
+    { name crac_ret_04_f; type faceSet; action new; source boxToFace; sourceInfo { box (0.99 12.61 0.91) (1.01 13.59 2.69); } }
+    { name crac_sup_05_f; type faceSet; action new; source boxToFace; sourceInfo { box (10.01 0.01 0.59) (10.99 0.99 0.61); } }
+    { name crac_ret_05_f; type faceSet; action new; source boxToFace; sourceInfo { box (9.99 0.01 0.91) (10.01 0.99 2.69); } }
+    { name crac_sup_06_f; type faceSet; action new; source boxToFace; sourceInfo { box (10.01 4.21 0.59) (10.99 5.19 0.61); } }
+    { name crac_ret_06_f; type faceSet; action new; source boxToFace; sourceInfo { box (9.99 4.21 0.91) (10.01 5.19 2.69); } }
+    { name crac_sup_07_f; type faceSet; action new; source boxToFace; sourceInfo { box (10.01 8.41 0.59) (10.99 9.39 0.61); } }
+    { name crac_ret_07_f; type faceSet; action new; source boxToFace; sourceInfo { box (9.99 8.41 0.91) (10.01 9.39 2.69); } }
+    { name crac_sup_08_f; type faceSet; action new; source boxToFace; sourceInfo { box (10.01 12.61 0.59) (10.99 13.59 0.61); } }
+    { name crac_ret_08_f; type faceSet; action new; source boxToFace; sourceInfo { box (9.99 12.61 0.91) (10.01 13.59 2.69); } }
+);

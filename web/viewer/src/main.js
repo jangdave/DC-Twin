@@ -99,6 +99,7 @@ async function main() {
     .then(() => {
       document.getElementById('flow-btn').hidden = false;
       document.getElementById('under-btn').hidden = !scene.hasPlenum; // 흐름장에 이중 바닥이 있을 때만
+      document.getElementById('containment-group').hidden = !scene.hasCac; // 장면 자료에 CAC가 있을 때만
       boot.set('flow', 'done');
     })
     .catch((e) => {
@@ -227,6 +228,12 @@ async function main() {
       scene.setModels(b);
     },
     onFlow: (b) => scene.setAirflow(b),
+    // 격벽 방식 보기(docs/34): HAC / CAC. 공기 흐름을 함께 봐야 차이가 보여서 CAC로 바꿀 때 공기 흐름을 켠다
+    onContainment: async (t) => {
+      await scene.setContainment(t, BASE).catch((e) => console.warn('격벽 방식 바꾸기 실패:', e.message));
+      if (t === 'cold' && !scene.showAirflow) document.getElementById('flow-btn').click();
+      document.getElementById('cac-note').hidden = t !== 'cold';
+    },
     // 바닥 아래 보기는 공기 흐름과 함께 봐야 뜻이 있어서 켤 때 공기 흐름도 켠다
     onUnderfloor: (b) => {
       scene.setUnderfloor(b);

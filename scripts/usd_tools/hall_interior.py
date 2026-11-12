@@ -257,10 +257,13 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
     xs = [175.0 + 150.0 * k for k in range(6)]
     rz = cfg["containment"]["roof_z"]
     # 열기 통로 조명은 격벽 지붕 아래에 LIGHT_GAP만큼 띄워 매단다. 윗면이 지붕 아랫면과 같은 높이면 두 면이 겹쳐 깜빡인다(2026-11-11 사용자 보고).
-    spots = [((y0 + y1) / 2, H, 20.0, "Light") for (y0, y1) in lay.cold_aisles] + [((y0 + y1) / 2, rz - LIGHT_GAP, 15.0, "Light") for (y0, y1) in lay.hot_aisles]
+    # 격벽 방식(containment.type): hot(열기 통로 격리, 기본)이면 열기 통로 조명이 격벽 지붕 아래, cold(냉기 통로 격리, CAC)이면 냉기 통로 조명이 격벽 지붕 아래다
+    cold_cont = containment_type(cfg) == "cold"
+    xs_in = [x for x in xs if lay.rack_x0 + 60.0 <= x <= lay.rack_x1 - 60.0]  # 격벽 지붕 안에 들어가는 자리만
+    spots = [((y0 + y1) / 2, rz - LIGHT_GAP if cold_cont else H, 20.0, xs_in if cold_cont else xs) for (y0, y1) in lay.cold_aisles] +             [((y0 + y1) / 2, H if cold_cont else rz - LIGHT_GAP, 15.0, xs) for (y0, y1) in lay.hot_aisles]
     tri["Lights"] = 0
-    for yc, ztop, w, _ in spots:
-        for xc in xs:
+    for yc, ztop, w, xs_ in spots:
+        for xc in xs_:
             n += 1
             p = f"{lights}/Light_{n:02d}"
             UsdGeom.Xform.Define(stage, p)
@@ -272,6 +275,14 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
             author_mesh(stage, f"{p}/Diffuser", dif, mats)
             tri["Lights"] += fr.triangles() + dif.triangles()
     return tri
+
+
+def containment_type(cfg: dict) -> str:
+    """격벽 방식. "hot": 열기 통로 격리(HAC, 기본), "cold": 냉기 통로 격리(CAC). docs/34"""
+    t = cfg["containment"].get("type", "hot")
+    if t not in ("hot", "cold"):
+        raise ValueError(f"containment.type은 hot 또는 cold: {t}")
+    return t
 
 
 def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) -> dict:
@@ -303,6 +314,15 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
                 k += 1
             glass_lo = (lo[0] + bar, lo[1] + bar, lo[2] + (hi[2] - lo[2]) / 2 - 0.5)
             glass_hi = (hi[0] - bar, hi[1] - bar, lo[2] + (hi[2] - lo[2]) / 2 + 0.5)
+        elif sz[0] <= t + 1e-6:  # 끝 문: 수직 판. 두께 t는 x, 폭은 y, 높이 z (냉기 통로 격리의 통로 끝)
+            fr.box((lo[0], lo[1], lo[2]), (hi[0], hi[1], lo[2] + 6.0), "frame")
+            fr.box((lo[0], lo[1], hi[2] - 6.0), (hi[0], hi[1], hi[2]), "frame")
+            fr.box((lo[0], lo[1], lo[2] + 6.0), (hi[0], lo[1] + bar, hi[2] - 6.0), "frame")
+            fr.box((lo[0], hi[1] - bar, lo[2] + 6.0), (hi[0], hi[1], hi[2] - 6.0), "frame")
+            fr.box((lo[0], (lo[1] + hi[1]) / 2 - bar / 2, lo[2] + 6.0), (hi[0], (lo[1] + hi[1]) / 2 + bar / 2, hi[2] - 6.0), "frame")  # 미닫이 두 짝 사이
+            mid = (lo[0] + hi[0]) / 2
+            glass_lo = (mid - 0.5, lo[1] + bar, lo[2] + 6.0)
+            glass_hi = (mid + 0.5, hi[1] - bar, hi[2] - 6.0)
         else:  # 옆면: 수직 판. 두께 t는 y, 높이 z
             fr.box((lo[0], lo[1], lo[2]), (hi[0], hi[1], lo[2] + 6.0), "frame")
             fr.box((lo[0], lo[1], hi[2] - 6.0), (hi[0], hi[1], hi[2]), "frame")
@@ -318,6 +338,13 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
         tri["Frame"] += fr.triangles()
         tri["Glass"] += gl.triangles()
 
+    if containment_type(cfg) == "cold":
+        # 냉기 통로 격리(CAC): 랙 앞면 사이(냉기 통로) 위를 지붕으로 덮고, 줄 끝 양쪽을 문으로 막는다. 열기 통로는 열려 있다
+        for k, (ya, yb) in enumerate(lay.cold_aisles, start=1):
+            panel(f"{cont}/ColdAisle_{k:02d}_Roof", (lay.rack_x0, ya, rz), (lay.rack_x1, yb, rz + t), 0, 120.0)
+            panel(f"{cont}/ColdAisle_{k:02d}_Door_W", (lay.rack_x0 - t, ya, 0), (lay.rack_x0, yb, rz + t), 1, 0.0)
+            panel(f"{cont}/ColdAisle_{k:02d}_Door_E", (lay.rack_x1, ya, 0), (lay.rack_x1 + t, yb, rz + t), 1, 0.0)
+        return tri
     for k, (ya, yb) in enumerate(lay.hot_aisles, start=1):
         panel(f"{cont}/HotAisle_{k:02d}_Roof", (xa, ya, rz), (xb, yb, rz + t), 0, 120.0)
         for outward in (-1, 1):

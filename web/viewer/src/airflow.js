@@ -15,14 +15,14 @@ export const PLENUM_SPAWN = 0.3; // 이중 바닥일 때 바닥 아래(공조기
 const LEAK_CEILING = 3.6; // m. 이 높이를 넘으면 사라진다(천장 근처에서 되돌아가는 공기에 섞인다고 본다)
 const LEAK_WARM = [1.0, 0.72, 0.38]; // 올라가며 뜨거운 공기와 섞여 따뜻해지는 색
 
-export async function loadFlow(baseUrl) {
+export async function loadFlow(baseUrl, name = 'flow') {
   const [meta, buf] = await Promise.all([
-    fetch(`${baseUrl}data/flow.json`).then((r) => {
-      if (!r.ok) throw new Error(`flow.json ${r.status}`);
+    fetch(`${baseUrl}data/${name}.json`).then((r) => {
+      if (!r.ok) throw new Error(`${name}.json ${r.status}`);
       return r.json();
     }),
-    fetch(`${baseUrl}data/flow.bin`).then((r) => {
-      if (!r.ok) throw new Error(`flow.bin ${r.status}`);
+    fetch(`${baseUrl}data/${name}.bin`).then((r) => {
+      if (!r.ok) throw new Error(`${name}.bin ${r.status}`);
       return r.arrayBuffer();
     }),
   ]);

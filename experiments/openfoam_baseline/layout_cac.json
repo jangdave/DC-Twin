@@ -1,0 +1,4152 @@
+{
+ "racks": [
+  {
+   "name": "Rack_01",
+   "path": "/DC/Hall01/Row01/Rack_01",
+   "min": [
+    250.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    310.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_02",
+   "path": "/DC/Hall01/Row01/Rack_02",
+   "min": [
+    310.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    370.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_03",
+   "path": "/DC/Hall01/Row01/Rack_03",
+   "min": [
+    370.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    430.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_04",
+   "path": "/DC/Hall01/Row01/Rack_04",
+   "min": [
+    430.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    490.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_05",
+   "path": "/DC/Hall01/Row01/Rack_05",
+   "min": [
+    490.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    550.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_06",
+   "path": "/DC/Hall01/Row01/Rack_06",
+   "min": [
+    550.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    610.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_07",
+   "path": "/DC/Hall01/Row01/Rack_07",
+   "min": [
+    610.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    670.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_08",
+   "path": "/DC/Hall01/Row01/Rack_08",
+   "min": [
+    670.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    730.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_09",
+   "path": "/DC/Hall01/Row01/Rack_09",
+   "min": [
+    730.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    790.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_10",
+   "path": "/DC/Hall01/Row01/Rack_10",
+   "min": [
+    790.0,
+    100.0,
+    0.0
+   ],
+   "max": [
+    850.0,
+    200.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_11",
+   "path": "/DC/Hall01/Row02/Rack_11",
+   "min": [
+    250.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    310.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_12",
+   "path": "/DC/Hall01/Row02/Rack_12",
+   "min": [
+    310.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    370.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_13",
+   "path": "/DC/Hall01/Row02/Rack_13",
+   "min": [
+    370.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    430.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_14",
+   "path": "/DC/Hall01/Row02/Rack_14",
+   "min": [
+    430.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    490.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_15",
+   "path": "/DC/Hall01/Row02/Rack_15",
+   "min": [
+    490.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    550.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_16",
+   "path": "/DC/Hall01/Row02/Rack_16",
+   "min": [
+    550.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    610.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_17",
+   "path": "/DC/Hall01/Row02/Rack_17",
+   "min": [
+    610.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    670.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_18",
+   "path": "/DC/Hall01/Row02/Rack_18",
+   "min": [
+    670.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    730.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_19",
+   "path": "/DC/Hall01/Row02/Rack_19",
+   "min": [
+    730.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    790.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_20",
+   "path": "/DC/Hall01/Row02/Rack_20",
+   "min": [
+    790.0,
+    320.0,
+    0.0
+   ],
+   "max": [
+    850.0,
+    420.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_21",
+   "path": "/DC/Hall01/Row03/Rack_21",
+   "min": [
+    250.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    310.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_22",
+   "path": "/DC/Hall01/Row03/Rack_22",
+   "min": [
+    310.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    370.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_23",
+   "path": "/DC/Hall01/Row03/Rack_23",
+   "min": [
+    370.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    430.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_24",
+   "path": "/DC/Hall01/Row03/Rack_24",
+   "min": [
+    430.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    490.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_25",
+   "path": "/DC/Hall01/Row03/Rack_25",
+   "min": [
+    490.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    550.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_26",
+   "path": "/DC/Hall01/Row03/Rack_26",
+   "min": [
+    550.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    610.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_27",
+   "path": "/DC/Hall01/Row03/Rack_27",
+   "min": [
+    610.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    670.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_28",
+   "path": "/DC/Hall01/Row03/Rack_28",
+   "min": [
+    670.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    730.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_29",
+   "path": "/DC/Hall01/Row03/Rack_29",
+   "min": [
+    730.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    790.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_30",
+   "path": "/DC/Hall01/Row03/Rack_30",
+   "min": [
+    790.0,
+    520.0,
+    0.0
+   ],
+   "max": [
+    850.0,
+    620.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_31",
+   "path": "/DC/Hall01/Row04/Rack_31",
+   "min": [
+    250.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    310.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_32",
+   "path": "/DC/Hall01/Row04/Rack_32",
+   "min": [
+    310.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    370.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_33",
+   "path": "/DC/Hall01/Row04/Rack_33",
+   "min": [
+    370.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    430.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_34",
+   "path": "/DC/Hall01/Row04/Rack_34",
+   "min": [
+    430.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    490.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_35",
+   "path": "/DC/Hall01/Row04/Rack_35",
+   "min": [
+    490.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    550.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_36",
+   "path": "/DC/Hall01/Row04/Rack_36",
+   "min": [
+    550.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    610.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_37",
+   "path": "/DC/Hall01/Row04/Rack_37",
+   "min": [
+    610.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    670.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_38",
+   "path": "/DC/Hall01/Row04/Rack_38",
+   "min": [
+    670.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    730.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_39",
+   "path": "/DC/Hall01/Row04/Rack_39",
+   "min": [
+    730.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    790.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_40",
+   "path": "/DC/Hall01/Row04/Rack_40",
+   "min": [
+    790.0,
+    740.0,
+    0.0
+   ],
+   "max": [
+    850.0,
+    840.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_41",
+   "path": "/DC/Hall01/Row05/Rack_41",
+   "min": [
+    250.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    310.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_42",
+   "path": "/DC/Hall01/Row05/Rack_42",
+   "min": [
+    310.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    370.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_43",
+   "path": "/DC/Hall01/Row05/Rack_43",
+   "min": [
+    370.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    430.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_44",
+   "path": "/DC/Hall01/Row05/Rack_44",
+   "min": [
+    430.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    490.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_45",
+   "path": "/DC/Hall01/Row05/Rack_45",
+   "min": [
+    490.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    550.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_46",
+   "path": "/DC/Hall01/Row05/Rack_46",
+   "min": [
+    550.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    610.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_47",
+   "path": "/DC/Hall01/Row05/Rack_47",
+   "min": [
+    610.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    670.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_48",
+   "path": "/DC/Hall01/Row05/Rack_48",
+   "min": [
+    670.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    730.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_49",
+   "path": "/DC/Hall01/Row05/Rack_49",
+   "min": [
+    730.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    790.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_50",
+   "path": "/DC/Hall01/Row05/Rack_50",
+   "min": [
+    790.0,
+    940.0,
+    0.0
+   ],
+   "max": [
+    850.0,
+    1040.0,
+    200.0
+   ],
+   "front": [
+    1,
+    1
+   ]
+  },
+  {
+   "name": "Rack_51",
+   "path": "/DC/Hall01/Row06/Rack_51",
+   "min": [
+    250.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    310.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_52",
+   "path": "/DC/Hall01/Row06/Rack_52",
+   "min": [
+    310.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    370.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_53",
+   "path": "/DC/Hall01/Row06/Rack_53",
+   "min": [
+    370.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    430.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_54",
+   "path": "/DC/Hall01/Row06/Rack_54",
+   "min": [
+    430.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    490.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_55",
+   "path": "/DC/Hall01/Row06/Rack_55",
+   "min": [
+    490.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    550.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_56",
+   "path": "/DC/Hall01/Row06/Rack_56",
+   "min": [
+    550.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    610.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_57",
+   "path": "/DC/Hall01/Row06/Rack_57",
+   "min": [
+    610.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    670.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_58",
+   "path": "/DC/Hall01/Row06/Rack_58",
+   "min": [
+    670.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    730.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_59",
+   "path": "/DC/Hall01/Row06/Rack_59",
+   "min": [
+    730.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    790.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  },
+  {
+   "name": "Rack_60",
+   "path": "/DC/Hall01/Row06/Rack_60",
+   "min": [
+    790.0,
+    1160.0,
+    0.0
+   ],
+   "max": [
+    850.0,
+    1260.0,
+    200.0
+   ],
+   "front": [
+    1,
+    -1
+   ]
+  }
+ ],
+ "cracs": [
+  {
+   "name": "CRAC_01",
+   "path": "/DC/Hall01/Cooling/CRAC_01",
+   "min": [
+    -4.263256414560601e-14,
+    4.999999999999961,
+    0.0
+   ],
+   "max": [
+    100.00000000000003,
+    95.0,
+    220.0
+   ],
+   "front": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "CRAC_02",
+   "path": "/DC/Hall01/Cooling/CRAC_02",
+   "min": [
+    -4.263256414560601e-14,
+    425.0,
+    0.0
+   ],
+   "max": [
+    100.00000000000003,
+    515.0,
+    220.0
+   ],
+   "front": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "CRAC_03",
+   "path": "/DC/Hall01/Cooling/CRAC_03",
+   "min": [
+    -4.263256414560601e-14,
+    844.9999999999997,
+    0.0
+   ],
+   "max": [
+    100.00000000000003,
+    934.9999999999997,
+    220.0
+   ],
+   "front": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "CRAC_04",
+   "path": "/DC/Hall01/Cooling/CRAC_04",
+   "min": [
+    -4.263256414560601e-14,
+    1265.0000000000007,
+    0.0
+   ],
+   "max": [
+    100.00000000000003,
+    1355.0000000000007,
+    220.0
+   ],
+   "front": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "CRAC_05",
+   "path": "/DC/Hall01/Cooling/CRAC_05",
+   "min": [
+    1000.0,
+    4.999999999999961,
+    0.0
+   ],
+   "max": [
+    1100.0,
+    95.0,
+    220.0
+   ],
+   "front": [
+    0,
+    -1
+   ]
+  },
+  {
+   "name": "CRAC_06",
+   "path": "/DC/Hall01/Cooling/CRAC_06",
+   "min": [
+    1000.0,
+    425.0,
+    0.0
+   ],
+   "max": [
+    1100.0,
+    515.0,
+    220.0
+   ],
+   "front": [
+    0,
+    -1
+   ]
+  },
+  {
+   "name": "CRAC_07",
+   "path": "/DC/Hall01/Cooling/CRAC_07",
+   "min": [
+    1000.0,
+    844.9999999999997,
+    0.0
+   ],
+   "max": [
+    1100.0,
+    934.9999999999997,
+    220.0
+   ],
+   "front": [
+    0,
+    -1
+   ]
+  },
+  {
+   "name": "CRAC_08",
+   "path": "/DC/Hall01/Cooling/CRAC_08",
+   "min": [
+    1000.0,
+    1265.0000000000007,
+    0.0
+   ],
+   "max": [
+    1100.0,
+    1355.0000000000007,
+    220.0
+   ],
+   "front": [
+    0,
+    -1
+   ]
+  }
+ ],
+ "vents": [
+  {
+   "name": "Vent_01",
+   "path": "/DC/Hall01/Vents/Vent_01",
+   "min": [
+    255.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    305.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_02",
+   "path": "/DC/Hall01/Vents/Vent_02",
+   "min": [
+    315.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    365.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_03",
+   "path": "/DC/Hall01/Vents/Vent_03",
+   "min": [
+    375.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    425.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_04",
+   "path": "/DC/Hall01/Vents/Vent_04",
+   "min": [
+    435.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    485.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_05",
+   "path": "/DC/Hall01/Vents/Vent_05",
+   "min": [
+    495.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    545.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_06",
+   "path": "/DC/Hall01/Vents/Vent_06",
+   "min": [
+    555.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    605.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_07",
+   "path": "/DC/Hall01/Vents/Vent_07",
+   "min": [
+    615.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    665.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_08",
+   "path": "/DC/Hall01/Vents/Vent_08",
+   "min": [
+    675.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    725.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_09",
+   "path": "/DC/Hall01/Vents/Vent_09",
+   "min": [
+    735.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    785.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_10",
+   "path": "/DC/Hall01/Vents/Vent_10",
+   "min": [
+    795.0,
+    210.0,
+    0.0
+   ],
+   "max": [
+    845.0,
+    310.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_11",
+   "path": "/DC/Hall01/Vents/Vent_11",
+   "min": [
+    255.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    305.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_12",
+   "path": "/DC/Hall01/Vents/Vent_12",
+   "min": [
+    315.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    365.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_13",
+   "path": "/DC/Hall01/Vents/Vent_13",
+   "min": [
+    375.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    425.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_14",
+   "path": "/DC/Hall01/Vents/Vent_14",
+   "min": [
+    435.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    485.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_15",
+   "path": "/DC/Hall01/Vents/Vent_15",
+   "min": [
+    495.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    545.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_16",
+   "path": "/DC/Hall01/Vents/Vent_16",
+   "min": [
+    555.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    605.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_17",
+   "path": "/DC/Hall01/Vents/Vent_17",
+   "min": [
+    615.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    665.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_18",
+   "path": "/DC/Hall01/Vents/Vent_18",
+   "min": [
+    675.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    725.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_19",
+   "path": "/DC/Hall01/Vents/Vent_19",
+   "min": [
+    735.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    785.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_20",
+   "path": "/DC/Hall01/Vents/Vent_20",
+   "min": [
+    795.0,
+    630.0,
+    0.0
+   ],
+   "max": [
+    845.0,
+    730.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_21",
+   "path": "/DC/Hall01/Vents/Vent_21",
+   "min": [
+    255.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    305.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_22",
+   "path": "/DC/Hall01/Vents/Vent_22",
+   "min": [
+    315.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    365.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_23",
+   "path": "/DC/Hall01/Vents/Vent_23",
+   "min": [
+    375.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    425.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_24",
+   "path": "/DC/Hall01/Vents/Vent_24",
+   "min": [
+    435.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    485.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_25",
+   "path": "/DC/Hall01/Vents/Vent_25",
+   "min": [
+    495.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    545.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_26",
+   "path": "/DC/Hall01/Vents/Vent_26",
+   "min": [
+    555.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    605.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_27",
+   "path": "/DC/Hall01/Vents/Vent_27",
+   "min": [
+    615.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    665.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_28",
+   "path": "/DC/Hall01/Vents/Vent_28",
+   "min": [
+    675.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    725.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_29",
+   "path": "/DC/Hall01/Vents/Vent_29",
+   "min": [
+    735.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    785.0,
+    1150.0,
+    1.0
+   ]
+  },
+  {
+   "name": "Vent_30",
+   "path": "/DC/Hall01/Vents/Vent_30",
+   "min": [
+    795.0,
+    1050.0,
+    0.0
+   ],
+   "max": [
+    845.0,
+    1150.0,
+    1.0
+   ]
+  }
+ ],
+ "panels": [
+  {
+   "name": "ColdAisle_01_Roof",
+   "path": "/DC/Hall01/Containment/ColdAisle_01_Roof",
+   "min": [
+    250.0,
+    200.0,
+    200.0
+   ],
+   "max": [
+    850.0,
+    320.0,
+    205.0
+   ]
+  },
+  {
+   "name": "ColdAisle_01_Door_W",
+   "path": "/DC/Hall01/Containment/ColdAisle_01_Door_W",
+   "min": [
+    245.0,
+    200.0,
+    0.0
+   ],
+   "max": [
+    250.0,
+    320.0,
+    205.0
+   ]
+  },
+  {
+   "name": "ColdAisle_01_Door_E",
+   "path": "/DC/Hall01/Containment/ColdAisle_01_Door_E",
+   "min": [
+    850.0,
+    200.0,
+    0.0
+   ],
+   "max": [
+    855.0,
+    320.0,
+    205.0
+   ]
+  },
+  {
+   "name": "ColdAisle_02_Roof",
+   "path": "/DC/Hall01/Containment/ColdAisle_02_Roof",
+   "min": [
+    250.0,
+    620.0,
+    200.0
+   ],
+   "max": [
+    850.0,
+    740.0,
+    205.0
+   ]
+  },
+  {
+   "name": "ColdAisle_02_Door_W",
+   "path": "/DC/Hall01/Containment/ColdAisle_02_Door_W",
+   "min": [
+    245.0,
+    620.0,
+    0.0
+   ],
+   "max": [
+    250.0,
+    740.0,
+    205.0
+   ]
+  },
+  {
+   "name": "ColdAisle_02_Door_E",
+   "path": "/DC/Hall01/Containment/ColdAisle_02_Door_E",
+   "min": [
+    850.0,
+    620.0,
+    0.0
+   ],
+   "max": [
+    855.0,
+    740.0,
+    205.0
+   ]
+  },
+  {
+   "name": "ColdAisle_03_Roof",
+   "path": "/DC/Hall01/Containment/ColdAisle_03_Roof",
+   "min": [
+    250.0,
+    1040.0,
+    200.0
+   ],
+   "max": [
+    850.0,
+    1160.0,
+    205.0
+   ]
+  },
+  {
+   "name": "ColdAisle_03_Door_W",
+   "path": "/DC/Hall01/Containment/ColdAisle_03_Door_W",
+   "min": [
+    245.0,
+    1040.0,
+    0.0
+   ],
+   "max": [
+    250.0,
+    1160.0,
+    205.0
+   ]
+  },
+  {
+   "name": "ColdAisle_03_Door_E",
+   "path": "/DC/Hall01/Containment/ColdAisle_03_Door_E",
+   "min": [
+    850.0,
+    1040.0,
+    0.0
+   ],
+   "max": [
+    855.0,
+    1160.0,
+    205.0
+   ]
+  }
+ ],
+ "anchors": [
+  {
+   "path": "/DC/Hall01/Row01/Rack_01/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_01",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_01/Anchors/Sensor_POWER",
+   "equipment": "Rack_01",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_01/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_01",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_02/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_02",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_02/Anchors/Sensor_POWER",
+   "equipment": "Rack_02",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_02/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_02",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_03/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_03",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_03/Anchors/Sensor_POWER",
+   "equipment": "Rack_03",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_03/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_03",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_04/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_04",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_04/Anchors/Sensor_POWER",
+   "equipment": "Rack_04",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_04/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_04",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_05/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_05",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_05/Anchors/Sensor_POWER",
+   "equipment": "Rack_05",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_05/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_05",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_06/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_06",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_06/Anchors/Sensor_POWER",
+   "equipment": "Rack_06",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_06/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_06",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_07/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_07",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_07/Anchors/Sensor_POWER",
+   "equipment": "Rack_07",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_07/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_07",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_08/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_08",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_08/Anchors/Sensor_POWER",
+   "equipment": "Rack_08",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_08/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_08",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_09/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_09",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_09/Anchors/Sensor_POWER",
+   "equipment": "Rack_09",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_09/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_09",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_10/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_10",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    205.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_10/Anchors/Sensor_POWER",
+   "equipment": "Rack_10",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    150.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row01/Rack_10/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_10",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    95.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_11/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_11",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_11/Anchors/Sensor_POWER",
+   "equipment": "Rack_11",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_11/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_11",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_12/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_12",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_12/Anchors/Sensor_POWER",
+   "equipment": "Rack_12",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_12/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_12",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_13/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_13",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_13/Anchors/Sensor_POWER",
+   "equipment": "Rack_13",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_13/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_13",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_14/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_14",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_14/Anchors/Sensor_POWER",
+   "equipment": "Rack_14",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_14/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_14",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_15/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_15",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_15/Anchors/Sensor_POWER",
+   "equipment": "Rack_15",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_15/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_15",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_16/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_16",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_16/Anchors/Sensor_POWER",
+   "equipment": "Rack_16",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_16/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_16",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_17/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_17",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_17/Anchors/Sensor_POWER",
+   "equipment": "Rack_17",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_17/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_17",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_18/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_18",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_18/Anchors/Sensor_POWER",
+   "equipment": "Rack_18",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_18/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_18",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_19/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_19",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_19/Anchors/Sensor_POWER",
+   "equipment": "Rack_19",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_19/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_19",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_20/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_20",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    315.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_20/Anchors/Sensor_POWER",
+   "equipment": "Rack_20",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    370.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row02/Rack_20/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_20",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    425.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_21/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_21",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_21/Anchors/Sensor_POWER",
+   "equipment": "Rack_21",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_21/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_21",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_22/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_22",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_22/Anchors/Sensor_POWER",
+   "equipment": "Rack_22",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_22/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_22",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_23/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_23",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_23/Anchors/Sensor_POWER",
+   "equipment": "Rack_23",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_23/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_23",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_24/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_24",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_24/Anchors/Sensor_POWER",
+   "equipment": "Rack_24",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_24/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_24",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_25/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_25",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_25/Anchors/Sensor_POWER",
+   "equipment": "Rack_25",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_25/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_25",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_26/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_26",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_26/Anchors/Sensor_POWER",
+   "equipment": "Rack_26",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_26/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_26",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_27/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_27",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_27/Anchors/Sensor_POWER",
+   "equipment": "Rack_27",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_27/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_27",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_28/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_28",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_28/Anchors/Sensor_POWER",
+   "equipment": "Rack_28",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_28/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_28",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_29/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_29",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_29/Anchors/Sensor_POWER",
+   "equipment": "Rack_29",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_29/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_29",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_30/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_30",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    625.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_30/Anchors/Sensor_POWER",
+   "equipment": "Rack_30",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    570.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row03/Rack_30/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_30",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    515.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_31/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_31",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_31/Anchors/Sensor_POWER",
+   "equipment": "Rack_31",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_31/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_31",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_32/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_32",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_32/Anchors/Sensor_POWER",
+   "equipment": "Rack_32",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_32/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_32",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_33/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_33",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_33/Anchors/Sensor_POWER",
+   "equipment": "Rack_33",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_33/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_33",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_34/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_34",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_34/Anchors/Sensor_POWER",
+   "equipment": "Rack_34",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_34/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_34",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_35/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_35",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_35/Anchors/Sensor_POWER",
+   "equipment": "Rack_35",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_35/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_35",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_36/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_36",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_36/Anchors/Sensor_POWER",
+   "equipment": "Rack_36",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_36/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_36",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_37/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_37",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_37/Anchors/Sensor_POWER",
+   "equipment": "Rack_37",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_37/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_37",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_38/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_38",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_38/Anchors/Sensor_POWER",
+   "equipment": "Rack_38",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_38/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_38",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_39/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_39",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_39/Anchors/Sensor_POWER",
+   "equipment": "Rack_39",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_39/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_39",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_40/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_40",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    735.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_40/Anchors/Sensor_POWER",
+   "equipment": "Rack_40",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    790.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row04/Rack_40/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_40",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    845.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_41/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_41",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_41/Anchors/Sensor_POWER",
+   "equipment": "Rack_41",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_41/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_41",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_42/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_42",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_42/Anchors/Sensor_POWER",
+   "equipment": "Rack_42",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_42/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_42",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_43/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_43",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_43/Anchors/Sensor_POWER",
+   "equipment": "Rack_43",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_43/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_43",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_44/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_44",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_44/Anchors/Sensor_POWER",
+   "equipment": "Rack_44",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_44/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_44",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_45/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_45",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_45/Anchors/Sensor_POWER",
+   "equipment": "Rack_45",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_45/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_45",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_46/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_46",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_46/Anchors/Sensor_POWER",
+   "equipment": "Rack_46",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_46/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_46",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_47/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_47",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_47/Anchors/Sensor_POWER",
+   "equipment": "Rack_47",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_47/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_47",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_48/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_48",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_48/Anchors/Sensor_POWER",
+   "equipment": "Rack_48",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_48/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_48",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_49/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_49",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_49/Anchors/Sensor_POWER",
+   "equipment": "Rack_49",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_49/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_49",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_50/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_50",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    1045.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_50/Anchors/Sensor_POWER",
+   "equipment": "Rack_50",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    990.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row05/Rack_50/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_50",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    935.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_51/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_51",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_51/Anchors/Sensor_POWER",
+   "equipment": "Rack_51",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    280.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_51/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_51",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    280.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_52/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_52",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_52/Anchors/Sensor_POWER",
+   "equipment": "Rack_52",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    340.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_52/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_52",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    340.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_53/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_53",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_53/Anchors/Sensor_POWER",
+   "equipment": "Rack_53",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    400.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_53/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_53",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    400.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_54/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_54",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_54/Anchors/Sensor_POWER",
+   "equipment": "Rack_54",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    460.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_54/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_54",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    460.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_55/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_55",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_55/Anchors/Sensor_POWER",
+   "equipment": "Rack_55",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    520.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_55/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_55",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    520.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_56/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_56",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_56/Anchors/Sensor_POWER",
+   "equipment": "Rack_56",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    580.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_56/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_56",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    580.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_57/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_57",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_57/Anchors/Sensor_POWER",
+   "equipment": "Rack_57",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    640.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_57/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_57",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    640.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_58/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_58",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_58/Anchors/Sensor_POWER",
+   "equipment": "Rack_58",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    700.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_58/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_58",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    700.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_59/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_59",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_59/Anchors/Sensor_POWER",
+   "equipment": "Rack_59",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    760.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_59/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_59",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    760.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_60/Anchors/Sensor_TEMP_IN",
+   "equipment": "Rack_60",
+   "metric": "temp_in",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    1155.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_60/Anchors/Sensor_POWER",
+   "equipment": "Rack_60",
+   "metric": "power",
+   "unit": "kW",
+   "pos_cm": [
+    820.0,
+    1210.0,
+    180.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Row06/Rack_60/Anchors/Sensor_TEMP_OUT",
+   "equipment": "Rack_60",
+   "metric": "temp_out",
+   "unit": "degC",
+   "pos_cm": [
+    820.0,
+    1265.0,
+    120.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_01/Anchors/Sensor_SUPPLY_TEMP",
+   "equipment": "CRAC_01",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    -5.000000000000014,
+    49.999999999999986,
+    30.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_01/Anchors/Sensor_RETURN_TEMP",
+   "equipment": "CRAC_01",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    105.00000000000001,
+    50.000000000000014,
+    132.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_01/Anchors/Sensor_FAN_SPEED",
+   "equipment": "CRAC_01",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    50.0,
+    50.0,
+    225.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_02/Anchors/Sensor_SUPPLY_TEMP",
+   "equipment": "CRAC_02",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    -5.000000000000014,
+    470.0,
+    30.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_02/Anchors/Sensor_RETURN_TEMP",
+   "equipment": "CRAC_02",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    105.00000000000001,
+    470.0,
+    132.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_02/Anchors/Sensor_FAN_SPEED",
+   "equipment": "CRAC_02",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    50.0,
+    470.0,
+    225.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_03/Anchors/Sensor_SUPPLY_TEMP",
+   "equipment": "CRAC_03",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    -5.000000000000014,
+    890.0,
+    30.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_03/Anchors/Sensor_RETURN_TEMP",
+   "equipment": "CRAC_03",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    105.00000000000001,
+    890.0,
+    132.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_03/Anchors/Sensor_FAN_SPEED",
+   "equipment": "CRAC_03",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    50.0,
+    890.0,
+    225.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_04/Anchors/Sensor_SUPPLY_TEMP",
+   "equipment": "CRAC_04",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    -5.000000000000014,
+    1310.0,
+    30.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_04/Anchors/Sensor_RETURN_TEMP",
+   "equipment": "CRAC_04",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    105.00000000000001,
+    1310.0,
+    132.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_04/Anchors/Sensor_FAN_SPEED",
+   "equipment": "CRAC_04",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    50.0,
+    1310.0,
+    225.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_05/Anchors/Sensor_SUPPLY_TEMP",
+   "equipment": "CRAC_05",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    1105.0,
+    49.999999999999986,
+    30.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_05/Anchors/Sensor_RETURN_TEMP",
+   "equipment": "CRAC_05",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    995.0,
+    50.000000000000014,
+    132.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_05/Anchors/Sensor_FAN_SPEED",
+   "equipment": "CRAC_05",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    1050.0,
+    50.0,
+    225.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_06/Anchors/Sensor_SUPPLY_TEMP",
+   "equipment": "CRAC_06",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    1105.0,
+    470.0,
+    30.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_06/Anchors/Sensor_RETURN_TEMP",
+   "equipment": "CRAC_06",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    995.0,
+    470.0,
+    132.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_06/Anchors/Sensor_FAN_SPEED",
+   "equipment": "CRAC_06",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    1050.0,
+    470.0,
+    225.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_07/Anchors/Sensor_SUPPLY_TEMP",
+   "equipment": "CRAC_07",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    1105.0,
+    890.0,
+    30.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_07/Anchors/Sensor_RETURN_TEMP",
+   "equipment": "CRAC_07",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    995.0,
+    890.0,
+    132.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_07/Anchors/Sensor_FAN_SPEED",
+   "equipment": "CRAC_07",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    1050.0,
+    890.0,
+    225.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_08/Anchors/Sensor_SUPPLY_TEMP",
+   "equipment": "CRAC_08",
+   "metric": "supply_temp",
+   "unit": "degC",
+   "pos_cm": [
+    1105.0,
+    1310.0,
+    30.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_08/Anchors/Sensor_RETURN_TEMP",
+   "equipment": "CRAC_08",
+   "metric": "return_temp",
+   "unit": "degC",
+   "pos_cm": [
+    995.0,
+    1310.0,
+    132.0
+   ]
+  },
+  {
+   "path": "/DC/Hall01/Cooling/CRAC_08/Anchors/Sensor_FAN_SPEED",
+   "equipment": "CRAC_08",
+   "metric": "fan_speed",
+   "unit": "percent",
+   "pos_cm": [
+    1050.0,
+    1310.0,
+    225.0
+   ]
+  }
+ ],
+ "size_cm": [
+  1100.0,
+  1360.0,
+  400.0
+ ],
+ "plenum": {
+  "depth_cm": 60.0,
+  "floor_cm": 20.0,
+  "open_ratio": 0.25,
+  "pedestal_pitch_cm": 60.0,
+  "pedestal_width_cm": 3.0
+ },
+ "underfloor": [
+  {
+   "kind": "cable_tray",
+   "name": "CableTray_01",
+   "min": [
+    200.0,
+    135.0,
+    -50.0
+   ],
+   "max": [
+    900.0,
+    165.0,
+    -40.0
+   ]
+  },
+  {
+   "kind": "cable_tray",
+   "name": "CableTray_02",
+   "min": [
+    200.0,
+    355.0,
+    -50.0
+   ],
+   "max": [
+    900.0,
+    385.0,
+    -40.0
+   ]
+  },
+  {
+   "kind": "cable_tray",
+   "name": "CableTray_03",
+   "min": [
+    200.0,
+    555.0,
+    -50.0
+   ],
+   "max": [
+    900.0,
+    585.0,
+    -40.0
+   ]
+  },
+  {
+   "kind": "cable_tray",
+   "name": "CableTray_04",
+   "min": [
+    200.0,
+    775.0,
+    -50.0
+   ],
+   "max": [
+    900.0,
+    805.0,
+    -40.0
+   ]
+  },
+  {
+   "kind": "cable_tray",
+   "name": "CableTray_05",
+   "min": [
+    200.0,
+    975.0,
+    -50.0
+   ],
+   "max": [
+    900.0,
+    1005.0,
+    -40.0
+   ]
+  },
+  {
+   "kind": "cable_tray",
+   "name": "CableTray_06",
+   "min": [
+    200.0,
+    1195.0,
+    -50.0
+   ],
+   "max": [
+    900.0,
+    1225.0,
+    -40.0
+   ]
+  },
+  {
+   "kind": "pipe",
+   "name": "Pipe_01",
+   "min": [
+    130.0,
+    20.0,
+    -80.0
+   ],
+   "max": [
+    150.0,
+    1340.0,
+    -60.0
+   ]
+  },
+  {
+   "kind": "pipe",
+   "name": "Pipe_02",
+   "min": [
+    950.0,
+    20.0,
+    -80.0
+   ],
+   "max": [
+    970.0,
+    1340.0,
+    -60.0
+   ]
+  }
+ ]
+}

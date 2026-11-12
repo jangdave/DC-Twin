@@ -38,6 +38,8 @@ def main() -> None:
     ap.add_argument("--scene", type=Path, default=hs.ROOT / "usd" / "scenes" / "hall01.usda")
     ap.add_argument("--out", type=Path, default=hs.ROOT / "web" / "viewer" / "public" / "data")
     ap.add_argument("--cache", type=Path, default=hs.ROOT / "sim" / "out" / "jobs" / "flows")
+    ap.add_argument("--from-npz", type=Path, default=None, help="이미 계산한 정상 상태 흐름(.npz) 하나로 정상 장만 만든다(예: CAC 보기, docs/34). 팬을 바꿔도 흐름은 그대로다")
+    ap.add_argument("--name", default="flow", help="저장 파일 이름(flow -> flow.bin, flow.json)")
     a = ap.parse_args()
     hs.DX = 0.10
     hall = hs.read_hall(a.scene)
@@ -47,11 +49,14 @@ def main() -> None:
     runner = OpenFOAMRunner(a.cache)
     present = lay.fluid | (lay.rack_id >= 0)
     fields, meta = [], []
-    cases = [("all", None)] + [(f"off{i + 1:02d}", c) for i, c in enumerate(cracs)]
+    cases = [("all", None)] + ([] if a.from_npz else [(f"off{i + 1:02d}", c) for i, c in enumerate(cracs)])
     for name, off in cases:
         fan = {c: (0.0 if c == off else 1.0) for c in cracs}
-        npz, m = runner.flow(fan, kw, lambda f, note=None, name=name: print(f"  {name} {f * 100:5.1f}% {note or ''}", flush=True),
-                             scene=a.scene if hall.get("plenum") else None)
+        if a.from_npz:
+            npz, m = a.from_npz, {}
+        else:
+            npz, m = runner.flow(fan, kw, lambda f, note=None, name=name: print(f"  {name} {f * 100:5.1f}% {note or ''}", flush=True),
+                                 scene=a.scene if hall.get("plenum") else None)
         z = np.load(npz)
         u = z["U"].astype(np.float64)
         sp = np.linalg.norm(u, axis=-1)
@@ -62,8 +67,8 @@ def main() -> None:
     shape = list(fields[0].shape[:3])
     blob, unit = encode_diff(fields)
     a.out.mkdir(parents=True, exist_ok=True)
-    (a.out / "flow.bin").write_bytes(blob.tobytes())
-    (a.out / "flow.json").write_text(json.dumps({
+    (a.out / f"{a.name}.bin").write_bytes(blob.tobytes())
+    (a.out / f"{a.name}.json").write_text(json.dumps({
         "version": 1, "source": "openfoam",
         "note": "시각화 목적. OpenFOAM(k-epsilon, 부력, 다공질 랙, 10 cm, 정상 상태, 랙 10 kW 균일)의 흐름을 20 cm로 줄였다. 실측이 아니다.",
         "shape": shape, "cell_m": hs.DX * BLOCK, "vmax_ms": unit * 127.0, "encoding": "diff",
@@ -72,7 +77,7 @@ def main() -> None:
         "z0_m": -lay.z_off_cm / 100.0, "plenum": hall.get("plenum"),
         "fields": meta,
     }, indent=1, ensure_ascii=False), encoding="utf-8")
-    print("저장:", a.out / "flow.bin", blob.nbytes)
+    print("저장:", a.out / f"{a.name}.bin", blob.nbytes)
 
 
 if __name__ == "__main__":

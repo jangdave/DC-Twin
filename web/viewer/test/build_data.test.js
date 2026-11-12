@@ -90,6 +90,10 @@ describe('장면과 센서 변환', () => {
     const p = buildScene({ ...layout, plenum: { depth_cm: 60, floor_cm: 20 }, underfloor: [{ name: 'Pipe_01', kind: 'pipe', min: [0, 0, -80], max: [20, 100, -60] }] });
     expect(p.plenum.depth_cm).toBe(60);
     expect(p.underfloor[0]).toEqual({ name: 'Pipe_01', kind: 'pipe', min: [0, 0, -80], max: [20, 100, -60] });
+    // 냉기 통로 격리(CAC) 묶음: 격벽 판과 CAC용 껍데기, 흐름 파일 이름(docs/34)
+    const c = buildScene(layout, { ...layout, panels: [{ name: 'ColdAisle_01_Roof', min: [0, 0, 200], max: [10, 10, 205] }] });
+    expect(c.variants.cac).toEqual({ panels: [{ name: 'ColdAisle_01_Roof', min: [0, 0, 200], max: [10, 10, 205] }], shell: 'hall_shell_cac.glb', flow: 'flow_cac' });
+    expect(s.variants).toBeUndefined();
   });
   it('센서: 장비 이름을 토픽에서 뽑는다', () => {
     const [s] = buildSensors({ sensors: [{ sensorId: 'X', topic: 'dct/v1/hall01/rack_01/temp_in', equipmentType: 'rack', metric: 'temp_in', unit: 'degC', range: [10, 45], warn: 27, critical: 32 }] });

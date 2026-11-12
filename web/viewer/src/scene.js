@@ -153,23 +153,92 @@ export class HallScene {
       return mesh;
     };
     boxMesh(data.vents, new THREE.MeshBasicMaterial({ color: 0x1b5fb0 }));
-    // 열기 통로 격벽(HAC): 옆판은 옅게, 지붕은 조금 진하게, 모든 판에 테두리 선을 둘러 잘 보이게 한다(2026-11-10 사용자 요청)
-    const roofs = data.panels.filter((p) => p.name.endsWith('_Roof'));
-    const sides = data.panels.filter((p) => !p.name.endsWith('_Roof'));
-    const panels = boxMesh(sides, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
-    panels.renderOrder = 2;
-    const roofMesh = boxMesh(roofs, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
-    roofMesh.renderOrder = 2;
-    const edgeGeos = data.panels.map((p) => {
-      const g = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
-      g.applyMatrix4(this._boxMatrix(p));
-      return g;
-    });
-    const edges = new THREE.LineSegments(mergeGeometries(edgeGeos, false), new THREE.LineBasicMaterial({ color: 0x8fc0f0, transparent: true, opacity: 0.85 }));
-    edgeGeos.forEach((g) => g.dispose());
-    edges.renderOrder = 3;
-    edges.name = 'containmentEdges';
-    this.hall.add(edges);
+    this.containment = 'hot';
+    this._buildContainment(data.panels);
+  }
+
+  // 격벽: 옆판(문)은 옅게, 지붕은 조금 진하게, 모든 판에 테두리 선을 둘러 잘 보이게 한다(2026-11-10 사용자 요청).
+  // 격벽 방식을 바꾸면(setContainment) 지우고 다시 만든다.
+  _buildContainment(panelsData) {
+    if (this._contGroup) {
+      this.hall.remove(this._contGroup);
+      this._contGroup.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); });
+    }
+    const g = new THREE.Group();
+    g.name = 'containment';
+    const boxMesh = (items, material) => {
+      const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, Math.max(1, items.length));
+      items.forEach((b, i) => mesh.setMatrixAt(i, this._boxMatrix(b)));
+      mesh.count = items.length;
+      mesh.renderOrder = 2;
+      g.add(mesh);
+      return mesh;
+    };
+    const roofs = panelsData.filter((p) => p.name.endsWith('_Roof'));
+    const sides = panelsData.filter((p) => !p.name.endsWith('_Roof'));
+    boxMesh(sides, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
+    boxMesh(roofs, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
+    if (panelsData.length) {
+      const edgeGeos = panelsData.map((p) => new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)).applyMatrix4(this._boxMatrix(p)));
+      const edges = new THREE.LineSegments(mergeGeometries(edgeGeos, false), new THREE.LineBasicMaterial({ color: 0x8fc0f0, transparent: true, opacity: 0.85 }));
+      edgeGeos.forEach((x) => x.dispose());
+      edges.renderOrder = 3;
+      edges.name = 'containmentEdges';
+      g.add(edges);
+    }
+    this.hall.add(g);
+    this._contGroup = g;
+    this._dirty = true;
+  }
+
+  // 격벽 방식 보기(docs/34): 'hot' = 열기 통로 격리(HAC, 기본, 모든 값의 기준), 'cold' = 냉기 통로 격리(CAC).
+  // 격벽, 조명(서버실 껍데기), 공기 흐름(정상 상태)만 바꾼다. 센서 값과 온도 색은 HAC 계산 그대로다.
+  get hasCac() {
+    return !!this.data.variants?.cac;
+  }
+
+  async setContainment(type, baseUrl) {
+    if (type === this.containment || (type === 'cold' && !this.hasCac)) return;
+    this.containment = type;
+    const v = type === 'cold' ? this.data.variants.cac : null;
+    this._buildContainment(v ? v.panels : this.data.panels);
+    this._variant ??= {};
+    const key = v ? 'cold' : 'hot';
+    // 서버실 껍데기(조명 위치가 다르다). 아직 안 받았으면 받는다
+    if (this.shell) {
+      if (!this._variant[key]?.shell) {
+        const file = v ? v.shell : 'hall_shell.glb';
+        const gltf = await new GLTFLoader().loadAsync(`${baseUrl}models/${file}`);
+        this._variant[key] = { ...this._variant[key], shell: gltf.scene, parts: prepareShell(gltf.scene) };
+      }
+      this._variant.hot ??= {};
+      this._variant.hot.shell ??= this.shell;
+      this._variant.hot.parts ??= this.shellParts;
+      if (this.containment !== type) return; // 받는 사이에 다시 바뀜
+      this.hall.remove(this.shell);
+      this.shell = this._variant[key].shell;
+      this.shellParts = this._variant[key].parts;
+      this.hall.add(this.shell);
+      this._updateShell();
+      if (this.underfloor) this.setUnderfloor(true);
+    }
+    // 공기 흐름
+    if (this.airflow) {
+      if (!this._variant[key]?.airflow) {
+        const flow = await loadFlow(baseUrl, v ? v.flow : 'flow');
+        this._variant.hot ??= {};
+        this._variant.hot.airflow ??= this.airflow;
+        this._variant[key] = { ...this._variant[key], airflow: new Airflow(flow, this.data, this.store, this.rackKeys, this.cracKeys, { count: this.q.particles }) };
+      }
+      this._variant.hot.airflow ??= this.airflow;
+      if (this.containment !== type) return;
+      const vis = this.showAirflow ?? false;
+      this.hall.remove(this.airflow.points);
+      this.airflow = this._variant[key].airflow;
+      this.airflow.points.visible = vis;
+      this.hall.add(this.airflow.points);
+    }
+    this._dirty = true;
   }
 
   _boxMatrix(b, grow = 0) {
@@ -1064,9 +1133,10 @@ export class HallScene {
       .sort((a, b) => a.y - b.y)
       // 이름은 통로 가운데(랙 위에 겹쳐 보인다)가 아니라 통로 끝에 둔다: 냉기 통로는 동쪽 끝, 열기 통로는 서쪽 끝, 바닥에서 3 m 위
       .forEach((e, i) => items.push({ text: `냉기 통로 ${i + 1}`, pos: toThree(Math.max(...e.xs) + 120, e.y, 300), cls: 'cold' }));
-    data.panels
-      .filter((p) => p.name.endsWith('_Roof'))
-      .forEach((p) => items.push({ text: `열기 통로 ${Number(/HotAisle_(\d+)/.exec(p.name)?.[1])}`, pos: toThree(p.min[0] - 60, (p.min[1] + p.max[1]) / 2, 300), cls: 'hot' }));
+    // 열기 통로는 공조기가 끝에 놓인 통로다(격벽 방식과 관계없이 공조기 y 위치로 찾는다. 냉기 통로 격리(CAC)면 열기 통로에 격벽이 없다)
+    const hotY = [...new Set(data.cracs.map((c) => Math.round((c.min[1] + c.max[1]) / 2)))].sort((a, b) => a - b);
+    const westX = Math.min(...data.cracs.map((c) => c.max[0]));
+    hotY.forEach((y, i) => items.push({ text: `열기 통로 ${i + 1}`, pos: toThree(westX + 40, y, 300), cls: 'hot' }));
     for (const it of items) {
       const el = document.createElement('div');
       el.className = `aisle-label ${it.cls}`;
