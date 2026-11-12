@@ -33,7 +33,7 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 | `sim/` | 센서 시나리오 생성기(`sensors/`), 서버. `thermal/`은 비어 있고 실제 열 계산(Warp)은 `experiments/omniverse_probe/hall60_sim.py`에 있다(옮기는 안은 `docs/30`) |
 | `scripts/usd_tools/` | USD 검증(`validate_usd.py`), 에셋 마무리(`finalize_asset.py`), 장면 생성(`build_scene.py`) |
 | `usd/scenes/hall01.config.json` | 홀 배치 원본(랙 6줄 x 10기, CRAC 8기). 장면은 이 파일에서만 만든다 |
-| `gateway/` | MQTT → WebSocket/REST 게이트웨이 (Node) |
+| `gateway/` | MQTT → WebSocket/REST 게이트웨이 (Node). 예제로만 두고 손대지 않는다(운영 경로는 `server/`, `docs/30` 6절) |
 | `unreal/` | UE 5.8 프로젝트 `unreal/DataCenter_DT/DataCenter_DT.uproject` (C++, 모듈 `DataCenter_DT`) |
 | `web/viewer/` | 웹 보기 화면(Three.js, Vite). GitHub Pages에 자동 배포. 메뉴: 모니터링 / 시뮬레이션(미리 계산한 값 12개) / 간이 계산(브라우저 L0) / CCTV. 설명은 `web/viewer/README.md`, 설계는 `docs/27`. **세 메뉴의 역할 개편 중**(`docs/31`: 모니터링=서버 실시간, 시뮬레이션=조건을 정해 서버에서 정확하게 계산, 간이 계산=모니터링 상태에서 팬·급기만 빠르게) |
 | `server/` | 시뮬레이션 서버 실행 구성(Docker, compose, `run_local.ps1`, 센서 매니페스트·앵커 사본). 코드는 `sim/sensors/dct_sensors/serve.py`, `api.py`. 인증, 안전, 한계는 `server/README.md`. **계획: Omniverse Kit 안에서 도는 로컬 서버**(장면 USD, 센서 생성기, 작업 실행기. 정확한 계산은 Warp 시간 변화 + OpenFOAM 정상 상태, `docs/31` 4.1, 8장) |
