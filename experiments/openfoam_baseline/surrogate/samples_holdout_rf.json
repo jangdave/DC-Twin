@@ -1,0 +1,175 @@
+{
+ "samples": [
+  {
+   "id": "holdout_A_normal",
+   "group": "holdout",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "remove": [],
+   "holdout": false,
+   "check": {
+    "racks": 60,
+    "supply_m3s": 57.6,
+    "leak_m3s": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     19.2,
+     9.6
+    ],
+    "total_power_kw": 600.0,
+    "ok": true
+   }
+  },
+  {
+   "id": "holdout_B_crac02_06_off",
+   "group": "holdout",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 0.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 0.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "remove": [],
+   "holdout": false,
+   "check": {
+    "racks": 60,
+    "supply_m3s": 38.4,
+    "leak_m3s": [
+     0.0,
+     19.2,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     19.2,
+     9.6
+    ],
+    "total_power_kw": 600.0,
+    "ok": true
+   }
+  },
+  {
+   "id": "holdout_D_crac02_off",
+   "group": "holdout",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 0.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "remove": [],
+   "holdout": false,
+   "check": {
+    "racks": 60,
+    "supply_m3s": 48.0,
+    "leak_m3s": [
+     0.0,
+     9.6,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     19.2,
+     9.6
+    ],
+    "total_power_kw": 600.0,
+    "ok": true
+   }
+  },
+  {
+   "id": "holdout_E_rm05_06_crac02_06_off",
+   "group": "holdout",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 0.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 0.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "remove": [
+    "Rack_05",
+    "Rack_06"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 58,
+    "supply_m3s": 36.48,
+    "leak_m3s": [
+     0.0,
+     19.2,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     7.68,
+     19.2,
+     19.2,
+     9.6
+    ],
+    "total_power_kw": 580.0,
+    "ok": true
+   }
+  }
+ ]
+}

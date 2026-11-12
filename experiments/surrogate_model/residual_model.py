@@ -161,7 +161,10 @@ def load_dataset(of_dir: Path, samples_json: Path, only_converged: bool = False)
     for s in spec:
         sid = s["id"]
         if s.get("holdout"):
-            of_path = RES / s["existing_of"]
+            # 데이터 폴더에 같은 장면으로 다시 계산한 보류 결과(of_<id>.csv)가 있으면 그것을 쓴다(이중 바닥 장면은 surrogate_rf, docs/33 7장).
+            # 없으면 처음 계산한 결과(existing_of, 이중 바닥 전 장면)
+            own = of_dir / f"of_{sid}.csv"
+            of_path = own if own.exists() else RES / s["existing_of"]
         else:
             of_path = of_dir / f"of_{sid}.csv"
         ours_path = of_dir / f"ours_{sid}.csv"

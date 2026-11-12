@@ -333,7 +333,7 @@ def make_stages(manifest: Manifest, *, runner: OpenFOAMRunner | None = None, see
 
 
 def main(argv: list[str] | None = None) -> int:
-    """작업 하나를 명령줄에서 돌린다(서버 없이 확인할 때). experiments/omniverse_probe 환경에서:
+    r"""작업 하나를 명령줄에서 돌린다(서버 없이 확인할 때). experiments/omniverse_probe 환경에서:
 
         set PYTHONPATH=..\..\sim\sensors
         uv run --python 3.13 python -m dct_sensors.precise --conditions cond.json [--out ..\..\sim\out\jobs]
