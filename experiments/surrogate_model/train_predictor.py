@@ -27,7 +27,7 @@ ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parent / "m
 a = ap.parse_args()
 samples_json = rm.BASE / "surrogate" / "samples.json"
 specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
-data = [d for d in rm.load_dataset(rm.RES / "surrogate", samples_json, a.only_converged) if not d["holdout"]]
+data = [d for d in rm.load_dataset(rm.DATA, samples_json, a.only_converged) if not d["holdout"]]
 p = pr.ResidualPredictor().fit(data, specs)
 p.save(a.out)
 print(f"학습 샘플 {len(data)}개로 학습, 저장: {a.out} ({a.out.stat().st_size / 1e6:.1f} MB)")
@@ -47,7 +47,7 @@ def git(*args: str) -> str:
 
 
 used = {d["id"] for d in data}
-progress = json.loads((rm.RES / "surrogate" / "progress.json").read_text(encoding="utf-8"))
+progress = json.loads((rm.DATA / "progress.json").read_text(encoding="utf-8"))
 excluded = {sid: ("보류(학습에서 제외)" if specs[sid].get("holdout") else progress.get(sid, {}).get("status", "결과 파일 없음")) for sid in specs if sid not in used}
 # dirty: 학습에 쓴 코드와 데이터가 커밋과 다르면 True
 meta = {
@@ -55,7 +55,8 @@ meta = {
     "trained_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     "model_sha256": sha256(a.out),
     "samples_json_sha256": sha256(samples_json),
-    "code": {"git_commit": git("rev-parse", "HEAD"), "dirty": bool(git("status", "--porcelain", "--untracked-files=no", "--", ":(top)experiments/surrogate_model", ":(top)experiments/openfoam_baseline/surrogate/samples.json", ":(top)experiments/openfoam_baseline/results/surrogate")), "python": platform.python_version(), "scikit_learn": sklearn.__version__, "numpy": np.__version__},
+    "data_dir": rm.DATA.name,
+    "code": {"git_commit": git("rev-parse", "HEAD"), "dirty": bool(git("status", "--porcelain", "--untracked-files=no", "--", ":(top)experiments/surrogate_model", ":(top)experiments/openfoam_baseline/surrogate/samples.json", ":(top)experiments/openfoam_baseline/results/" + rm.DATA.name)), "python": platform.python_version(), "scikit_learn": sklearn.__version__, "numpy": np.__version__},
     "only_converged": a.only_converged,
     "n_samples": len(data),
     "sample_ids": sorted(used),

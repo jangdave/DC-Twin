@@ -15,14 +15,14 @@ import predictor as pr  # noqa: E402
 import residual_model as rm  # noqa: E402
 
 SAMPLES = rm.BASE / "surrogate" / "samples.json"
-pytestmark = pytest.mark.skipif(not (rm.RES / "surrogate" / "ours_progress.json").exists(), reason="학습 결과 없음")
+pytestmark = pytest.mark.skipif(not (rm.DATA / "ours_progress.json").exists(), reason="학습 결과 없음")
 
 
 @pytest.fixture(scope="module")
 def env():
     specs = {s["id"]: s for s in json.loads(SAMPLES.read_text(encoding="utf-8"))["samples"]}
-    info = json.loads((rm.RES / "surrogate" / "ours_progress.json").read_text(encoding="utf-8"))
-    data = [d for d in rm.load_dataset(rm.RES / "surrogate", SAMPLES, only_converged=True) if not d["holdout"]]
+    info = json.loads((rm.DATA / "ours_progress.json").read_text(encoding="utf-8"))
+    data = [d for d in rm.load_dataset(rm.DATA, SAMPLES, only_converged=True) if not d["holdout"]]
     p = pr.ResidualPredictor(n_estimators=60).fit(data, specs)
     d0 = data[0]
     return {"p": p, "specs": specs, "info": info, "data": data, "d0": d0, "ours0": dict(zip(d0["names"], d0["ours"]))}

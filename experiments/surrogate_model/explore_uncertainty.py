@@ -14,7 +14,7 @@ sys.path.insert(0, str(HERE))
 import residual_model as rm  # noqa: E402
 
 only_conv = "--only-converged" in sys.argv
-data = rm.load_dataset(rm.RES / "surrogate", rm.BASE / "surrogate" / "samples.json", only_conv)
+data = rm.load_dataset(rm.DATA, rm.BASE / "surrogate" / "samples.json", only_conv)
 train = [d for d in data if not d["holdout"]]
 print("학습 샘플", len(train), "수렴만" if only_conv else "(미수렴 포함)")
 

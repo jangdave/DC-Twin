@@ -65,7 +65,8 @@ def load_default_predictor():
         if meta is None:
             prov.update({"history": None, "stale": None})  # 학습 이력이 없다: 어떤 데이터로 만들었는지 알 수 없다
         else:
-            stale = meta.get("samples_json_sha256") != _sha256(samples_json)
+            # 학습 데이터 폴더가 다르면(예: 이중 바닥 전 데이터 surrogate로 만든 모델) 지금 장면과 맞지 않는다
+            stale = meta.get("samples_json_sha256") != _sha256(samples_json) or meta.get("data_dir", "surrogate") != rm.DATA.name
             prov.update({"trained_at": meta["trained_at"], "n_samples": meta["n_samples"], "samples_json_sha256": meta["samples_json_sha256"], "git_commit": meta["code"]["git_commit"], "power_range_kw": meta["power_range_kw"], "stale": stale})
             if stale and os.environ.get("DCT_ALLOW_STALE_MODEL") != "1":
                 raise StaleModelError("model.pkl이 지금 학습 데이터(samples.json)와 맞지 않는다(학습 이력의 해시가 다르다). 다시 학습한다: "
@@ -74,7 +75,7 @@ def load_default_predictor():
         return pred
 
     specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
-    data = [d for d in rm.load_dataset(rm.RES / "surrogate", samples_json, False) if not d["holdout"]]
+    data = [d for d in rm.load_dataset(rm.DATA, samples_json, False) if not d["holdout"]]
     pred = pr.ResidualPredictor().fit(data, specs)
     pred.provenance = {"source": "fit_on_the_fly", "model_sha256": None, "samples_json_sha256": _sha256(samples_json), "n_samples": len(data), "stale": False}
     return pred

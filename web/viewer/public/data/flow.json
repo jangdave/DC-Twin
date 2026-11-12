@@ -1,7 +1,7 @@
 {
  "version": 1,
  "source": "openfoam",
- "note": "시각화 목적. OpenFOAM(k-epsilon, 부력, 다공질 랙, 이중 바닥: 깊이 60 cm, 천공 타일 25 %, 10 cm, 정상 상태, 랙 10 kW 균일)의 흐름을 20 cm로 줄였다. 실측이 아니다. 9개 중 4개(정상, 줄 끝 공조기 1대 정지)는 반복 한도 3000회에서 끝났다(docs/33).",
+ "note": "시각화 목적. OpenFOAM(k-epsilon, 부력, 다공질 랙, 10 cm, 정상 상태, 랙 10 kW 균일)의 흐름을 20 cm로 줄였다. 실측이 아니다.",
  "shape": [
   55,
   68,
@@ -9,11 +9,20 @@
  ],
  "cell_m": 0.2,
  "vmax_ms": 8.0,
+ "encoding": "diff",
  "layout": "field,x,y,z,component int8 (scene axes, z up). encoding diff: 첫 장은 값, 나머지는 첫 장과의 차이",
+ "z0_m": -0.8,
+ "plenum": {
+  "depth_cm": 60.0,
+  "floor_cm": 20.0,
+  "open_ratio": 0.25,
+  "pedestal_pitch_cm": 60.0,
+  "pedestal_width_cm": 3.0
+ },
  "fields": [
   {
    "name": "all",
-   "max_ms": 13.1,
+   "max_ms": 12.41,
    "openfoam": {
     "iterations": 3000,
     "converged": false
@@ -21,7 +30,7 @@
   },
   {
    "name": "off01",
-   "max_ms": 16.45,
+   "max_ms": 18.7,
    "openfoam": {
     "iterations": 3000,
     "converged": false
@@ -29,23 +38,23 @@
   },
   {
    "name": "off02",
-   "max_ms": 13.08,
+   "max_ms": 12.82,
    "openfoam": {
-    "iterations": 2356,
+    "iterations": 934,
     "converged": true
    }
   },
   {
    "name": "off03",
-   "max_ms": 13.08,
+   "max_ms": 12.82,
    "openfoam": {
-    "iterations": 1975,
+    "iterations": 933,
     "converged": true
    }
   },
   {
    "name": "off04",
-   "max_ms": 16.45,
+   "max_ms": 18.7,
    "openfoam": {
     "iterations": 3000,
     "converged": false
@@ -53,7 +62,7 @@
   },
   {
    "name": "off05",
-   "max_ms": 16.45,
+   "max_ms": 18.7,
    "openfoam": {
     "iterations": 3000,
     "converged": false
@@ -61,34 +70,27 @@
   },
   {
    "name": "off06",
-   "max_ms": 13.08,
+   "max_ms": 12.82,
    "openfoam": {
-    "iterations": 2154,
+    "iterations": 933,
     "converged": true
    }
   },
   {
    "name": "off07",
-   "max_ms": 13.08,
+   "max_ms": 12.82,
    "openfoam": {
-    "iterations": 2358,
+    "iterations": 937,
     "converged": true
    }
   },
   {
    "name": "off08",
-   "max_ms": 16.45,
+   "max_ms": 18.7,
    "openfoam": {
     "iterations": 3000,
     "converged": false
    }
   }
- ],
- "z0_m": -0.8,
- "plenum": {
-  "depth_cm": 60.0,
-  "floor_cm": 20.0,
-  "open_ratio": 0.25
- },
- "encoding": "diff"
+ ]
 }

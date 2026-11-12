@@ -131,6 +131,10 @@ mergePatchPairs ();
     roofs = sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
     open_names = {roofs[i]["name"] for i in open_roofs}  # 새는 통로의 지붕은 열어 둔다(우리 모델의 '지붕 틈' 대응)
     solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names]
+    # 바닥 아래 장애물(docs/33 6장): 케이블 트레이와 배관은 막힌 칸, 케이블 구멍은 바닥판에서 저항 없이 열린 칸
+    under = hall_g.get("underfloor", []) if plenum else []
+    solids += [u for u in under if u["kind"] != "cutout"]
+    cutouts = [u for u in under if u["kind"] == "cutout"]
 
     def cell_action(name, kind, action, bx):
         return f"""    {{ name {name}; type {kind}; action {action}; source boxToCell; sourceInfo {{ box {vec(bx.lo)} {vec(bx.hi)}; }} }}\n"""
@@ -142,7 +146,7 @@ mergePatchPairs ();
         # 이중 바닥: 바닥판 층(바닥 아래 공간 위)을 막고 천공 타일 자리만 다시 연다(docs/33)
         kd0, kf1 = lay.floor_k
         s += cell_action("solid", "cellSet", "add", Box(0, nx, 0, ny, kd0, kf1, dx))
-        for v in hall_g["vents"]:
+        for v in hall_g["vents"] + cutouts:
             xs, xe, ys, ye, _, _ = voxel(v, dx, lay.shape)
             s += cell_action("solid", "cellSet", "delete", Box(xs, xe, ys, ye, kd0, kf1, dx))
     s += "    { name fluid; type cellSet; action new; source cellToCell; sourceInfo { set solid; } }\n"
@@ -159,6 +163,8 @@ mergePatchPairs ();
         for vi, v in enumerate(hall_g["vents"]):
             xs, xe, ys, ye, _, _ = voxel(v, dx, lay.shape)
             s += cell_action("tiles", "cellZoneSet", "new" if vi == 0 else "add", Box(xs, xe, ys, ye, kd0, kf1, dx))
+        if plenum.get("pedestal_pitch_cm"):
+            s += cell_action("pedestals", "cellZoneSet", "new", Box(0, nx, 0, ny, 0, kd0, dx))
     n_cold = lay.n_cold
     first = [True] * n_cold
     for vi, v in enumerate([] if plenum else hall["vents"]):
@@ -287,6 +293,24 @@ RAS { RASModel kEpsilon; turbulence on; printCoeffs on; }
     }}
 }}
 """
+    if plenum and plenum.get("pedestal_pitch_cm"):
+        # 받침 기둥: 간격 p, 폭 w인 기둥 숲의 수평 항력 F = ½ρ Cd (w/p²)|u|u → Forchheimer f = Cd w / p² (Cd = 1.2, 각기둥 대략값). 수직은 0
+        f_ped = 1.2 * (plenum["pedestal_width_cm"] / 100.0) / (plenum["pedestal_pitch_cm"] / 100.0) ** 2
+        fo += f"""pedestals_por
+{{
+    type explicitPorositySource; active yes;
+    explicitPorositySourceCoeffs
+    {{
+        selectionMode cellZone; cellZone pedestals; type DarcyForchheimer;
+        DarcyForchheimerCoeffs
+        {{
+            d d [0 -2 0 0 0 0 0] (0 0 0);
+            f f [0 -1 0 0 0 0 0] ({f_ped:.6g} {f_ped:.6g} 0);
+            coordinateSystem {{ type cartesian; origin (0 0 0); coordinateRotation {{ type axesRotation; e1 (1 0 0); e2 (0 1 0); }} }}
+        }}
+    }}
+}}
+"""
     (out / "constant/fvOptions").write_text(fo, encoding="utf-8")
 
     # ---- 초기값과 경계 ----
@@ -410,7 +434,7 @@ runTimeModifiable false;
     if plenum:
         kd0, kf1 = lay.floor_k
         solid_only[:, :, kd0:kf1] = True
-        for v in hall_g["vents"]:
+        for v in hall_g["vents"] + cutouts:
             xs, xe, ys, ye, _, _ = voxel(v, dx, lay.shape)
             solid_only[xs:xe, ys:ye, kd0:kf1] = False
     np.savez_compressed(out / "case_voxels.npz", shape=np.array(lay.shape), dx=dx, solid=np.packbits(solid_only.ravel(order="F")))

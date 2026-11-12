@@ -71,7 +71,8 @@ def read_hall(path: Path) -> dict:
 def read_hall_from_stage(stage) -> dict:
     """열린 USD 장면에서 홀 정보(랙, CRAC, 급기구, 격벽, 센서 앵커, 홀 크기)를 읽는다."""
     cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
-    hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "anchors": [], "size_cm": None, "plenum": None}
+    hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "anchors": [], "size_cm": None, "plenum": None, "underfloor": []}
+    guide = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_, UsdGeom.Tokens.guide])
     for prim in stage.Traverse():
         if prim.GetName().startswith("Hall") and prim.GetAttribute("dct:hallSizeCm"):
             hall["size_cm"] = tuple(float(v) for v in prim.GetAttribute("dct:hallSizeCm").Get())
@@ -79,6 +80,15 @@ def read_hall_from_stage(stage) -> dict:
             if d and d.HasAuthoredValue() and float(d.Get()) > 0:  # 이중 바닥과 바닥 아래 공간(build_scene.py raised_floor)
                 hall["plenum"] = {"depth_cm": float(d.Get()), "floor_cm": float(prim.GetAttribute("dct:floorThicknessCm").Get()),
                                   "open_ratio": float(prim.GetAttribute("dct:tileOpenRatio").Get())}
+                pp = prim.GetAttribute("dct:pedestalPitchCm")
+                if pp and pp.HasAuthoredValue():
+                    hall["plenum"]["pedestal_pitch_cm"] = float(pp.Get())
+                    hall["plenum"]["pedestal_width_cm"] = float(prim.GetAttribute("dct:pedestalWidthCm").Get())
+        uk = prim.GetAttribute("dct:underfloorKind")
+        if uk and uk.HasAuthoredValue():  # 바닥 아래 장애물(케이블 트레이, 배관)과 바닥판의 케이블 구멍(build_scene.py raised_floor.obstructions)
+            r = guide.ComputeWorldBound(prim).ComputeAlignedRange()
+            hall["underfloor"].append({"kind": str(uk.Get()), "name": prim.GetName(), "min": tuple(r.GetMin()), "max": tuple(r.GetMax())})
+            continue
         at = prim.GetAttribute("dct:assetType")
         if not at or not at.Get():
             continue
@@ -111,8 +121,8 @@ def shift_hall_z(hall: dict, dz_cm: float) -> dict:
     import copy
 
     h = copy.deepcopy(hall)
-    for k in ("racks", "cracs", "vents", "panels"):
-        for it in h[k]:
+    for k in ("racks", "cracs", "vents", "panels", "underfloor"):
+        for it in h.get(k, []):
             it["min"] = (it["min"][0], it["min"][1], it["min"][2] + dz_cm)
             it["max"] = (it["max"][0], it["max"][1], it["max"][2] + dz_cm)
     W, L, H = h["size_cm"]
@@ -213,6 +223,17 @@ class Layout:
                 xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny)
                 self.dis_id[xs:xe, ys:ye, kd0 - 1] = idx
             self.vent = self.dis_id >= 0  # 급기 온도로 들어오는 칸(덮어쓰기 이류와 fv의 들어오는 온도가 함께 쓴다)
+            # 바닥 아래 장애물: 케이블 트레이와 배관은 막고, 케이블 구멍은 바닥판을 연다(저항 없는 구멍)
+            self.cutout = np.zeros(self.shape, dtype=bool)
+            for it in hall.get("underfloor", []):
+                (x0, y0, z0), (x1, y1, z1) = it["min"], it["max"]
+                xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
+                if it["kind"] == "cutout":
+                    self.solid[xs:xe, ys:ye, kd0:kf1] = False
+                    self.cutout[xs:xe, ys:ye, kd0:kf1] = True
+                else:
+                    self.solid[xs:xe, ys:ye, zs:ze] = True
+                    self.dis_id[xs:xe, ys:ye, zs:ze] = -1
         self.fluid = ~self.solid
         for a in ("intake", "exhaust", "vent"):
             setattr(self, a, getattr(self, a) & self.fluid)
@@ -234,6 +255,10 @@ class Layout:
         if self.plenum:
             # 천공 타일은 바람이 지나기 어렵다(통과 쉬움 TILE_SIGMA). 퍼텐셜 흐름에서는 이 저항으로 타일마다 나오는 양이 정해진다.
             self.sigma[self.tile] = TILE_SIGMA
+            if self.plenum.get("pedestal_pitch_cm"):
+                # 받침 기둥: 바닥 아래 공간 전체에 고르게 퍼진 작은 저항(가린 단면 비율만큼 통과 쉬움을 낮춘다)
+                block = self.plenum["pedestal_width_cm"] / self.plenum["pedestal_pitch_cm"]
+                self.sigma[:, :, : self.floor_k[0]] *= 1.0 - block
         # 열기 통로: CRAC의 y 위치(열기 통로 끝에 놓임)로 통로를 나누고, 랙은 뒷면이 닿는 통로에 배정한다.
         centers = sorted({round((c["min"][1] + c["max"][1]) / 2 / 10.0) * 10.0 for c in hall["cracs"]})
         self.n_aisles = len(centers)

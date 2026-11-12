@@ -35,12 +35,17 @@ def save(prog):
 
 
 def main():
+    global RES
     ap = argparse.ArgumentParser()
     ap.add_argument("--spec", default=str(SUR / "samples.json"))
     ap.add_argument("--only", nargs="*", default=None)
     ap.add_argument("--np", type=int, default=16)
     ap.add_argument("--nice", type=int, default=5)
+    ap.add_argument("--cases", default=str(SUR / "cases"), help="사례 정의 폴더(make_cases.py --out-dir)")
+    ap.add_argument("--res", default=str(RES), help="결과 폴더(of_<id>.csv, progress.json)")
+    ap.add_argument("--init", default=None, help="초기값으로 쓸 끝난 사례 폴더(WSL 경로). mapFields로 옮겨 반복을 줄인다(2026-11-11, docs/33 C단계)")
     a = ap.parse_args()
+    RES = Path(a.res)
     RES.mkdir(parents=True, exist_ok=True); WORK.mkdir(parents=True, exist_ok=True)
     data = json.loads(Path(a.spec).read_text(encoding="utf-8"))
     samples = [s for s in (data["samples"] if isinstance(data, dict) else data) if not s.get("holdout")]
@@ -54,7 +59,7 @@ def main():
             continue
         run = WORK / sid
         shutil.rmtree(run, ignore_errors=True)
-        shutil.copytree(SUR / "cases" / sid, run)
+        shutil.copytree(Path(a.cases) / sid, run)
         # 줄바꿈이 CRLF로 저장돼 있어도 LF로 바꾼다(CR 문자가 OpenFOAM 사전과 사례 이름에 들어가는 것을 막는다)
         for f in list(run.rglob("*")):
             if f.is_file() and f.suffix != ".npz":
@@ -76,6 +81,15 @@ def main():
         sh(f"{n} createPatch -overwrite", run, run / "log.createPatch")
         shutil.rmtree(run / "0", ignore_errors=True); shutil.copytree(run / "0.orig", run / "0")
         sh(f"{n} checkMesh", run, run / "log.checkMesh")
+        warm = False
+        if a.init:
+            # 정상 해에서 출발: 같은 영역의 끝난 사례에서 내부 값을 옮긴다(경계 조건은 이 사례 것). 실패하면 처음 값 그대로
+            # 패치 구성이 사례마다 달라(꺼진 공조기, 열린 지붕) -consistent는 못 쓴다. 내부 값만 옮기고 경계는 이 사례 것을 둔다
+            (run / "system/mapFieldsDict").write_text("FoamFile { version 2.0; format ascii; class dictionary; object mapFieldsDict; }" + chr(10) + "patchMap ();" + chr(10) + "cuttingPatches ();" + chr(10))
+            rc = sh(f"{n} mapFields {a.init} -sourceTime latestTime", run, run / "log.mapFields")
+            warm = rc == 0
+            if not warm:
+                shutil.rmtree(run / "0", ignore_errors=True); shutil.copytree(run / "0.orig", run / "0")
         sh(f"{n} decomposePar -force", run, run / "log.decomposePar")
         t1 = time.time()
         sh(f"{n} mpirun --allow-run-as-root --oversubscribe -np {a.np} buoyantBoussinesqSimpleFoam -parallel", run, run / "log.solver")
@@ -93,7 +107,7 @@ def main():
         cells = [l.strip() for l in (run / "log.checkMesh").read_text(errors="ignore").splitlines() if l.strip().startswith("cells:")]
         (RES / f"log_{sid}.txt").write_text("\n".join(cells + last + (solver.splitlines()[-8:] if status == "failed" else [])) + "\n", encoding="utf-8")
         prog[sid] = {"status": status, "converged": converged, "iterations": iters, "solve_wall_s": round(t2 - t1, 1), "total_wall_s": round(time.time() - t0, 1),
-                     "cores": a.np, "nice": a.nice, "finished": time.strftime("%Y-%m-%d %H:%M:%S")}
+                     "cores": a.np, "nice": a.nice, "warm_start": warm, "finished": time.strftime("%Y-%m-%d %H:%M:%S")}
         save(prog)
         shutil.rmtree(run, ignore_errors=True)  # 큰 결과 필드와 메시 삭제
     save(prog)

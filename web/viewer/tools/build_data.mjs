@@ -32,6 +32,9 @@ export function buildScene(layout) {
     cracs: layout.cracs.map((c) => ({ ...box(c), front: c.front })),
     vents: layout.vents.map(box),
     panels: layout.panels.map(box),
+    // 이중 바닥(docs/33): 바닥 아래 공간 설정과 장애물(케이블 트레이, 배관, 케이블 구멍). 없는 장면이면 넣지 않는다
+    ...(layout.plenum ? { plenum: layout.plenum } : {}),
+    ...(layout.underfloor?.length ? { underfloor: layout.underfloor.map((u) => ({ ...box(u), kind: u.kind })) } : {}),
   };
 }
 
