@@ -68,7 +68,16 @@ def test_flow_converges_and_is_reasonable(lay):
     s, _ = hs.source_field(lay, fans(lay))
     u, info = hs.solve_flow(lay, s)
     assert info["cg_info"] == 0 and info["residual"] < 1e-4
-    assert 1.0 < info["max_speed_ms"] < 8.0
+    assert 1.0 < info["max_speed_ms"]
+    # 방 안(바닥 위)은 8 m/s 아래. 이중 바닥 장면(docs/33 C단계 기본값)이면 공조기가 자기 바닥 면적으로 바닥 아래에 내려보내는 곳이
+    # 가장 빠르다(최대 9.6 m3/s / 약 0.9 m2 = 약 10.7 m/s, OpenFOAM도 최고 12.4 m/s). 그곳은 그 송풍 속도의 1.2배 안쪽인지만 본다
+    speed = np.linalg.norm(u, axis=-1)
+    k = lay.floor_k[1] if lay.plenum else 0
+    assert speed[:, :, k:][lay.fluid[:, :, k:]].max() < 8.0
+    if lay.plenum:
+        q, _ = hs.crac_returns(lay, fans(lay))  # 공조기별 유량(m3/s)
+        area = min(((lay.dis_id == i).sum() for i in range(lay.n_cracs) if (lay.dis_id == i).any())) * hs.DX ** 2  # 바닥 송풍 면적(가장 작은 것)
+        assert info["max_speed_ms"] < 1.2 * float(q.max()) / area
     assert np.isfinite(u).all()
     inside = lay.rack_id >= 0
     assert np.allclose(u[inside], lay.rack_dir[inside])  # 랙 안은 정해 둔 통과 속도

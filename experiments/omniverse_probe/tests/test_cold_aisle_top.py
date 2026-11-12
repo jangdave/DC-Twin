@@ -55,11 +55,13 @@ def test_screen_shifts_inflow_from_top_to_ends():
 
 
 def test_sigma_one_is_the_plain_potential_flow():
-    """sigma 1이면 모든 칸의 통과 쉬움이 1이다(예전 풀이와 같다)."""
+    """sigma 1이면 바닥 위 모든 칸의 통과 쉬움이 1이다(예전 풀이와 같다).
+    이중 바닥 장면(docs/33 C단계 기본값)이면 바닥판의 천공 타일(TILE_SIGMA)과 바닥 아래 받침 기둥 저항은 따로 있으므로 바닥 위만 본다."""
     old = hs.SIGMA_COLD_TOP
     hs.SIGMA_COLD_TOP = 1.0
     try:
         lay = hs.Layout(hs.read_hall(SCENE))
     finally:
         hs.SIGMA_COLD_TOP = old
-    assert np.all(lay.sigma == 1.0)
+    k = lay.floor_k[1] if lay.plenum else 0
+    assert np.all(lay.sigma[:, :, k:] == 1.0)
