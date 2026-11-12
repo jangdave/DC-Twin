@@ -213,6 +213,8 @@ await p3.setViewport({ width: 1280, height: 800 });
 await p3.goto(`${base}?scenario=fan_fault&t=240`, { waitUntil: 'networkidle0' });
 await p3.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 const vis = (sel) => p3.$eval(sel, (e) => !e.hidden);
+// 로딩 화면은 모델과 기류 데이터가 끝난 뒤에 사라지며 그동안 클릭을 막는다(의도한 동작). networkidle0 뒤에도 몇 초 남을 수 있어서(CPU가 바쁠 때 실패, 2026-11-12) 사라질 때까지 기다린다
+await p3.waitForFunction(() => document.getElementById('boot').hidden, { timeout: 40000 });
 ok('FR-80 처음은 외관: 요약 카드가 보이고 보기 도구와 뒤로 단추는 숨김', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior' && (await vis('#exterior-card')) && !(await vis('#stage-tools')) && !(await vis('#back-btn')));
 const ext = await p3.evaluate(() => ({ total: document.getElementById('ext-total').textContent, pue: document.getElementById('ext-pue').textContent, status: document.getElementById('ext-status').textContent, hasOld: !!document.getElementById('ext-temp') }));
 ok('FR-82 외관 요약은 건물 전체 전력, 오늘 사용량, PUE, 알람 건수만("정상/비정상" 판정 없음, 최고 입구 온도와 알람 표 없음)', /kW$/.test(ext.total) && /^\d/.test(ext.pue) && /^(없음|\d+건)$/.test(ext.status) && !/정상|주의 필요/.test(await p3.$eval('#exterior-card', (e) => e.textContent)) && !ext.hasOld, JSON.stringify(ext));
