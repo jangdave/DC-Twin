@@ -46,7 +46,7 @@ Blender로 모델링 → USD 파일 → Omniverse(데이터 생성)  ┐
 | `blender/` | Blender 원본 파일과 내보내기 스크립트 |
 | `usd/` | 만들어 둔 USD 에셋과 장면 |
 | `sim/` | 센서 값과 열·기류 데이터 생성 코드 |
-| `gateway/` | MQTT를 WebSocket으로 바꿔 주는 중간 프로그램 |
+| `gateway/` | MQTT를 WebSocket으로 바꿔 주는 중간 프로그램. **예제로만 둔다**(운영 경로는 `server/`의 시뮬레이션 서버, `docs/30` 6절 결정) |
 | `unreal/` | Unreal 프로젝트 |
 | `web/` | 웹으로 만드는 일부 화면 |
 | `experiments/` | 비교 실험 코드와 결과 |
