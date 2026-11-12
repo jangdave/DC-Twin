@@ -40,7 +40,7 @@ def run_sample(smp: dict) -> dict:
     hall = h.read_hall(scene)
     lay = h.Layout(hall)
     names = [c["name"] for c in hall["cracs"]]
-    sim = h.Sim(hall, lay, 10.0, 10.0, advection="maccormack")
+    sim = h.Sim(hall, lay, 10.0, 10.0, advection="fv" if hall.get("plenum") else "maccormack")  # 센서 생성기(solver_l1)와 같은 선택
     fan = np.ones(len(names), dtype=np.float32)
     sim.set_fans(fan)
     target_fan = np.array([smp["fan"][n] for n in names], dtype=np.float32)
@@ -65,10 +65,13 @@ def run_sample(smp: dict) -> dict:
 
 
 def main() -> None:
+    global RES
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--only", nargs="*", default=None)
+    ap.add_argument("--res", type=Path, default=RES, help="결과 폴더(이중 바닥 장면은 results/surrogate_rf)")
     a = ap.parse_args()
+    RES = a.res
     wp.config.quiet = True
     wp.init()
     RES.mkdir(parents=True, exist_ok=True)

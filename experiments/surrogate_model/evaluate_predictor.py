@@ -24,8 +24,8 @@ def main() -> None:
 
     samples_json = rm.BASE / "surrogate" / "samples.json"
     specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
-    ours_info = json.loads((rm.RES / "surrogate" / "ours_progress.json").read_text(encoding="utf-8"))
-    data = rm.load_dataset(rm.RES / "surrogate", samples_json, args.only_converged)
+    ours_info = json.loads((rm.DATA / "ours_progress.json").read_text(encoding="utf-8"))
+    data = rm.load_dataset(rm.DATA, samples_json, args.only_converged)
     train = [d for d in data if not d["holdout"]]
     hold = [d for d in data if d["holdout"]]
 

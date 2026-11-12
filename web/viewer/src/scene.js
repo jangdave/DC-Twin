@@ -300,6 +300,38 @@ export class HallScene {
       under.rotation.x = -Math.PI / 2;
       under.position.set(this.center.x, top * CM, this.center.z);
       g.add(edges, slab, under);
+      // 바닥 아래 장애물(장면 자료에 있을 때): 케이블 트레이(주황), 냉수 배관(청록), 케이블 구멍(빨강 테두리), 받침 기둥(회색 가는 기둥)
+      const uf = this.data.underfloor ?? [];
+      const LOOK = { cable_tray: 0xd08a3a, pipe: 0x3ab5a8 };
+      for (const kind of Object.keys(LOOK)) {
+        const items = uf.filter((u) => u.kind === kind);
+        if (!items.length) continue;
+        const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: LOOK[kind], roughness: 0.7 }), items.length);
+        items.forEach((b, i) => m.setMatrixAt(i, this._boxMatrix(b)));
+        m.name = `underfloor_${kind}`;
+        g.add(m);
+      }
+      const cuts = uf.filter((u) => u.kind === 'cutout');
+      if (cuts.length) {
+        const eg = cuts.map((b) => new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)).applyMatrix4(this._boxMatrix(b)));
+        const lines = new THREE.LineSegments(mergeGeometries(eg, false), new THREE.LineBasicMaterial({ color: 0xff5a4a }));
+        eg.forEach((x) => x.dispose());
+        lines.name = 'underfloor_cutout';
+        g.add(lines);
+      }
+      const pitch = this.data.plenum?.pedestal_pitch_cm;
+      if (pitch) {
+        const w = this.data.plenum.pedestal_width_cm ?? 3;
+        const nx = Math.floor(sx / pitch), ny = Math.floor(sy / pitch);
+        const ped = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x8a9099, roughness: 0.6 }), nx * ny);
+        let k = 0;
+        for (let i = 1; i <= nx; i++) for (let j = 1; j <= ny; j++) {
+          const x = i * pitch - pitch / 2, y = j * pitch - pitch / 2;
+          ped.setMatrixAt(k++, this._boxMatrix({ min: [x - w / 2, y - w / 2, bot], max: [x + w / 2, y + w / 2, top] }));
+        }
+        ped.name = 'underfloor_pedestals';
+        g.add(ped);
+      }
       this.hall.add(g);
       this._plenumGroup = g;
     }

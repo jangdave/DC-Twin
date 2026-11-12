@@ -9,7 +9,12 @@ def Xform "DC"
 {
     def Xform "Hall01"
     {
+        custom float dct:floorThicknessCm = 20
         custom float3 dct:hallSizeCm = (1100, 1360, 400)
+        custom float dct:pedestalPitchCm = 60
+        custom float dct:pedestalWidthCm = 3
+        custom float dct:plenumDepthCm = 60
+        custom float dct:tileOpenRatio = 0.25
 
         def Xform "Row01"
         {
@@ -4173,6 +4178,98 @@ def Xform "DC"
                         )
                         uniform token subdivisionScheme = "none"
                     }
+                }
+            }
+
+            def Cube "Plenum"
+            {
+                uniform token purpose = "guide"
+                double size = 1
+                float3 xformOp:scale = (1100, 1360, 60)
+                double3 xformOp:translate = (550, 680, -50)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            }
+
+            def "Underfloor"
+            {
+                def Cube "CableTray_01"
+                {
+                    custom token dct:underfloorKind = "cable_tray"
+                    uniform token purpose = "guide"
+                    double size = 1
+                    float3 xformOp:scale = (700, 30, 10)
+                    double3 xformOp:translate = (550, 150, -45)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+                }
+
+                def Cube "CableTray_02"
+                {
+                    custom token dct:underfloorKind = "cable_tray"
+                    uniform token purpose = "guide"
+                    double size = 1
+                    float3 xformOp:scale = (700, 30, 10)
+                    double3 xformOp:translate = (550, 370, -45)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+                }
+
+                def Cube "CableTray_03"
+                {
+                    custom token dct:underfloorKind = "cable_tray"
+                    uniform token purpose = "guide"
+                    double size = 1
+                    float3 xformOp:scale = (700, 30, 10)
+                    double3 xformOp:translate = (550, 570, -45)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+                }
+
+                def Cube "CableTray_04"
+                {
+                    custom token dct:underfloorKind = "cable_tray"
+                    uniform token purpose = "guide"
+                    double size = 1
+                    float3 xformOp:scale = (700, 30, 10)
+                    double3 xformOp:translate = (550, 790, -45)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+                }
+
+                def Cube "CableTray_05"
+                {
+                    custom token dct:underfloorKind = "cable_tray"
+                    uniform token purpose = "guide"
+                    double size = 1
+                    float3 xformOp:scale = (700, 30, 10)
+                    double3 xformOp:translate = (550, 990, -45)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+                }
+
+                def Cube "CableTray_06"
+                {
+                    custom token dct:underfloorKind = "cable_tray"
+                    uniform token purpose = "guide"
+                    double size = 1
+                    float3 xformOp:scale = (700, 30, 10)
+                    double3 xformOp:translate = (550, 1210, -45)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+                }
+
+                def Cube "Pipe_01"
+                {
+                    custom token dct:underfloorKind = "pipe"
+                    uniform token purpose = "guide"
+                    double size = 1
+                    float3 xformOp:scale = (20, 1320, 20)
+                    double3 xformOp:translate = (140, 680, -70)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+                }
+
+                def Cube "Pipe_02"
+                {
+                    custom token dct:underfloorKind = "pipe"
+                    uniform token purpose = "guide"
+                    double size = 1
+                    float3 xformOp:scale = (20, 1320, 20)
+                    double3 xformOp:translate = (960, 680, -70)
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
                 }
             }
         }

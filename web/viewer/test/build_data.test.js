@@ -86,6 +86,10 @@ describe('장면과 센서 변환', () => {
     const s = buildScene(layout);
     expect(s.racks[0]).toMatchObject({ name: 'Rack_11', row: 2, front: [1, 1] });
     expect(s.cracs[0].front).toEqual([0, 1]);
+    expect(s.plenum).toBeUndefined(); // 이중 바닥이 없는 장면은 넣지 않는다
+    const p = buildScene({ ...layout, plenum: { depth_cm: 60, floor_cm: 20 }, underfloor: [{ name: 'Pipe_01', kind: 'pipe', min: [0, 0, -80], max: [20, 100, -60] }] });
+    expect(p.plenum.depth_cm).toBe(60);
+    expect(p.underfloor[0]).toEqual({ name: 'Pipe_01', kind: 'pipe', min: [0, 0, -80], max: [20, 100, -60] });
   });
   it('센서: 장비 이름을 토픽에서 뽑는다', () => {
     const [s] = buildSensors({ sensors: [{ sensorId: 'X', topic: 'dct/v1/hall01/rack_01/temp_in', equipmentType: 'rack', metric: 'temp_in', unit: 'degC', range: [10, 45], warn: 27, critical: 32 }] });

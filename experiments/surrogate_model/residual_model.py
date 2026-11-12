@@ -24,6 +24,9 @@ from sklearn.linear_model import Ridge
 HERE = Path(__file__).resolve().parent
 BASE = HERE.parent / "openfoam_baseline"
 RES = BASE / "results"
+# 학습 데이터 폴더. 기본 장면에 이중 바닥과 바닥 아래 장애물을 켠 뒤(2026-11-11, docs/33 C단계) 그 장면으로 다시 계산한 surrogate_rf를 쓴다.
+# 예전(바닥 아래 공간 없음) 데이터는 results/surrogate에 남아 있다.
+DATA = RES / "surrogate_rf"
 
 
 def read_csv(path: Path) -> dict[str, float]:
@@ -229,7 +232,7 @@ def leave_group_out(train_data, split: str = "sample"):
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="우리 솔버의 오차를 배우는 잔차 모델: leave-one-sample-out 검증과 보류 사례 평가")
-    ap.add_argument("--of-dir", type=Path, default=RES / "surrogate")
+    ap.add_argument("--of-dir", type=Path, default=DATA)
     ap.add_argument("--samples", type=Path, default=BASE / "surrogate" / "samples.json")
     ap.add_argument("--report", type=Path, default=None, help="결과를 이 마크다운 파일로도 저장")
     ap.add_argument("--only-converged", action="store_true", help="수렴한 샘플만 학습과 검증에 쓴다(미수렴 제외)")

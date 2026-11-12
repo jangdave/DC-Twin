@@ -16,11 +16,13 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--spec", type=Path, default=HERE / "samples.json")
 ap.add_argument("--only", nargs="*", default=None)
 ap.add_argument("--iters", type=int, default=3500)
+ap.add_argument("--out-dir", type=Path, default=HERE / "cases", help="사례 정의를 둘 폴더(이중 바닥 장면은 cases_rf)")
+ap.add_argument("--scene", type=Path, default=None, help="장면 USD(기본 hall01.usda)")
 a = ap.parse_args()
 data = json.loads(a.spec.read_text(encoding="utf-8"))
 samples = data["samples"] if isinstance(data, dict) else data
 for s in samples:
     if s.get("holdout") or (a.only and s["id"] not in a.only):
         continue
-    sys.argv = ["gen_case.py", "--spec", str(a.spec), "--sample", s["id"], "--iters", str(a.iters), "--conservative", "--out", str(HERE / "cases" / s["id"])]
+    sys.argv = ["gen_case.py", "--spec", str(a.spec), "--sample", s["id"], "--iters", str(a.iters), "--conservative", "--out", str(a.out_dir / s["id"])] + (["--scene", str(a.scene)] if a.scene else [])
     gen_case.main()
