@@ -115,13 +115,14 @@ describe('저장소에 올라간 정적 자료(public/data)', () => {
     expect(scene.cracs).toHaveLength(8);
     expect(scene.vents).toHaveLength(30);
   });
-  it('팬 이상 녹화의 마지막 시각 등급이 ok 48, caution 8, low 4다', async () => {
-    // 2026-11-04 보정 모델을 낮은 부하 샘플 8개를 더해 다시 학습하면서 이전 값(ok 48, low 12)에서 바뀌었다.
+  it('팬 이상 녹화의 마지막 시각 등급이 ok 46, caution 10, low 4다', async () => {
+    // 보정 모델을 다시 학습할 때마다 바뀐다: 처음 ok 48, low 12 -> 2026-11-04 낮은 부하 샘플 추가 ok 48, caution 8, low 4
+    // -> 2026-11-13 이중 바닥 장면의 학습 데이터(results/surrogate_rf, docs/33 7장) ok 46, caution 10, low 4.
     // Unreal 실제 연결 확인(이전 값)은 이전 모델 기준이라 다시 확인해야 한다(docs/27 16.10).
     const rec = JSON.parse(await readFile(path.join(PUBLIC, 'rec', 'fan_fault.json'), 'utf8'));
     const codes = Object.values(rec.est).map((e) => e.conf.at(-1));
-    expect(codes.filter((c) => c === 1)).toHaveLength(48);
-    expect(codes.filter((c) => c === 2)).toHaveLength(8);
+    expect(codes.filter((c) => c === 1)).toHaveLength(46);
+    expect(codes.filter((c) => c === 2)).toHaveLength(10);
     expect(codes.filter((c) => c === 3)).toHaveLength(4);
   });
   it('모든 녹화가 같은 보정 모델(출처 기록)로 만들어졌다', async () => {
