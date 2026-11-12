@@ -1,0 +1,70 @@
+{
+	"folders": [
+		{ "name": "DC-Twin (저장소 전체)", "path": "." },
+		{ "name": "Unreal: DataCenter_DT", "path": "unreal/DataCenter_DT" },
+		{ "name": "웹 보기 화면", "path": "web/viewer" },
+		{ "name": "센서 생성기·서버", "path": "sim/sensors" },
+		{ "name": "Warp 열 계산", "path": "experiments/omniverse_probe" },
+		{ "name": "OpenFOAM 기준 계산", "path": "experiments/openfoam_baseline" },
+		{ "name": "게이트웨이", "path": "gateway" },
+		{ "name": "문서", "path": "docs" }
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.vs": true,
+			"**/Binaries": true,
+			"**/DerivedDataCache": true,
+			"**/Intermediate": true,
+			"**/Saved": true,
+			"**/__pycache__": true,
+			"**/.pytest_cache": true
+		},
+		"search.exclude": {
+			"**/.vs": true,
+			"**/Binaries": true,
+			"**/DerivedDataCache": true,
+			"**/Intermediate": true,
+			"**/Saved": true,
+			"**/*.uasset": true,
+			"**/*.umap": true,
+			"**/node_modules": true,
+			"**/dist": true,
+			"**/.venv": true,
+			"**/*.npz": true,
+			"**/*.bin": true,
+			"**/experiments/openfoam_baseline/cases": true,
+			"**/sim/out": true
+		},
+		"files.watcherExclude": {
+			"**/.vs/**": true,
+			"**/Binaries/**": true,
+			"**/DerivedDataCache/**": true,
+			"**/Intermediate/**": true,
+			"**/Saved/**": true,
+			"**/node_modules/**": true,
+			"**/.venv/**": true,
+			"**/experiments/openfoam_baseline/cases/**": true,
+			"**/sim/out/**": true
+		},
+		"files.associations": {
+			"*.uproject": "jsonc",
+			"*.uplugin": "jsonc",
+			"*.usda": "plaintext"
+		},
+		"files.eol": "\n",
+		"files.encoding": "utf8",
+		"C_Cpp.default.cppStandard": "c++20",
+		"python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+		"python.testing.pytestEnabled": true
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.cpptools",
+			"ms-vscode.cpptools-extension-pack",
+			"ms-python.python",
+			"charliermarsh.ruff",
+			"vitest.explorer",
+			"ms-vscode-remote.remote-wsl"
+		]
+	}
+}
