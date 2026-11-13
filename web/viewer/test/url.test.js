@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkLiveUrl, parseParams } from '../src/url.js';
+import { checkLiveUrl, isLocalUrl, parseParams } from '../src/url.js';
 
 describe('라이브 주소 규칙 (FR-63)', () => {
   it('로컬 ws와 모든 wss는 허용', () => {
@@ -69,5 +69,16 @@ describe('주소 매개변수', () => {
     const bad = parseParams('?server=ws://example.com/ws', ids);
     expect(bad.server).toBeNull();
     expect(bad.liveError).toContain('127.0.0.1');
+  });
+});
+
+describe('이 컴퓨터 주소 판정 (docs/30 M6)', () => {
+  it('127.0.0.1, localhost, ::1만 이 컴퓨터로 본다', () => {
+    expect(isLocalUrl('ws://127.0.0.1:8765/ws')).toBe(true);
+    expect(isLocalUrl('wss://localhost/ws')).toBe(true);
+    expect(isLocalUrl('ws://[::1]:8765/ws')).toBe(true);
+    expect(isLocalUrl('wss://127.0.0.1.example.com/ws')).toBe(false);
+    expect(isLocalUrl('wss://example.com/ws')).toBe(false);
+    expect(isLocalUrl('not a url')).toBe(false);
   });
 });

@@ -15,7 +15,7 @@ import { ServerData, apiBaseFromWs } from './server_data.js';
 import { JobClient, summarize as summarizeJob } from './sim/jobs.js';
 import { JobUI } from './sim/jobs_ui.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
-import { checkLiveUrl, parseParams } from './url.js';
+import { checkLiveUrl, isLocalUrl, parseParams } from './url.js';
 import { Boot, eventFraction } from './boot.js';
 import { derive, initial as wsInitial, reduce as wsReduce } from './workspace.js';
 
@@ -780,7 +780,12 @@ async function main() {
 
   setView(state.view);
   if (params.liveError) console.warn(`라이브 주소를 쓰지 않는다: ${params.liveError}`);
-  if (params.server) {
+  // 주소 링크가 이 컴퓨터 밖의 서버를 가리키면 붙기 전에 묻는다(낯선 링크로 모르는 서버의 값을 보게 되지 않게, docs/30 M6)
+  const linked = params.server || params.live;
+  if (linked && !isLocalUrl(linked) && !(await ui.confirmRemote(new URL(linked).host))) {
+    params.liveError = '원격 서버에 연결하지 않기로 함';
+    await startRecording();
+  } else if (params.server) {
     await startLive(params.server, true);
   } else if (params.live) {
     await startLive(params.live);

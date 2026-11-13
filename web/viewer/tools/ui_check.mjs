@@ -1026,6 +1026,28 @@ await pc.close();
   bare.http.close();
 }
 
+// 원격 서버 링크(docs/30 M6): ?server=가 이 컴퓨터 밖이면 붙기 전에 묻고, "연결하지 않음"이면 녹화로 시작하고 연결 시도가 없다
+{
+  const rp = await browser.newPage();
+  await rp.setViewport({ width: 1280, height: 800 });
+  const wsTried = [];
+  rp.on('request', (r) => { if (new URL(r.url()).hostname.endsWith('example.invalid')) wsTried.push(r.url()); }); // 페이지 주소의 쿼리에도 들어 있으므로 호스트로 본다
+  await rp.evaluateOnNewDocument(() => {
+    const W = window.WebSocket;
+    window.__wsUrls = [];
+    window.WebSocket = class extends W { constructor(u, ...a) { window.__wsUrls.push(String(u)); super(u, ...a); } };
+  });
+  await rp.goto(`${base}?stage=hall&server=${encodeURIComponent('wss://dc.example.invalid:9000/ws')}`, { waitUntil: 'domcontentloaded' });
+  await rp.waitForFunction(() => document.getElementById('remote-dialog')?.open, { timeout: 30000 }).catch(() => {});
+  const before = await rp.evaluate(() => ({ open: document.getElementById('remote-dialog').open, host: document.getElementById('remote-host').textContent, focus: document.activeElement?.id, ws: window.__wsUrls.length }));
+  await rp.click('#remote-cancel');
+  await rp.waitForFunction(() => window.__viewer?.state.player, { timeout: 20000 }).catch(() => {});
+  const after = await rp.evaluate(() => ({ live: !!window.__viewer.state.live, server: !!window.__viewer.state.server, ws: window.__wsUrls.filter((u) => u.includes('example.invalid')).length, badge: document.getElementById('mode-badge').textContent }));
+  ok('M6 원격 서버 링크는 먼저 묻고(기본 선택은 연결하지 않음), 거절하면 녹화로 시작하며 그 서버에 붙지 않음',
+    before.open && before.host === 'dc.example.invalid:9000' && before.focus === 'remote-cancel' && before.ws === 0 && !after.live && !after.server && after.ws === 0 && wsTried.length === 0, JSON.stringify({ before, after, wsTried }));
+  await rp.close();
+}
+
 // 통로 이름을 켠 채 외관으로 가도 이름이 남지 않고, 돌아오면 다시 보임
 {
   const lp = await browser.newPage();

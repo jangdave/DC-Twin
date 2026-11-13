@@ -14,6 +14,16 @@ export function checkLiveUrl(text) {
   return { ok: false, reason: 'ws:// 또는 wss:// 주소만 쓸 수 있다' };
 }
 
+// 이 컴퓨터의 주소인가(127.0.0.1, localhost, ::1). 아니면 원격 서버로 표시하고, 주소 링크(?server=, ?live=)로 열 때는 먼저 묻는다(docs/30 M6).
+export function isLocalUrl(text) {
+  try {
+    const h = new URL(text).hostname;
+    return h === '127.0.0.1' || h === 'localhost' || h === '[::1]';
+  } catch {
+    return false;
+  }
+}
+
 // ?scenario=fan_fault&t=60&live=ws://127.0.0.1:8080/ws
 export function parseParams(search, scenarioIds) {
   const p = new URLSearchParams(search);
