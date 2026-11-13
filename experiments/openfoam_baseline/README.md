@@ -192,7 +192,7 @@ uv run --python 3.13 python ../openfoam_baseline/compare.py --rerun-ours --scena
 | `surrogate/ours_batch.py` | 학습 샘플과 보류 4개를 우리 솔버로 계산(`--res` 폴더의 `ours_<id>.csv`, `--scene`으로 장면). 결과 폴더: 이중 바닥 전 `results/surrogate`, 기본 장면 `results/surrogate_rf`, CAC `results/surrogate_cac` |
 | `results/surrogate/of_<id>.csv`, `progress.json`, `log_<id>.txt` | OpenFOAM 랙 입구 온도(제거한 랙은 행 없음), 진행 상황(상태, 반복, 시간, converged), 로그 일부 |
 
-실행: (1) `design_samples.py`, `make_cases.py` (experiments/omniverse_probe 폴더에서 `uv run --python 3.13 python ../openfoam_baseline/surrogate/...`), (2) `ours_batch.py`(`make_cases`, `run_batch`, `ours_batch` 모두 폴더 인자가 필수다. 기본값이 옛 장면 폴더를 가리켜 섞일 수 있어 2026-11-13에 없앴다), (3) 무인 계산: `python surrogate/keepalive.py`를 Windows에서 분리 실행(`creationflags=DETACHED|NEW_PROCESS_GROUP|BREAKAWAY`).
+실행: (1) `design_samples.py`, `make_cases.py` (experiments/omniverse_probe 폴더에서 `uv run --python 3.13 python ../openfoam_baseline/surrogate/...`), (2) `ours_batch.py`(`make_cases`, `run_batch`, `ours_batch` 모두 폴더 인자가 필수다. 기본값이 옛 장면 폴더를 가리켜 섞일 수 있어 2026-11-13에 없앴다), (3) 무인 계산: `python surrogate/keepalive.py --cases <사례 폴더> --res <결과 폴더> [--spec ...] [--init ...]`를 Windows에서 분리 실행(`creationflags=DETACHED|NEW_PROCESS_GROUP|BREAKAWAY`). 배치는 한 번에 하나만 돈다: `run_batch.py`가 `~/foam_runs/.run_batch.lock`을 잡지 못하면 종료 코드 3으로 바로 끝나므로 감독 프로그램이 겹쳐 시작해도 같은 사례를 두 번 돌리지 않는다. `progress.json`은 임시 파일에 쓴 뒤 바꿔 끼운다(2026-11-13, docs/30 M14).
 조건: 우리 솔버는 처음 120초는 팬 1.0, 10 kW 균일이고 121초부터 샘플의 팬, 전력을 적용해 정상(변화 없음)은 600초, 나머지는 900초까지 돌린 값이다(`compare.py`와 같음). 샘플 명세로 만든 사례 하나가 기존 B와 같은 값을 내는 것을 확인했다(아래).
 
 알아 둘 점:

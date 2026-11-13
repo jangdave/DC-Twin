@@ -7,14 +7,18 @@
 - 샘플마다: 사례 정의(surrogate/cases/<id>/)를 ~/foam_runs/surrogate/<id>로 복사 -> 메시 -> 계산 -> 수렴 판정 -> extract.py로 results/surrogate/of_<id>.csv
   -> 큰 결과(메시, 필드)는 삭제하고 로그 일부(results/surrogate/log_<id>.txt)와 시간만 남긴다.
 - 수렴 판정: log.solver에 "SIMPLE solution converged"가 있으면 converged=true, 반복 한도(사례의 endTime, 3500)까지 가면 false.
-- 진행 상황: results/surrogate/progress.json
+- 진행 상황: <결과 폴더>/progress.json(임시 파일에 쓴 뒤 바꿔 끼운다. 쓰는 도중 죽어도 깨진 파일이 남지 않는다)
+- 한 번에 하나만 돈다: ~/foam_runs/.run_batch.lock을 잡지 못하면(다른 배치가 도는 중) 아무것도 하지 않고 종료 코드 3으로 끝난다.
+  감독 프로그램이 다시 시작해도 같은 사례를 두 번 돌리지 않는다(작업 폴더 ~/foam_runs/surrogate/<id>도 배치끼리 같다, docs/30 M14).
 """
 import argparse
+import fcntl
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -31,7 +35,25 @@ def sh(cmd, cwd, log):
 
 
 def save(prog):
-    (RES / "progress.json").write_text(json.dumps(prog, indent=1, ensure_ascii=False), encoding="utf-8")
+    tmp = RES / "progress.json.tmp"
+    tmp.write_text(json.dumps(prog, indent=1, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, RES / "progress.json")
+
+
+LOCK = Path.home() / "foam_runs" / ".run_batch.lock"  # WSL 리눅스 파일 시스템(drvfs의 /mnt/d는 flock을 믿기 어렵다)
+
+
+def take_lock():
+    """배치 잠금을 잡는다. 이미 다른 배치가 잡고 있으면 None. 잠금은 프로세스가 끝나면(죽어도) 풀린다."""
+    LOCK.parent.mkdir(parents=True, exist_ok=True)
+    f = open(LOCK, "a+")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        f.close()
+        return None
+    f.seek(0); f.truncate(); f.write(f"{os.getpid()} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"); f.flush()
+    return f
 
 
 def main():
@@ -45,6 +67,10 @@ def main():
     ap.add_argument("--res", required=True, help="결과 폴더(of_<id>.csv, progress.json)(필수. 장면마다 폴더가 다르다: 이중 바닥 전 surrogate, 기본 장면 surrogate_rf, CAC surrogate_cac. 기본값을 두면 옛 장면 폴더에 섞여 2026-11-13 재검토에서 없앴다)")
     ap.add_argument("--init", default=None, help="초기값으로 쓸 끝난 사례 폴더(WSL 경로). mapFields로 옮겨 반복을 줄인다(2026-11-11, docs/33 C단계)")
     a = ap.parse_args()
+    lock = take_lock()
+    if lock is None:
+        print(f"다른 배치가 이미 돌고 있다({LOCK}): 시작하지 않는다", flush=True)
+        sys.exit(3)
     RES = Path(a.res)
     RES.mkdir(parents=True, exist_ok=True); WORK.mkdir(parents=True, exist_ok=True)
     data = json.loads(Path(a.spec).read_text(encoding="utf-8"))
