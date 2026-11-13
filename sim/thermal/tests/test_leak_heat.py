@@ -12,11 +12,11 @@ import numpy as np
 import pytest
 import warp as wp
 
-HERE = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(HERE))
-import hall60_sim as hs  # noqa: E402
+ROOT = Path(__file__).resolve().parents[3]  # 저장소
+sys.path.insert(0, str(ROOT / "sim" / "thermal"))
+from dct_thermal import hall60_sim as hs  # noqa: E402
 
-SCENE = HERE.parents[1] / "usd" / "scenes" / "hall01.usda"
+SCENE = ROOT / "usd" / "scenes" / "hall01.usda"
 pytestmark = pytest.mark.skipif(not SCENE.exists(), reason="hall01.usda 없음")
 
 

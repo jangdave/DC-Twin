@@ -12,7 +12,7 @@
 | `web/viewer/public/data/scene.json` | 웹 화면 | 랙, CRAC 이름과 상자가 layout.json과 같음 |
 | `web/viewer/public/data/sensors.json` | 웹 화면 | 센서 ID 목록과 기준값이 매니페스트와 같음 |
 
-사용 (experiments/omniverse_probe 폴더에서, usd-core가 있는 환경):
+사용 (sim/thermal 폴더에서, usd-core가 있는 환경):
     uv run --python 3.13 python ../../scripts/check_geometry.py
 다른 것이 있으면 무엇이 다른지 적고 종료 코드 1. 고치는 방법은 각 사본을 만드는 명령을 다시 실행하는 것이다(메시지에 적는다).
 """

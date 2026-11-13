@@ -17,5 +17,5 @@
 
 ## 실행 환경과 시험
 
-- 필요한 패키지(Warp, usd-core, scipy, pillow, scikit-learn)는 아직 `experiments/omniverse_probe`의 uv 환경에 있다. 시험도 그 폴더에서 돌린다: `uv run --python 3.13 python -m pytest tests`(Warp), `experiments/surrogate_model`에서 `uv run --python 3.13 python -m pytest tests`(보정 모델).
+- 실행 환경: 이 폴더의 uv 환경(`pyproject.toml`, 버전은 옛 시험 환경 `experiments/omniverse_probe/uv.lock`과 같게 고정). 시험: `uv run --python 3.13 python -m pytest tests`(Warp, GPU, 2~3분, 형상 사본 일치 검사 포함), 보정 모델 시험은 `uv run --python 3.13 python -m pytest ../../experiments/surrogate_model/tests`. 실험 스크립트와 그 시험(`test_layout_whatif.py`)은 `experiments/omniverse_probe`에 남는다(2026-11-13).
 - 남은 일: 시험과 uv 환경을 이 폴더로 옮기기, OpenFOAM 도구(`experiments/openfoam_baseline`)의 제품 경로 정리.
