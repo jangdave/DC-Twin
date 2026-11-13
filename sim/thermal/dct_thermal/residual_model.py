@@ -21,7 +21,7 @@ import numpy as np
 from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor
 from sklearn.linear_model import Ridge
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parents[3] / "experiments" / "surrogate_model"  # 모델 파일(model.pkl)과 학습 스크립트가 있는 폴더(코드는 docs/30 M12로 sim/thermal에 옮김)
 BASE = HERE.parent / "openfoam_baseline"
 RES = BASE / "results"
 # 학습 데이터 폴더. 기본 장면에 이중 바닥과 바닥 아래 장애물을 켠 뒤(2026-11-11, docs/33 C단계) 그 장면으로 다시 계산한 surrogate_rf를 쓴다.

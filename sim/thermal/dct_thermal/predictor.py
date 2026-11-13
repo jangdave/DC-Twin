@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 from sklearn.ensemble import ExtraTreesRegressor
 
-import residual_model as rm
+from . import residual_model as rm
 
 # 신뢰 등급의 경계(앙상블 퍼짐, 도). 패턴을 통째로 뺀 검증(38개 샘플)의 분위수에서 정했다: 중앙값 아래는 0.05 이하,
 # 상위 25%가 0.44 이상, 상위 5%가 1.15 이상이다.

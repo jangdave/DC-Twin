@@ -15,8 +15,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "experiments" / "omniverse_probe"))
-import hall60_sim as hs  # noqa: E402
+sys.path.insert(0, str(ROOT / "sim" / "thermal"))
+from dct_thermal import hall60_sim as hs  # noqa: E402
 
 
 def build(scene: Path) -> dict:

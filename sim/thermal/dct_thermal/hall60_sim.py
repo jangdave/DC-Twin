@@ -34,8 +34,8 @@ import warp as wp
 from PIL import Image, ImageDraw
 from pxr import Gf, Usd, UsdGeom
 
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent.parent
+ROOT = Path(__file__).resolve().parents[3]  # 저장소 루트(sim/thermal/dct_thermal/hall60_sim.py)
+HERE = ROOT / "experiments" / "omniverse_probe"  # 실험 출력의 기준 폴더(코드를 sim/thermal로 옮기기 전 위치, docs/30 M12)
 OUT = HERE / "out" / "hall60"
 DX = 0.10            # 격자 간격 (m)
 K_DIFF = 0.02        # 확산 계수 (m^2/s, 난류 혼합을 흉내 낸 값)

@@ -28,7 +28,8 @@ from .manifest import Manifest
 from .solvers import Controls
 
 REPO = Path(__file__).resolve().parents[3]
-OMNI = REPO / "experiments" / "omniverse_probe"
+OMNI = REPO / "experiments" / "omniverse_probe"  # OpenFOAM 사례 도구(gen_case.py)를 돌리는 uv 환경
+THERMAL = REPO / "sim" / "thermal"  # 열 계산 패키지 dct_thermal(docs/30 M12)
 OFB = REPO / "experiments" / "openfoam_baseline"
 SCENE = REPO / "usd" / "scenes" / "hall01.usda"
 NU, PR, PRT = 1.5e-5, 0.71, 0.85  # OpenFOAM 사례와 같은 값(공기 점성, 프란틀 수, 난류 프란틀 수)
@@ -171,8 +172,9 @@ class CFDSolver:
     팬 상태가 바뀌면 그 상태의 흐름으로 한 번에 바꾼다(흐름이 바뀌는 과정은 없다). 응답 속도는 L1과 같은 조절값 slow를 쓴다."""
 
     def __init__(self, manifest: Manifest, cfg: Config, flows: dict, slow: float = 10.0, warmup_s: float = 120.0, scene: Path | None = None):
-        sys.path.insert(0, str(OMNI))
-        import hall60_sim as hs
+        if str(THERMAL) not in sys.path:
+            sys.path.insert(0, str(THERMAL))
+        from dct_thermal import hall60_sim as hs
         import warp as wp
 
         wp.config.quiet = True

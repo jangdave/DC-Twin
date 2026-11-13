@@ -1,6 +1,6 @@
 """L2 모델: L1(Warp 열 시뮬레이션)의 랙 입구 온도에 OpenFOAM 기준 답으로 배운 보정을 더하고, 90% 구간과 신뢰 등급을 붙인다.
 
-보정 모델은 `experiments/surrogate_model/predictor.py`의 `ResidualPredictor`다(근거와 한계: `experiments/results/E5_surrogate_residual_model.md`).
+보정 모델은 `sim/thermal/dct_thermal/predictor.py`의 `ResidualPredictor`다(근거와 한계: `experiments/results/E5_surrogate_residual_model.md`).
 `model.pkl`이 있으면 읽고, 없으면 저장소의 OpenFOAM 학습 결과로 몇 초 안에 학습한다. scikit-learn과 Warp가 있는 환경에서 쓴다:
 
     cd experiments/omniverse_probe
@@ -46,12 +46,16 @@ def load_default_predictor():
     모델이 지금 데이터와 맞지 않으므로 거부한다(다시 학습한다: `cd experiments/surrogate_model && uv run python train_predictor.py`).
     지금 데이터로 일부러 옛 모델을 쓰려면 환경 변수 DCT_ALLOW_STALE_MODEL=1을 준다(녹화에 `stale: true`가 남는다).
     """
-    sys.path.insert(0, str(SURROGATE_DIR))
+    if str(REPO / "sim" / "thermal") not in sys.path:
+        sys.path.insert(0, str(REPO / "sim" / "thermal"))
     try:
-        import predictor as pr
-        import residual_model as rm
+        from dct_thermal import predictor as pr
+        from dct_thermal import residual_model as rm
     except ImportError as exc:
         raise SystemExit(f"L2에는 scikit-learn이 필요하다(experiments/omniverse_probe 환경에서 실행): {exc}") from exc
+    # 코드를 옮기기 전에 저장한 model.pkl은 모듈 이름 predictor로 클래스를 찾는다(docs/30 M12)
+    sys.modules.setdefault("predictor", pr)
+    sys.modules.setdefault("residual_model", rm)
     pkl = SURROGATE_DIR / "model.pkl"
     import json
     import os

@@ -77,7 +77,7 @@ def main() -> None:
     wp.init()
     RES.mkdir(parents=True, exist_ok=True)
     samples = json.loads((HERE / "samples.json").read_text(encoding="utf-8"))["samples"]
-    sha = hashlib.sha1((h.HERE / "hall60_sim.py").read_bytes()).hexdigest()[:12]
+    sha = hashlib.sha1(Path(h.__file__).read_bytes()).hexdigest()[:12]
     prog_p = RES / "ours_progress.json"
     prog = json.loads(prog_p.read_text(encoding="utf-8")) if prog_p.exists() else {}
     for smp in samples:

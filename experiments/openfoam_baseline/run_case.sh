@@ -4,7 +4,8 @@
 set -e
 export WM_PROJECT_DIR=/usr/share/openfoam   # 이 설치(Ubuntu 패키지)는 환경 파일 없이 이 변수만 필요하다
 NAME=$1; NP=${2:-16}
-SRC=/mnt/d/Test/experiments/openfoam_baseline/cases/$NAME
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)   # 저장소 위치를 고정하지 않는다(docs/30 M13)
+SRC=$HERE/cases/$NAME
 RUN=$HOME/foam_runs/$NAME
 rm -rf "$RUN"; mkdir -p "$RUN"; cp -r "$SRC"/* "$RUN"/; cd "$RUN"
 sed -i "s/numberOfSubdomains .*/numberOfSubdomains $NP;/" system/decomposeParDict

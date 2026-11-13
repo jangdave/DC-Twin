@@ -18,7 +18,7 @@ import subprocess
 import time
 from pathlib import Path
 
-ROOT = Path("/mnt/d/Test/experiments/openfoam_baseline")
+ROOT = Path(__file__).resolve().parents[1]  # experiments/openfoam_baseline(저장소 위치를 고정하지 않는다, docs/30 M13)
 SUR = ROOT / "surrogate"
 RES = ROOT / "results" / "surrogate"
 WORK = Path.home() / "foam_runs" / "surrogate"
