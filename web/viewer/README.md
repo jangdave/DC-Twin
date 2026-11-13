@@ -90,6 +90,7 @@ Edge나 Chrome이 기본 경로에 없으면 `--browser <경로>`로 알려 준�
 |---|---|
 | `src/colors.js` | 온도 색, 등급 색, 막대 길이(Unreal과 같은 규칙) |
 | `src/sources.js` | 데이터 출처 어댑터(녹화, 시뮬레이션, 라이브/서버)를 같은 모양으로 감쌈 |
+| `src/hall_logic.js` | 화면과 무관한 계산: 서버 조작 상태 접기(`ServerModel`), 모니터링 시작값, 방향키 랙 이동 |
 | `src/source_manager.js` | 출처 전환 규칙(옛 출처 닫기, 늦게 끝난 열기 버리기). 경쟁 상황은 가짜 출처로 단위 시험 |
 | `src/store.js`, `recording.js`, `live.js`, `messages.js`, `url.js` | 센서 값 저장소, 녹화 재생, 라이브 연결, 메시지 검사, 주소 규칙 |
 | `src/sim/` | 직접 시뮬레이션: `core.js`(L0 모델, 알람, 시나리오), `engine.js`, `runner.js`, `panel.js`, 에너지·용량·이상 대비(`insight.js`, `insight_panel.js`) |
