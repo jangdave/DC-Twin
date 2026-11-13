@@ -46,3 +46,30 @@ export function browserEnv() {
     automated: !!navigator.webdriver,
   };
 }
+
+// 프레임 감시(main.js에서 떼어 냄, docs/30 L4): 처음 몇 초 평균이 minFps 미만이면 화질을 한 단계 낮추라고 알린다.
+// 처음 skipMs는 모델을 받느라 느리니 건너뛰고, windowMs 동안 센다. 낮춘 뒤에는 restMs 쉬고 다시 잰다(더 낮출 수 있으면). 충분하면 끝.
+export class FrameGuard {
+  constructor(tier, { on = true, minFps = 22, skipMs = 2500, windowMs = 3000, restMs = 1500 } = {}) {
+    Object.assign(this, { tier, on, minFps, skipMs, windowMs, restMs, frames: 0, t0: 0 });
+  }
+
+  /** 프레임마다 부른다. 낮춰야 하면 { tier, fps }, 아니면 null. */
+  tick(now) {
+    if (!this.on) return null;
+    if (!this.t0) this.t0 = now + this.skipMs;
+    if (now < this.t0) return null;
+    this.frames++;
+    if (now - this.t0 < this.windowMs) return null;
+    const fps = (this.frames * 1000) / (now - this.t0);
+    const lower = lowerTier(this.tier);
+    this.frames = 0;
+    this.t0 = now + this.restMs;
+    if (fps < this.minFps && lower) {
+      this.tier = lower;
+      return { tier: lower, fps };
+    }
+    this.on = false;
+    return null;
+  }
+}

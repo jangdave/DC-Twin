@@ -3,7 +3,7 @@ import { CommandQueue, FlowState, summarize } from './flow.js';
 import { alarmSets, buildCameras } from './cctv.js';
 import { CctvPanel } from './cctv_ui.js';
 import { InsightPanel } from './sim/insight_panel.js';
-import { detectQuality, browserEnv, lowerTier, SETTINGS } from './quality.js';
+import { detectQuality, browserEnv, FrameGuard, SETTINGS } from './quality.js';
 import { HallScene } from './scene.js';
 import { VIEWS } from './views.js';
 import { SensorStore } from './store.js';
@@ -12,7 +12,7 @@ import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
 import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
 import { SourceManager } from './source_manager.js';
-import { ServerModel, monitorSeed as seedFrom, rackGrid } from './hall_logic.js';
+import { ServerModel, canvasArrow, keyAction, monitorSeed as seedFrom, rackGrid } from './hall_logic.js';
 import { ServerData, apiBaseFromWs } from './server_data.js';
 import { JobClient, summarize as summarizeJob } from './sim/jobs.js';
 import { JobUI } from './sim/jobs_ui.js';
@@ -639,25 +639,27 @@ async function main() {
   const nextRack = rackGrid(sceneData.racks);
   const moveSelection = (dRow, dCol) => selectEquipment(nextRack(state.selected, dRow, dCol), true);
   canvas.addEventListener('keydown', (e) => {
-    if (flow.stage !== 'hall') return;
-    const d = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[e.key];
+    const d = canvasArrow(e.key, flow.stage);
     if (!d) return;
     e.preventDefault();
     moveSelection(d[0], d[1]);
   });
+  // 키보드 규칙은 src/hall_logic.js keyAction(단위 시험)이 정하고 여기서는 실행만 한다
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !e.target.closest?.('dialog')) return ws.overlay ? dispatch({ type: 'overlay', value: null }) : void queue.push({ name: 'view.back' });
-    if (e.target.closest?.('select, input, textarea, dialog, button')) return;
-    if (e.key === 'Enter' && flow.stage === 'exterior') return void queue.push({ name: 'view.goto', value: 'hall' });
-    if (!state.player) return;
-    if (e.key === ' ') {
+    const a = keyAction(
+      { key: e.key, shiftKey: e.shiftKey, inDialog: !!e.target.closest?.('dialog'), inField: !!e.target.closest?.('select, input, textarea, dialog, button'), onCanvas: e.target === canvas },
+      { stage: flow.stage, overlay: ws.overlay, hasPlayer: !!state.player },
+    );
+    if (!a) return;
+    if (a.type === 'closeOverlay') dispatch({ type: 'overlay', value: null });
+    else if (a.type === 'back') queue.push({ name: 'view.back' });
+    else if (a.type === 'enterHall') queue.push({ name: 'view.goto', value: 'hall' });
+    else if (a.type === 'togglePlay') {
       e.preventDefault();
       state.player.playing = !state.player.playing;
       ui.renderTransport(state.player);
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      if (e.target === canvas) return;
-      const step = (e.shiftKey ? 30 : 5) * (e.key === 'ArrowLeft' ? -1 : 1);
-      state.player.seek(state.player.time + step);
+    } else if (a.type === 'seekBy') {
+      state.player.seek(state.player.time + a.by);
       refresh();
     }
   });
@@ -669,25 +671,13 @@ async function main() {
   resize();
 
   // 프레임이 낮으면(처음 몇 초 평균 22 미만) 화질을 한 단계 낮춘다. 주소에 q가 있거나 자동 시험 브라우저면 하지 않는다.
-  const guard = { on: !params.q && !navigator.webdriver, frames: 0, t0: 0, tier };
+  const guard = new FrameGuard(tier, { on: !params.q && !navigator.webdriver });
   function perfGuard(now) {
-    if (!guard.on) return;
-    if (!guard.t0) guard.t0 = now + 2500; // 처음 2.5초는 모델을 받느라 느리니 건너뛴다
-    if (now < guard.t0) return;
-    guard.frames++;
-    if (now - guard.t0 < 3000) return;
-    const fps = (guard.frames * 1000) / (now - guard.t0);
-    const lower = lowerTier(guard.tier);
-    guard.frames = 0;
-    guard.t0 = now + 1500;
-    if (fps < 22 && lower) {
-      guard.tier = lower;
-      scene.applyQuality(lower);
-      if (qsel) qsel.title = `프레임이 낮아 화질을 ${lower}로 낮췄다`;
-      console.info(`프레임 ${fps.toFixed(0)}fps: 화질을 ${lower}로 낮춤`);
-    } else {
-      guard.on = false; // 충분하면 끝
-    }
+    const r = guard.tick(now);
+    if (!r) return;
+    scene.applyQuality(r.tier);
+    if (qsel) qsel.title = `프레임이 낮아 화질을 ${r.tier}로 낮췄다`;
+    console.info(`프레임 ${r.fps.toFixed(0)}fps: 화질을 ${r.tier}로 낮춤`);
   }
 
   let last = performance.now();
