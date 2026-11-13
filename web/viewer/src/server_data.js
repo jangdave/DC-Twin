@@ -81,3 +81,38 @@ export class ServerData {
     }
   }
 }
+
+// 서버 데이터 연결 관리(main.js에서 떼어 냄, docs/30 L4, M5): 서버를 연달아 바꾸면 늦게 온 옛 응답(성공이든 실패든)은 버린다.
+// connect의 결과: { stale: true }(버림) | { ok: true, lib } | { ok: false, error }. 지금 쓰는 서버는 current.
+export class DataLink {
+  constructor(make = (base) => new ServerData(base)) {
+    this.make = make;
+    this.seq = 0;
+    this.current = null;
+  }
+
+  async connect(base) {
+    const mine = ++this.seq;
+    const sd = this.make(base);
+    try {
+      const lib = await sd.connect();
+      if (mine !== this.seq) return { stale: true };
+      this.current = sd;
+      return { ok: true, lib };
+    } catch (error) {
+      if (mine !== this.seq) return { stale: true };
+      this.current = null;
+      return { ok: false, error };
+    }
+  }
+
+  /** 지금 서버에서 받을 수 있는지(연결에 성공했고 아직 끊지 않았다). */
+  get usable() {
+    return !!this.current?.ok;
+  }
+
+  /** 받다가 실패하면 서버를 버린다(사이트에 포함된 파일로 돌아간다). */
+  drop() {
+    this.current = null;
+  }
+}
