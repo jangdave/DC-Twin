@@ -346,3 +346,48 @@ def test_a_step_error_does_not_kill_the_server(manifest, monkeypatch):
                 pass
 
     assert asyncio.run(main()) >= 4
+
+
+def test_fail_records_are_capped_even_when_all_are_recent(manifest, monkeypatch):
+    """주소를 바꿔 가며 틀린 토큰을 보내도 기록이 상한을 넘지 않는다(docs/30 L5)."""
+    monkeypatch.setattr(sv, "FAILS_MAX", 16)
+    now = [1000.0]
+    srv = sv.Server(sv.Engine(manifest, Config(), "l0", "normal", seed=3), token=TOKEN, clock=lambda: now[0])
+    for i in range(100):
+        now[0] += 0.01
+        srv._record_fail(f"10.0.0.{i}")
+    assert len(srv.fails) <= 16
+    assert "10.0.0.99" in srv.fails  # 가장 최근 것은 남는다
+
+
+class _FakeTransport:
+    def __init__(self, size):
+        self.size, self.aborted = size, False
+
+    def get_write_buffer_size(self):
+        return self.size
+
+    def abort(self):
+        self.aborted = True
+
+
+class _FakeWs:
+    def __init__(self, size):
+        self.transport = _FakeTransport(size)
+        self.remote_address = ("127.0.0.1", 1)
+
+
+def test_broadcast_drops_slow_clients_and_sends_to_the_rest(manifest, monkeypatch):
+    """받지 못해 쓰기 버퍼가 상한을 넘은 접속은 끊고, 나머지에만 보낸다(docs/30 L5)."""
+    srv = sv.Server(sv.Engine(manifest, Config(), "l0", "normal", seed=3), token=None)
+    fast, slow = _FakeWs(0), _FakeWs(sv.SLOW_CLIENT_BUFFER + 1)
+    srv.clients = {fast, slow}
+    sent = []
+    monkeypatch.setattr(websockets, "broadcast", lambda conns, text: sent.append((list(conns), text)))
+    srv.broadcast("x")
+    assert sent == [([fast], "x")]
+    assert slow.transport.aborted and not fast.transport.aborted
+    assert srv.clients == {fast}
+    srv.clients = set()
+    srv.broadcast("y")  # 접속이 없으면 보내지 않는다
+    assert len(sent) == 1

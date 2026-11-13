@@ -47,6 +47,8 @@ MIN_TOKEN_LEN = 16                # 접근 토큰의 최소 길이
 AUTH_TIMEOUT_S = 5.0              # 접속한 뒤 이 시간 안에 첫 메시지로 토큰을 보내야 한다
 MAX_PENDING = 16                  # 아직 인증하지 않은 접속의 최대 수
 MAX_PENDING_PER_PEER = 4          # 같은 주소가 인증을 기다리며 잡아 둘 수 있는 자리(한 곳이 16자리를 다 차지하지 못하게)
+SLOW_CLIENT_BUFFER = 4 * 1024 * 1024  # 보내지 못하고 쌓인 바이트가 이보다 많으면 느린 접속으로 보고 끊는다(docs/30 L5)
+FAILS_MAX = 1024                  # 틀린 토큰 기록을 둘 주소 수 상한(넘으면 1분 지난 것, 그래도 넘으면 오래된 것부터 버린다)
 AUTH_FAILS_PER_MINUTE = 5         # 같은 주소에서 틀린 토큰을 보낼 수 있는 횟수(분당). 넘으면 잠시 막는다
 
 
@@ -278,8 +280,6 @@ class Server:
         self._stop = asyncio.Event()
 
     async def ticker(self) -> None:
-        import websockets
-
         loop = asyncio.get_running_loop()
         nxt = loop.time()
         while not self._stop.is_set():
@@ -290,9 +290,8 @@ class Server:
                 await asyncio.sleep(1.0)
                 nxt = loop.time()
                 continue
-            if self.clients:
-                for m in msgs:
-                    websockets.broadcast(self.clients, json.dumps(m, ensure_ascii=False, separators=(",", ":")))
+            for m in msgs:
+                self.broadcast(json.dumps(m, ensure_ascii=False, separators=(",", ":")))
             nxt += self.engine.cfg.interval_s / self.speed
             delay = nxt - loop.time()
             if delay > 0:
@@ -329,6 +328,27 @@ class Server:
             return None
         return respond(reply.status, reply.reason, reply.headers, reply.body)
 
+    def broadcast(self, text: str) -> None:
+        """모든 접속에 보낸다. websockets.broadcast는 기다리지 않고 쓰기 버퍼에 쌓기만 해서(되밀림 없음) 받지 못하는 접속이 있으면
+        서버 메모리가 계속 는다. 쌓인 양이 SLOW_CLIENT_BUFFER를 넘은 접속은 1013(잠시 뒤 다시)으로 닫고 보내지 않는다(docs/30 L5)."""
+        import websockets
+
+        if not self.clients:
+            return
+        ok = []
+        for ws in list(self.clients):
+            tr = getattr(ws, "transport", None)
+            size = tr.get_write_buffer_size() if tr is not None else 0
+            if size > SLOW_CLIENT_BUFFER:
+                print(f"[서버] 느린 접속을 끊는다({self._peer(ws)}, 쌓인 {size} 바이트)", file=sys.stderr)
+                self.clients.discard(ws)
+                if tr is not None:
+                    tr.abort()  # 닫기 인사도 그 버퍼 뒤에 쌓이므로 바로 끊는다
+                continue
+            ok.append(ws)
+        if ok:
+            websockets.broadcast(ok, text)
+
     def _peer(self, ws) -> str:
         addr = getattr(ws, "remote_address", None)
         return str(addr[0]) if addr else "?"
@@ -341,8 +361,11 @@ class Server:
         now = self.clock()
         start, n = self.fails.get(peer, (now, 0))
         self.fails[peer] = (now, 1) if now - start >= 60.0 else (start, n + 1)
-        if len(self.fails) > 1024:  # 오래된 기록을 버린다
+        if len(self.fails) > FAILS_MAX:  # 오래된 기록을 버린다
             self.fails = {k: v for k, v in self.fails.items() if now - v[0] < 60.0}
+            if len(self.fails) > FAILS_MAX:  # 1분 안의 주소가 그래도 많으면(주소를 바꿔 가며 보내는 경우) 상한까지만 남긴다
+                keep = sorted(self.fails.items(), key=lambda kv: kv[1][0])[-FAILS_MAX:]
+                self.fails = dict(keep)
 
     async def authenticate(self, ws) -> bool:
         """토큰이 켜져 있으면 첫 메시지로 토큰을 받는다. 이 단계 전에는 어떤 값도 보내지 않는다. 실패하면 연결을 닫고 False."""
@@ -462,10 +485,7 @@ class Server:
             return
 
         def send():
-            import websockets
-
-            if self.clients:
-                websockets.broadcast(self.clients, json.dumps({"type": "job", "job": snap}, ensure_ascii=False))
+            self.broadcast(json.dumps({"type": "job", "job": snap}, ensure_ascii=False))
 
         loop.call_soon_threadsafe(send)
 

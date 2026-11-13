@@ -25,6 +25,11 @@ describe('주소 매개변수', () => {
     const p = parseParams('?scenario=fan_fault&t=60&view=power&live=ws://127.0.0.1:8080/ws', ids);
     expect(p).toMatchObject({ scenario: 'fan_fault', t: 60, view: 'power', live: 'ws://127.0.0.1:8080/ws' });
   });
+  it('debug=1일 때만 점검 훅을 연다(docs/30 L3)', () => {
+    expect(parseParams('', ids).debug).toBe(false);
+    expect(parseParams('?debug=1', ids).debug).toBe(true);
+    expect(parseParams('?debug=true', ids).debug).toBe(false);
+  });
   it('모르는 시나리오와 이상한 시각, 나쁜 라이브 주소는 무시', () => {
     const p = parseParams('?scenario=zzz&t=-5&view=x&live=ws://example.com/ws', ids);
     expect(p.scenario).toBeNull();
@@ -34,7 +39,7 @@ describe('주소 매개변수', () => {
     expect(p.liveError).toBeTruthy();
   });
   it('아무것도 없으면 기본값', () => {
-    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null, sky: 'day', q: null, panel: 'default', fx: null });
+    expect(parseParams('', ids)).toEqual({ scenario: null, t: 0, live: null, liveError: null, view: null, stage: null, mode: null, models: true, server: null, sky: 'day', q: null, panel: 'default', fx: null, debug: false });
   });
   it('panel=open만 패널을 처음부터 펼친다', () => {
     expect(parseParams('?panel=open', ids).panel).toBe('open');
