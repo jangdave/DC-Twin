@@ -30,7 +30,7 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 | `docs/` | 기획·설계·로드맵·실험·정책, `docs/decisions/`(ADR) |
 | `blender/` | .blend 원본, 내보내기 스크립트 |
 | `usd/` | 내보낸 USD 에셋/씬 (`assets/`, `scenes/`) |
-| `sim/` | 센서 시나리오 생성기(`sensors/`), 서버. `thermal/`은 비어 있고 실제 열 계산(Warp)은 `experiments/omniverse_probe/hall60_sim.py`에 있다(옮기는 안은 `docs/30`) |
+| `sim/` | 센서 시나리오 생성기(`sensors/`), 서버. `thermal/dct_thermal/`에 열 계산(Warp, `hall60_sim.py`)과 보정 모델(`predictor.py`, `residual_model.py`)이 있다(2026-11-13 `experiments/`에서 옮김, 옛 위치에는 같은 모듈을 가리키는 연결 파일만 남음, `docs/30` M12). 시험과 실행 환경은 아직 `experiments/omniverse_probe`(uv) |
 | `scripts/usd_tools/` | USD 검증(`validate_usd.py`), 에셋 마무리(`finalize_asset.py`), 장면 생성(`build_scene.py`) |
 | `usd/scenes/hall01.config.json` | 홀 배치 원본(랙 6줄 x 10기, CRAC 8기). 장면은 이 파일에서만 만든다 |
 | `gateway/` | MQTT → WebSocket/REST 게이트웨이 (Node). 예제로만 두고 손대지 않는다(운영 경로는 `server/`, `docs/30` 6절) |

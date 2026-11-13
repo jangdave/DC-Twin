@@ -285,6 +285,17 @@ export class UI {
     $('alarm-chip').hidden = !(this._alarmChipActive && this._chipStage === 'hall' && !this._chipCctv);
   }
 
+  // 원격 서버 확인 창. 연결하면 true
+  confirmRemote(host) {
+    const d = $('remote-dialog');
+    $('remote-host').textContent = host;
+    return new Promise((resolve) => {
+      d.addEventListener('close', () => resolve(d.returnValue === 'connect'), { once: true });
+      d.showModal();
+      $('remote-cancel').focus(); // 기본 선택은 연결하지 않음
+    });
+  }
+
   openServerDialog() {
     $('server-error').hidden = true;
     $('server-dialog').showModal();

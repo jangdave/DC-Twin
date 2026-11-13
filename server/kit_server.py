@@ -24,8 +24,10 @@ from pathlib import Path
 import omni.kit.app
 import omni.usd
 
-ROOT = Path(os.environ.get("DCT_REPO", "D:/Test"))
-sys.path[:0] = [os.environ.get("DCT_PYDEPS", "D:/omniverse-kit/pydeps"), str(ROOT / "sim" / "sensors"), str(ROOT / "experiments" / "omniverse_probe")]
+# 저장소 위치: DCT_REPO가 있으면 그것, 없으면 이 파일 위치(server/의 위). Kit의 --exec 실행에서 __file__이 없으면 예전 기본값(docs/30 M13)
+_here = globals().get("__file__")
+ROOT = Path(os.environ.get("DCT_REPO") or (Path(_here).resolve().parents[1] if _here else "D:/Test"))
+sys.path[:0] = [os.environ.get("DCT_PYDEPS", "D:/omniverse-kit/pydeps"), str(ROOT / "sim" / "sensors"), str(ROOT / "sim" / "thermal")]
 STOP = ROOT / "sim" / "out" / "kit_server.stop"
 ARGS = shlex.split(os.environ.get("DCT_SERVER_ARGS", f"--manifest {ROOT / 'server' / 'data' / 'sensor_manifest.json'} --solver l2 --jobs").replace("\\", "/"))  # Windows 경로의 \를 shlex가 지우지 않게
 
@@ -43,7 +45,7 @@ async def run() -> None:
         log(f"장면을 열었다: prim {sum(1 for _ in ctx.get_stage().Traverse())}개, {time.time() - t0:.2f}초")
         STOP.unlink(missing_ok=True)
         # 홀 정보는 Kit이 연 장면에서 메인 스레드가 한 번 읽어 둔다. 서버 스레드가 같은 파일을 다시 열면 Kit의 장면과 부딪혔다(2026-11-10).
-        import hall60_sim as hs
+        from dct_thermal import hall60_sim as hs
 
         scene = (ROOT / "usd" / "scenes" / "hall01.usda").resolve()
         hs.HALL_CACHE[str(scene)] = hs.read_hall_from_stage(ctx.get_stage())

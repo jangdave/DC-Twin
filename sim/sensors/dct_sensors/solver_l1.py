@@ -1,4 +1,4 @@
-"""L1 모델: Warp 열 시뮬레이션(`experiments/omniverse_probe/hall60_sim.py`)의 결과를 센서 앵커 위치에서 읽는다.
+"""L1 모델: Warp 열 시뮬레이션(`sim/thermal/dct_thermal/hall60_sim.py`)의 결과를 센서 앵커 위치에서 읽는다.
 
 Warp와 USD(pxr)가 있는 환경에서만 쓴다. 예(저장소 루트에서):
 
@@ -28,10 +28,11 @@ REPO = Path(__file__).resolve().parents[3]
 
 class L1Solver:
     def __init__(self, manifest: Manifest, cfg: Config, scene: str | None = None, slow: float = 10.0, warmup_s: float = 120.0):
-        sys.path.insert(0, str(REPO / "experiments" / "omniverse_probe"))
+        if str(REPO / "sim" / "thermal") not in sys.path:
+            sys.path.insert(0, str(REPO / "sim" / "thermal"))
         try:
             import warp as wp
-            import hall60_sim as hs
+            from dct_thermal import hall60_sim as hs
         except ImportError as exc:
             raise SystemExit(f"L1에는 Warp와 USD가 필요하다(experiments/omniverse_probe 환경에서 실행): {exc}") from exc
         self.hs, self.cfg, self.m = hs, cfg, manifest

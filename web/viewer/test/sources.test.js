@@ -127,7 +127,7 @@ describe('LiveSource', () => {
   });
   it('연결 상태에 따라 모드 표시와 문구가 바뀐다', () => {
     let client;
-    const s = new LiveSource({ store: new SensorStore(sensors), url: 'u', control: true, makeClient: () => (client = fakeClient()) });
+    const s = new LiveSource({ store: new SensorStore(sensors), url: 'ws://127.0.0.1:8765/ws', control: true, makeClient: () => (client = fakeClient()) });
     s.open();
     expect(s.describe().badge).toEqual({ mode: 'connecting', text: '실시간 · 로컬 서버 연결 중' });
     client.state = 'open';
@@ -135,6 +135,12 @@ describe('LiveSource', () => {
     client.state = 'closed';
     client.retryInMs = 4000;
     expect(s.describe().badge).toEqual({ mode: 'closed', text: '연결 끊김, 4초 뒤 다시 시도' });
+  });
+  it('이 컴퓨터 밖의 서버는 "원격 서버(주소)"로 표시한다(docs/30 M6)', () => {
+    const mk = (url) => new LiveSource({ store: new SensorStore(sensors), url, control: true, makeClient: () => fakeClient() });
+    expect(mk('wss://dc.example.org:9000/ws').label).toBe('실시간 · 원격 서버(dc.example.org:9000)');
+    expect(mk('ws://localhost:8765/ws').label).toBe('실시간 · 로컬 서버');
+    expect(mk('u').label).toBe('실시간 · 원격 서버');
   });
   it('로컬 서버는 조작 패널과 시나리오 목록을 갖고 일반 라이브는 갖지 않는다', () => {
     const list = [{ id: 'normal', title: '정상', note: '' }];

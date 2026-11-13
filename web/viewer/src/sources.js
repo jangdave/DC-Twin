@@ -9,6 +9,7 @@
 //   advance(dt) 지난 시간만큼 진행하고, 화면을 다시 그려야 하면 true
 //   describe()  화면에 보일 값 { badge:{mode,text}, panel, scenarios, card, timebar }
 //   statusText() 연결 상태 줄(없으면 null)    send(c) 서버 조작(서버일 때만)
+import { isLocalUrl } from './url.js';
 import { LiveClient } from './live.js';
 import { RecordingPlayer, parseRecording } from './recording.js';
 import { SimRunner } from './sim/runner.js';
@@ -187,7 +188,15 @@ export class LiveSource {
   }
 
   get label() {
-    return this.control ? '실시간 · 로컬 서버' : '라이브';
+    if (!this.control) return '라이브';
+    if (isLocalUrl(this.url)) return '실시간 · 로컬 서버';
+    let host = '';
+    try {
+      host = new URL(this.url).host;
+    } catch {
+      /* 주소가 아니면 이름 없이 */
+    }
+    return host ? `실시간 · 원격 서버(${host})` : '실시간 · 원격 서버';
   }
 
   open() {

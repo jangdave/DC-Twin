@@ -1,6 +1,6 @@
 # OpenFOAM 기준 답(reference) 사례
 
-- 목적: 같은 홀, 같은 조건을 OpenFOAM(공기 흐름 + 온도 + 난류)으로 풀어, 우리 열 시뮬레이션(`experiments/omniverse_probe/hall60_sim.py`)의 랙 입구 온도와 견줄 수 있게 한다.
+- 목적: 같은 홀, 같은 조건을 OpenFOAM(공기 흐름 + 온도 + 난류)으로 풀어, 우리 열 시뮬레이션(`sim/thermal/dct_thermal/hall60_sim.py`)의 랙 입구 온도와 견줄 수 있게 한다.
 - 상태: 초안(동작함). **시각화 목적의 비교이며 공학적 정확성을 주장하지 않는다.** 메시 의존성 시험은 제대로 하지 못했다(아래 "한계").
 - 확인한 날짜: 2026-10-16. OpenFOAM v1912 (ESI, Ubuntu 24.04 패키지 `openfoam 1912.200626`), WSL, 16코어 사용.
 
