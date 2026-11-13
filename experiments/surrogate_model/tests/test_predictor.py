@@ -46,6 +46,8 @@ def test_normal_input_is_corrected_with_ordered_interval(env):
     (lambda s: s["fan"].update(CRAC_01=1.5), "팬"),
     (lambda s: s.update(remove=["Rack_01", "Rack_02", "Rack_03", "Rack_04", "Rack_05"]), "제거한 랙"),
     (lambda s: s.update(remove=["Rack_99"]), "없는 랙"),
+    # 줄 평균은 범위 안이지만 랙 하나가 범위 밖(docs/30 H3): 랙별 전력을 주면 잡는다
+    (lambda s: s.update(rack_power_kw={"Rack_01": 30.0, "Rack_02": 8.0}), "랙 전력"),
 ])
 def test_out_of_range_input_falls_back_to_ours(env, edit, why):
     d0 = env["d0"]
@@ -56,6 +58,16 @@ def test_out_of_range_input_falls_back_to_ours(env, edit, why):
     assert all(r.corrected[n] == env["ours0"][n] for n in r.corrected)  # 우리 솔버 값 그대로
     assert all(v == "fallback" for v in r.level.values())
     assert all(np.isnan(v) for v in r.sigma.values())
+
+
+def test_rack_power_inside_range_is_corrected(env):
+    """랙별 전력이 모두 학습 범위 안이면 그대로 보정한다(랙별 전력은 범위 검사에만 쓴다)."""
+    d0 = env["d0"]
+    s = copy.deepcopy(env["specs"][d0["id"]])
+    base = env["p"].predict(s, env["ours0"], env["info"][d0["id"]])
+    s["rack_power_kw"] = {n: 8.0 for n in env["ours0"]}
+    r = env["p"].predict(s, env["ours0"], env["info"][d0["id"]])
+    assert not r.fallback and r.corrected == base.corrected
 
 
 def test_validation_mode_still_corrects_but_reports_reason(env):

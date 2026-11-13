@@ -39,6 +39,13 @@ class JumpingPredictor(FakePredictor):
                                upper90={n: ours[n] + add + 0.5 for n in names}, level={n: "ok" for n in names})
 
 
+class OkPredictor(FakePredictor):
+    def predict(self, sample, ours, info):
+        names = list(ours)
+        return SimpleNamespace(fallback=False, reason="", corrected={n: ours[n] + 1.0 for n in names}, lower90={n: ours[n] for n in names},
+                               upper90={n: ours[n] + 2.0 for n in names}, level={n: "ok" for n in names})
+
+
 def make(manifest, fallback=False):
     cfg = Config()
     pred = FakePredictor(fallback)
@@ -58,6 +65,27 @@ def test_sample_has_fan_and_row_mean_power(manifest):
     assert sample["row_power_kw"] == [6.0, 8.0]
     assert set(ours) == {rack_title(n) for n in manifest.rack_names}
     assert info == {"supply_m3s": 50.0, "aisle_leak_m3s": [1.0, 2.0]}
+
+
+def test_uneven_row_power_caps_confidence_of_that_row(manifest):
+    """줄 안에서 랙 하나만 전력이 크게 다르면(학습한 적 없는 조건) 그 줄만 ok -> caution(docs/30 H3)."""
+    from dct_sensors.solver_l2 import RACK_SPREAD_KW
+
+    cfg = Config()
+    l2 = L2Solver(manifest, cfg, base=FakeBase(manifest, cfg), predictor=OkPredictor())
+    row1 = [n for n in manifest.rack_names if manifest.racks[n][0] == 1]
+    power = {n: 8.0 for n in manifest.rack_names}
+    power[row1[0]] = 8.0 + RACK_SPREAD_KW * 2  # 한 랙만 크게
+    l2.step(1.0, Controls({c: 1.0 for c in manifest.cracs}, power))
+    sample = l2.sample_of(Controls({c: 1.0 for c in manifest.cracs}, power))
+    assert sample["rack_power_kw"][rack_title(row1[0])] == 8.0 + RACK_SPREAD_KW * 2
+    for n in manifest.rack_names:
+        want = "caution" if manifest.racks[n][0] == 1 else "ok"
+        assert l2.estimates[f"{n}/temp_in"]["confidence"] == want, n
+    # 평소 정도의 차이(기본 전력 6~8.5 kW)는 내리지 않는다
+    even = {n: 6.0 + 2.5 * (i % 2) for i, n in enumerate(manifest.rack_names)}
+    l2.step(1.0, Controls({c: 1.0 for c in manifest.cracs}, even))
+    assert all(e["confidence"] == "ok" for e in l2.estimates.values())
 
 
 def test_only_temp_in_is_corrected_with_estimates(manifest):
