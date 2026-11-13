@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { ServerData, apiBaseFromWs, parseLibrary } from '../src/server_data.js';
+import { DataLink, ServerData, apiBaseFromWs, parseLibrary } from '../src/server_data.js';
 
 const read = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 const index = read('../public/data/index.json');
@@ -107,5 +107,45 @@ describe('ServerData 오류 구분', () => {
     const e = await new ServerData('http://h:1', { fetchImpl: f }).connect().catch((x) => x);
     expect(e.status).toBe(429);
     expect(e.message).toMatch(/잠시/);
+  });
+});
+
+describe('DataLink(서버 데이터 연결 순번, docs/30 L4·M5)', () => {
+  // connect를 밖에서 끝낼 수 있는 가짜 서버
+  const fakeMaker = () => {
+    const made = [];
+    const make = (base) => {
+      const sd = { base, ok: false, pending: null };
+      sd.connect = () => new Promise((res, rej) => (sd.pending = { res: (v) => ((sd.ok = true), res(v)), rej }));
+      made.push(sd);
+      return sd;
+    };
+    return { made, make };
+  };
+  it('늦게 온 옛 서버의 성공과 실패는 버리고 마지막 서버만 쓴다', async () => {
+    const { made, make } = fakeMaker();
+    const link = new DataLink(make);
+    const a = link.connect('http://a');
+    const b = link.connect('http://b');
+    made[1].pending.res({ index: [1] });
+    expect(await b).toEqual({ ok: true, lib: { index: [1] } });
+    made[0].pending.res({ index: [0] });
+    expect(await a).toEqual({ stale: true });
+    expect(link.current.base).toBe('http://b');
+    const c = link.connect('http://c');
+    made[2].pending.rej(new Error('늦은 실패'));
+    expect((await c).ok).toBe(false);
+    expect(link.current).toBeNull();
+    expect(link.usable).toBe(false);
+  });
+  it('실패하면 current를 비우고, drop으로 버릴 수 있다', async () => {
+    const { made, make } = fakeMaker();
+    const link = new DataLink(make);
+    const p = link.connect('http://a');
+    made[0].pending.res({ index: [] });
+    await p;
+    expect(link.usable).toBe(true);
+    link.drop();
+    expect(link.usable).toBe(false);
   });
 });

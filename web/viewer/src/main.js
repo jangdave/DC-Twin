@@ -13,7 +13,7 @@ import { SimPanel } from './sim/panel.js';
 import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
 import { SourceManager } from './source_manager.js';
 import { ServerModel, canvasArrow, keyAction, monitorSeed as seedFrom, rackGrid } from './hall_logic.js';
-import { ServerData, apiBaseFromWs } from './server_data.js';
+import { DataLink, apiBaseFromWs } from './server_data.js';
 import { JobClient, summarize as summarizeJob } from './sim/jobs.js';
 import { JobUI } from './sim/jobs_ui.js';
 import { UI, prettyName, METRIC_LABEL } from './ui.js';
@@ -171,8 +171,7 @@ async function main() {
   const recCache = new Map();
   const sensorIds = sensors.map((s) => s.sensorId);
   // 미리 계산한 값은 서버에 연결되어 있으면 서버에서 받고, 안 되면 사이트에 포함된 파일을 쓴다(대체 경로).
-  let serverData = null;
-  let dataSeq = 0; // 서버 데이터 연결 순번(서버를 연달아 바꿀 때 늦게 온 옛 응답을 버린다)
+  const dataLink = new DataLink(); // 서버 데이터 연결(서버를 연달아 바꿀 때 늦게 온 옛 응답을 버린다, src/server_data.js)
   let jobClient = null; // 서버 시뮬레이션 작업 연결(docs/31). 서버가 작업을 받을 때만 만든다
   let serverToken = null; // 서버 연결 창에서 넣은 접근 토큰(작업 연결에도 쓴다. 저장하지 않는다)
   let serverConn = null; // 마지막으로 연결한 서버 { url, token }. 모니터링 메뉴가 이 서버의 실시간 값을 연다
@@ -184,12 +183,12 @@ async function main() {
     if (state.mode === 'lib') ui.setScenarios(libSource.index, libSource.scenarioId, libSource.groups);
   };
   const loadRec = async (file) => {
-    if (serverData?.ok) {
+    if (dataLink.usable) {
       try {
-        return await serverData.rec(file);
+        return await dataLink.current.rec(file);
       } catch (e) {
         console.warn('서버에서 녹화를 받지 못해 사이트의 파일을 쓴다:', e.message);
-        serverData = null;
+        dataLink.drop();
         restoreStaticLib(); // 서버에만 있던 항목이 목록에 남아 눌러도 열리지 않는 일을 막는다
         ui.setDataSource('이 사이트에 포함된 파일 (서버에서 받지 못함)');
       }
@@ -526,21 +525,25 @@ async function main() {
   async function connectData(wsUrl) {
     const base = apiBaseFromWs(wsUrl);
     if (!base) return;
-    const mine = ++dataSeq;
-    const sd = new ServerData(base);
-    try {
-      const lib = await sd.connect();
-      if (mine !== dataSeq) return; // 그 사이에 다른 서버에 연결했다: 옛 응답은 버린다
-      serverData = sd;
-      connectJobs(wsUrl, lib.meta);
-      libSource.index = lib.index;
-      if (lib.groups.length) libSource.groups = lib.groups;
-      const ext = lib.index.filter((i) => i.source === 'external').length;
-      ui.setDataSource(`서버(${base})에서 받음 · 항목 ${lib.index.length}개${ext ? ` (이 컴퓨터의 외부 솔버 결과 ${ext}개 포함, 서버가 줄 때만 보임)` : ''}`);
-      if (state.mode === 'lib') ui.setScenarios(libSource.index, libSource.scenarioId, libSource.groups);
-    } catch (e) {
-      if (mine !== dataSeq) return;
-      serverData = null;
+    const r = await dataLink.connect(base);
+    if (r.stale) return; // 그 사이에 다른 서버에 연결했다: 옛 응답은 버린다
+    let e = r.error;
+    if (r.ok) {
+      try {
+        const { lib } = r;
+        connectJobs(wsUrl, lib.meta);
+        libSource.index = lib.index;
+        if (lib.groups.length) libSource.groups = lib.groups;
+        const ext = lib.index.filter((i) => i.source === 'external').length;
+        ui.setDataSource(`서버(${base})에서 받음 · 항목 ${lib.index.length}개${ext ? ` (이 컴퓨터의 외부 솔버 결과 ${ext}개 포함, 서버가 줄 때만 보임)` : ''}`);
+        if (state.mode === 'lib') ui.setScenarios(libSource.index, libSource.scenarioId, libSource.groups);
+        return;
+      } catch (err) {
+        e = err; // 받은 목록을 반영하다 실패해도 사이트의 파일로 돌아간다(옮기기 전과 같은 동작)
+        dataLink.drop();
+      }
+    }
+    {
       restoreStaticLib();
       console.warn('서버의 미리 계산한 값을 쓰지 않는다:', e.message);
       ui.setDataSource(e.status === 401 || e.status === 429 ? `이 사이트에 포함된 파일 (${e.message})` : '이 사이트에 포함된 파일 (서버에 데이터 API 없음)');
