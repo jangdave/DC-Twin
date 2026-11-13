@@ -21,6 +21,37 @@ describe('녹화 형식 검사', () => {
     expect(() => parseRecording(e, ids)).toThrow(/구간/);
     expect(() => parseRecording(null, ids)).toThrow();
   });
+  it('원소 형식이 틀리면 재생 전에 거부하고, 값 칸의 null은 허용(docs/30 L2)', () => {
+    const bad = (f) => {
+      const r = makeRec();
+      f(r);
+      return () => parseRecording(r, ids);
+    };
+    expect(bad((r) => (r.values['R2-T'][3] = null))).not.toThrow(); // 그 시각 값 없음
+    expect(bad((r) => (r.values['R2-T'][3] = '21'))).toThrow(/R2-T/);
+    expect(bad((r) => (r.values = null))).toThrow(/values/);
+    expect(bad((r) => (r.est['R1-T'] = null))).toThrow(/R1-T/);
+    expect(bad((r) => (r.est['R1-T'].conf[0] = 9))).toThrow(/구간 값/);
+    expect(bad((r) => (r.est['R1-T'].lower[0] = 'x'))).toThrow(/구간 값/);
+    expect(bad((r) => (r.est['R1-T'].conf[0] = null))).not.toThrow();
+    expect(bad((r) => (r.aggregates.pue = null))).toThrow(/pue/);
+    expect(bad((r) => (r.aggregates = []))).toThrow(/aggregates/);
+    expect(bad((r) => (r.alarms = {}))).toThrow(/alarms/);
+    expect(bad((r) => (r.alarms[0] = null))).toThrow(/알람/);
+    expect(bad((r) => r.alarms.reverse())).toThrow(/순서/);
+    expect(bad((r) => (r.events = [{ kind: 'x' }]))).toThrow(/이벤트/);
+    expect(bad((r) => (r.startTs = 'nope'))).toThrow(/startTs/);
+  });
+  it('값 칸에 null이 있어도 재생이 멈추지 않고 그 시각은 stale로 보인다', () => {
+    const r = makeRec();
+    r.values['R2-T'][3] = null;
+    const store = new SensorStore(sensors);
+    const p = new RecordingPlayer(parseRecording(r, ids), store);
+    p.seek(3.2);
+    expect(store.latest.get('R2-T')).toMatchObject({ value: null, quality: 'stale' });
+    p.seek(4.1);
+    expect(store.latest.get('R2-T').quality).toBe('good');
+  });
 });
 
 describe('녹화 재생', () => {

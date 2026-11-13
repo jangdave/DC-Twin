@@ -1336,6 +1336,23 @@ await pc.close();
   await tp.close();
 }
 
+// L3(docs/30): 사람이 여는 브라우저(navigator.webdriver 거짓)에서는 화면 이동 명령만 열리고 점검 훅은 닫힌다. ?debug=1이면 열린다.
+{
+  const hp = await browser.newPage();
+  await hp.evaluateOnNewDocument(() => Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false }));
+  await hp.goto(`${base}?stage=hall`, { waitUntil: 'networkidle0' });
+  await until(hp, () => !!window.__viewer, undefined, 15000);
+  const H1 = await hp.evaluate(() => ({ wd: navigator.webdriver, keys: Object.keys(window.__viewer ?? {}), ws: typeof window.__ws, frozen: Object.isFrozen(window.__viewer) }));
+  await hp.evaluate(() => window.__viewer.dispatch({ name: 'view.goto', value: 'exterior' }));
+  const moved = await until(hp, () => !document.getElementById('exterior-card').hidden);
+  await hp.goto(`${base}?stage=hall&debug=1`, { waitUntil: 'networkidle0' });
+  await until(hp, () => !!window.__viewer?.state, undefined, 15000);
+  const H2 = await hp.evaluate(() => ({ state: !!window.__viewer?.state, ws: typeof window.__ws }));
+  ok('L3 일반 브라우저에서는 window.__viewer에 dispatch만 있고(얼림) __ws가 없으며 명령은 동작, ?debug=1이면 점검 훅이 열림',
+    H1.wd === false && JSON.stringify(H1.keys) === '["dispatch"]' && H1.ws === 'undefined' && H1.frozen && moved && H2.state && H2.ws === 'function', JSON.stringify({ H1, moved, H2 }));
+  await hp.close();
+}
+
 await browser.close();
 web.close();
 const bad = [...new Set(errors)];

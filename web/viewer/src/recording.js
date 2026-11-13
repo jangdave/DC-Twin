@@ -3,17 +3,46 @@ import { CONF_BY_CODE } from './colors.js';
 import { HISTORY_LENGTH } from './store.js';
 
 // 형식 검사. 틀리면 이유와 함께 오류를 던진다(6.5장: 그 시나리오를 열지 않는다).
+// 서버가 준 녹화도 이 검사를 지난다(docs/30 L2): 원소 형식까지 보고, 재생 중에 TypeError가 나는 일이 없게 한다.
+// 값 칸의 null(그 시각 값 없음)은 허용한다(재생은 quality 'stale'로 보인다). 숫자도 null도 아닌 값은 거부한다.
+const isObj = (x) => !!x && typeof x === 'object' && !Array.isArray(x);
+const numOrNull = (x) => x === null || Number.isFinite(x);
+const seriesOk = (a, n, el = numOrNull) => Array.isArray(a) && a.length === n && a.every(el);
+const confOk = (c) => c === null || (Number.isInteger(c) && c >= 0 && c < CONF_BY_CODE.length);
+
 export function parseRecording(rec, sensorIds) {
-  if (!rec || typeof rec !== 'object') throw new Error('녹화가 객체가 아니다');
+  if (!isObj(rec)) throw new Error('녹화가 객체가 아니다');
   if (rec.version !== 1) throw new Error(`지원하지 않는 녹화 버전: ${rec.version}`);
   if (!Number.isInteger(rec.n) || rec.n < 1) throw new Error('녹화 길이(n)가 올바르지 않다');
   if (rec.dt !== 1) throw new Error('녹화 간격(dt)은 1초여야 한다');
+  if (typeof rec.startTs !== 'string' || !Number.isFinite(Date.parse(rec.startTs))) throw new Error('녹화 시작 시각(startTs)이 올바르지 않다');
+  if (!isObj(rec.values)) throw new Error('센서 값(values)이 객체가 아니다');
   for (const id of sensorIds) {
-    const v = rec.values?.[id];
+    const v = rec.values[id];
     if (!Array.isArray(v) || v.length !== rec.n) throw new Error(`센서 ${id}의 값 길이가 맞지 않다`);
+    if (!v.every(numOrNull)) throw new Error(`센서 ${id}의 값에 숫자도 null도 아닌 것이 있다`);
   }
+  if (rec.est != null && !isObj(rec.est)) throw new Error('구간(est)이 객체가 아니다');
   for (const [id, e] of Object.entries(rec.est ?? {})) {
-    if (![e.lower, e.upper, e.conf].every((a) => Array.isArray(a) && a.length === rec.n)) throw new Error(`센서 ${id}의 구간 길이가 맞지 않다`);
+    if (!isObj(e) || ![e.lower, e.upper, e.conf].every((a) => Array.isArray(a) && a.length === rec.n)) throw new Error(`센서 ${id}의 구간 길이가 맞지 않다`);
+    if (!seriesOk(e.lower, rec.n) || !seriesOk(e.upper, rec.n) || !seriesOk(e.conf, rec.n, confOk)) throw new Error(`센서 ${id}의 구간 값 형식이 올바르지 않다`);
+  }
+  if (rec.aggregates != null && !isObj(rec.aggregates)) throw new Error('집계(aggregates)가 객체가 아니다');
+  for (const [name, a] of Object.entries(rec.aggregates ?? {})) {
+    if (!Array.isArray(a) || !a.every(numOrNull)) throw new Error(`집계 ${name}의 값 형식이 올바르지 않다`);
+  }
+  for (const key of ['alarms', 'events']) {
+    if (rec[key] != null && !Array.isArray(rec[key])) throw new Error(`${key}가 배열이 아니다`);
+  }
+  let lastT = -Infinity;
+  for (const a of rec.alarms ?? []) {
+    // 재생은 알람을 시각 순서로 보고 i를 넘으면 멈춘다: 순서가 틀리면 알람 상태가 틀린다
+    if (!isObj(a) || !Number.isFinite(a.t) || typeof a.sensorId !== 'string' || typeof a.to !== 'string') throw new Error('알람 항목 형식이 올바르지 않다(t, sensorId, to)');
+    if (a.t < lastT) throw new Error('알람이 시각 순서가 아니다');
+    lastT = a.t;
+  }
+  for (const e of rec.events ?? []) {
+    if (!isObj(e) || !Number.isFinite(e.t)) throw new Error('이벤트 항목 형식이 올바르지 않다(t)');
   }
   return { ...rec, est: rec.est ?? {}, alarms: rec.alarms ?? [], events: rec.events ?? [], aggregates: rec.aggregates ?? {} };
 }

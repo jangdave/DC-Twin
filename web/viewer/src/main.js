@@ -67,6 +67,7 @@ async function main() {
 
   const ids = index.map((s) => s.id);
   const params = parseParams(location.search, ids);
+  const hooks = !!navigator.webdriver || params.debug; // 점검 훅을 열지(자동 시험 브라우저 또는 ?debug=1, docs/30 L3)
   const store = new SensorStore(sensors);
   const sensorInfo = store.byId;
   const flow = new FlowState(params.stage ?? 'exterior');
@@ -419,7 +420,7 @@ async function main() {
     else if (!vm.cctvOpen && cctv.isOpen) cctv.close();
   }
   ui.apply(vm, ws);
-  window.__ws = () => ws;
+  if (hooks) window.__ws = () => ws;
 
   // ---- 화면 단계와 이동 명령 (docs/20) ----
   // 서버실 껍데기는 처음 서버실에 들어갈 때 받는다(첫 로딩 용량을 아끼려고). 실패하면 옛 어두운 바닥으로 계속 쓴다.
@@ -797,7 +798,8 @@ async function main() {
   Promise.race([settled, waitMax]).then(() => requestAnimationFrame(() => requestAnimationFrame(() => boot.done())));
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
-  window.__viewer = { jobs: () => ({ client: jobClient, ui: jobUI }), getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, sourcesSettled: () => sources.settled, panel, flow, queue, dispatch: (c) => queue.push(c) };
+  // 화면 이동 명령(dispatch)은 늘 연다(docs/20 8.1). 상태와 장면을 만지는 점검 훅은 자동 시험 브라우저나 ?debug=1에서만(docs/30 L3)
+  window.__viewer = hooks ? { jobs: () => ({ client: jobClient, ui: jobUI }), getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, sourcesSettled: () => sources.settled, panel, flow, queue, dispatch: (c) => queue.push(c) } : Object.freeze({ dispatch: (c) => queue.push(c) });
 }
 
 main().catch((e) => {
