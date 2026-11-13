@@ -12,6 +12,7 @@ import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
 import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
 import { SourceManager } from './source_manager.js';
+import { ServerModel, monitorSeed as seedFrom, rackGrid } from './hall_logic.js';
 import { ServerData, apiBaseFromWs } from './server_data.js';
 import { JobClient, summarize as summarizeJob } from './sim/jobs.js';
 import { JobUI } from './sim/jobs_ui.js';
@@ -357,28 +358,8 @@ async function main() {
     refresh();
   }
   const useSource = (next, args) => sources.use(next, args);
-  // 모니터링에 보이는 지금 값(랙 입구·출구 온도, 공조기 팬, 급기 온도). 간이 계산의 시작값이 된다.
-  function monitorSeed() {
-    const num = (e) => (e && Number.isFinite(e.value) ? e.value : undefined);
-    const inlet = {};
-    const outlet = {};
-    for (const k of rackKeys) {
-      inlet[k] = num(store.metric(k, 'temp_in'));
-      outlet[k] = num(store.metric(k, 'temp_out'));
-    }
-    const fan = {};
-    for (const c of layout.cracs) {
-      const f = num(store.metric(c, 'fan_speed'));
-      if (f !== undefined) fan[c] = Math.min(Math.max(f / 100, 0), 1);
-    }
-    // 급기 온도: 서버면 서버가 알려 준 설정값, 녹화면 팬이 정상인 공조기의 공급 온도 가운데 가장 낮은 값(공급 온도 = 급기 + 팬이 줄면 오르는 몫)
-    let supply = state.server ? serverModel.supply : null;
-    if (!Number.isFinite(supply)) {
-      const vals = layout.cracs.filter((c) => (fan[c] ?? 1) > 0.99).map((c) => num(store.metric(c, 'supply_temp'))).filter((v) => v !== undefined);
-      supply = vals.length ? Math.min(...vals) : null;
-    }
-    return { inlet, outlet, fan, supply };
-  }
+  // 모니터링에 보이는 지금 값(간이 계산의 시작값, src/hall_logic.js)
+  const monitorSeed = () => seedFrom(store, rackKeys, layout.cracs, state.server ? serverModel.supply : null);
   async function startQuickFromMonitor() {
     const seed = monitorSeed();
     insight.saveBase(); // 바뀌기 전(모니터링 지금 값)을 비교 기준으로
@@ -500,32 +481,12 @@ async function main() {
     return true;
   }
 
-  // 서버가 알려 준 조작 상태(snapshot의 controls와 그 뒤의 이벤트)로 슬라이더를 맞춘다. 서버가 기준이다.
-  const serverModel = { fan: {}, powerScale: {}, racks: layout.racks, supply: null };
-  let ctlSeen;
-  let evSeen = 0;
-  function resetServerModel() {
-    const c = store.controls;
-    serverModel.fan = Object.fromEntries(layout.cracs.map((x) => [x, c?.fan?.[x] ?? 1]));
-    serverModel.powerScale = Object.fromEntries(layout.racks.map((r) => [r.name, c?.powerScale?.[r.name] ?? 1]));
-    serverModel.supply = Number.isFinite(c?.supply) ? c.supply : null;
-    evSeen = 0;
-  }
+  // 서버가 알려 준 조작 상태(snapshot의 controls와 그 뒤의 이벤트)로 슬라이더를 맞춘다. 서버가 기준이다(src/hall_logic.js).
+  const serverModel = new ServerModel(layout);
+  const resetServerModel = () => serverModel.reset(store.controls);
   resetServerModel();
   function syncServerPanel() {
-    if (store.controls !== ctlSeen || store.events.length < evSeen) {
-      ctlSeen = store.controls;
-      resetServerModel();
-    }
-    for (; evSeen < store.events.length; evSeen++) {
-      const e = store.events[evSeen];
-      if (e.kind === 'supply_temp') serverModel.supply = e.value;
-      else if (e.kind === 'crac_fan' && e.target in serverModel.fan) serverModel.fan[e.target] = e.value;
-      else if (e.kind === 'rack_power_scale') {
-        const names = e.target.startsWith('row:') ? layout.racks.filter((r) => r.row === Number(e.target.slice(4))).map((r) => r.name) : [e.target];
-        for (const n of names) if (n in serverModel.powerScale) serverModel.powerScale[n] = e.value;
-      }
-    }
+    serverModel.sync(store);
     panel.syncFromEngine(serverModel);
     panel.renderLog(store.events);
     panel.setSelected(state.selected, serverModel);
@@ -675,22 +636,8 @@ async function main() {
   });
 
   // 방향키로 랙 이동(FR-34): 줄은 위아래, 같은 줄은 좌우
-  const racks = sceneData.racks;
-  const byRow = new Map();
-  racks.forEach((r) => {
-    if (!byRow.has(r.row)) byRow.set(r.row, []);
-    byRow.get(r.row).push(r);
-  });
-  for (const list of byRow.values()) list.sort((a, b) => a.min[0] - b.min[0]);
-  const rows = [...byRow.keys()].sort((a, b) => a - b);
-  function moveSelection(dRow, dCol) {
-    const cur = state.selected && racks.find((r) => r.name.toLowerCase() === state.selected);
-    if (!cur) return selectEquipment(racks[0].name.toLowerCase(), true);
-    const ri = Math.min(Math.max(rows.indexOf(cur.row) + dRow, 0), rows.length - 1);
-    const list = byRow.get(rows[ri]);
-    const ci = Math.min(Math.max(byRow.get(cur.row).indexOf(cur) + dCol, 0), list.length - 1);
-    selectEquipment(list[ci].name.toLowerCase(), true);
-  }
+  const nextRack = rackGrid(sceneData.racks);
+  const moveSelection = (dRow, dCol) => selectEquipment(nextRack(state.selected, dRow, dCol), true);
   canvas.addEventListener('keydown', (e) => {
     if (flow.stage !== 'hall') return;
     const d = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[e.key];
