@@ -30,7 +30,7 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 | `docs/` | 기획·설계·로드맵·실험·정책, `docs/decisions/`(ADR) |
 | `blender/` | .blend 원본, 내보내기 스크립트 |
 | `usd/` | 내보낸 USD 에셋/씬 (`assets/`, `scenes/`) |
-| `sim/` | 센서 시나리오 생성기(`sensors/`), 서버. `thermal/dct_thermal/`에 열 계산(Warp, `hall60_sim.py`)과 보정 모델(`predictor.py`, `residual_model.py`)이 있다(2026-11-13 `experiments/`에서 옮김, 옛 위치에는 같은 모듈을 가리키는 연결 파일만 남음, `docs/30` M12). 시험과 실행 환경은 아직 `experiments/omniverse_probe`(uv) |
+| `sim/` | 센서 시나리오 생성기(`sensors/`), 서버. `thermal/dct_thermal/`에 열 계산(Warp, `hall60_sim.py`)과 보정 모델(`predictor.py`, `residual_model.py`)이 있다(2026-11-13 `experiments/`에서 옮김, 옛 위치에는 같은 모듈을 가리키는 연결 파일만 남음, `docs/30` M12). 시험(`sim/thermal/tests`)과 uv 환경(`sim/thermal/pyproject.toml`)도 여기 있다. 실험 스크립트는 그대로 `experiments/omniverse_probe` 환경 |
 | `scripts/usd_tools/` | USD 검증(`validate_usd.py`), 에셋 마무리(`finalize_asset.py`), 장면 생성(`build_scene.py`) |
 | `usd/scenes/hall01.config.json` | 홀 배치 원본(랙 6줄 x 10기, CRAC 8기). 장면은 이 파일에서만 만든다 |
 | `gateway/` | MQTT → WebSocket/REST 게이트웨이 (Node). 예제로만 두고 손대지 않는다(운영 경로는 `server/`, `docs/30` 6절) |
@@ -65,8 +65,9 @@ PR 전에 해당하는 것을 돌린다. 하나라도 실패하면 이유를 밝
 | 글자 대비 | `node tools/contrast_check.mjs` | 1분 |
 | 데이터 정합성 | `node tools/check_data.mjs` | 몇 초 |
 | 파이썬 시험 | `uv run --python 3.13 --extra serve python -m pytest tests` (`sim/sensors`) | 1분 |
-| Warp 열 계산 시험 | `uv run --python 3.13 python -m pytest tests` (`experiments/omniverse_probe`) | 1분 |
-| 형상 사본 일치 | `uv run --python 3.13 python ../../scripts/check_geometry.py` (`experiments/omniverse_probe`, Warp 시험에도 포함) | 몇 초 |
+| Warp 열 계산 시험 | `uv run --python 3.13 python -m pytest tests` (`sim/thermal`, GPU) | 2~3분 |
+| 형상 사본 일치 | `uv run --python 3.13 python ../../scripts/check_geometry.py` (`sim/thermal`, Warp 시험에도 포함) | 몇 초 |
+| 실험 스크립트 시험, 보정 모델 시험 | `uv run --python 3.13 python -m pytest tests` (`experiments/omniverse_probe`), `... -m pytest ../../experiments/surrogate_model/tests` (`sim/thermal`) | 몇 초 |
 | 서버 | `server/run_local.ps1`(GPU L2 또는 `-Solver l0`), Docker는 `server/README.md` | |
 주의: 점검용으로 띄운 서버와 브라우저, Kit(`kit.exe`) 프로세스는 끝내고 정리한다. Kit 스크립트는 파일이 있는 상태에서 실행한다(없으면 종료되지 않는다).
 

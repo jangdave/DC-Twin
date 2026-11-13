@@ -12,7 +12,7 @@ description: PR 전에 이 프로젝트의 시험과 점검을 순서대로 돌�
 |---|---|---|---|---|
 | 1 | 웹 단위 | `npx vitest run` (`web/viewer`) | 몇 초 | 웹 코드, 데이터를 바꿨을 때 |
 | 2 | 파이썬(센서, 서버, 외부 변환) | `uv run --python 3.13 --extra serve python -m pytest tests` (`sim/sensors`) | 1분 | `sim/sensors`, `server/`를 바꿨을 때 |
-| 3 | Warp 열 계산 | `uv run --python 3.13 python -m pytest tests` (`experiments/omniverse_probe`, GPU) | 1분 | `hall60_sim.py`를 바꿨을 때, 장면(`hall01.config.json`)이나 형상 사본을 바꿨을 때(`test_check_geometry.py`, docs/30 M11) |
+| 3 | Warp 열 계산 | `uv run --python 3.13 python -m pytest tests` (`sim/thermal`, GPU) | 2~3분 | `hall60_sim.py`를 바꿨을 때, 장면(`hall01.config.json`)이나 형상 사본을 바꿨을 때(`test_check_geometry.py`, docs/30 M11) |
 | 4 | 웹 빌드와 용량 | `npm run build` (`web/viewer`) | 1분 | 화면 시험 앞에 항상 |
 | 5 | 데이터 정합성 | `node tools/check_data.mjs` | 몇 초 | 녹화, 라이브러리, 센서 정의를 바꿨을 때. 원본에서 다시 만들어 같은지도 본다 |
 | 6 | 화면 시험 | `node tools/ui_check.mjs` | 2~3분 | 화면을 바꿨을 때. **도구의 120초 제한을 넘으니 백그라운드로 돌리고 끝나면 읽는다** |

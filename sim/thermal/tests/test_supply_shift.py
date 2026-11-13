@@ -1,6 +1,6 @@
 """급기 온도를 바꾸면 Warp 열 계산의 온도장이 같은 폭으로 옮겨 간다(식이 온도에 대해 선형). 기본값(18도)에서는 결과가 달라지지 않는다.
 
-    cd experiments/omniverse_probe && uv run --python 3.13 python -m pytest tests/test_supply_shift.py -q
+    cd sim/thermal && uv run --python 3.13 python -m pytest tests/test_supply_shift.py -q
 """
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # sim/thermal
 wp = pytest.importorskip("warp")
-import hall60_sim as hs  # noqa: E402
+from dct_thermal import hall60_sim as hs  # noqa: E402
 
 SCENE = Path(__file__).resolve().parents[3] / "usd" / "scenes" / "hall01.usda"
 

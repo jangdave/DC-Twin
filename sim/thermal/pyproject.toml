@@ -1,0 +1,25 @@
+[project]
+name = "dct-thermal"
+version = "0.1.0"
+description = "가상 홀의 열 계산(Warp, hall60_sim)과 보정 모델(predictor, residual_model). 시각화 목적이며 공학적 정확성을 주장하지 않는다"
+requires-python = ">=3.13,<3.14"
+# 버전은 옮기기 전 시험 환경(experiments/omniverse_probe/uv.lock)과 같게 고정한다(같은 결과를 내려고)
+dependencies = [
+    "numpy==2.2.6",
+    "pillow==12.2.0",
+    "warp-lang==1.18.0",
+    "usd-core==26.8",
+    "scipy==1.18.1",
+    "scikit-learn==1.9.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
