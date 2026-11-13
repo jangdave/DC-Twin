@@ -85,3 +85,26 @@ export function rackGrid(racks) {
     return list[ci].name.toLowerCase();
   };
 }
+
+/**
+ * 키보드 입력을 화면 동작으로 바꾼다(FR-34, FR-83). DOM은 보지 않고 필요한 사실만 받는다.
+ *   key: { key, shiftKey, inDialog, inField(입력칸·단추·대화상자 안), onCanvas }
+ *   ctx: { stage: 'exterior'|'hall', overlay, hasPlayer }
+ * 돌려주는 값: { type: 'closeOverlay' | 'back' | 'enterHall' | 'togglePlay' | 'seekBy', by? } 또는 null(처리 안 함).
+ * 캔버스의 화살표(랙 이동)는 canvasArrow가 따로 처리한다.
+ */
+export function keyAction(key, ctx) {
+  if (key.key === 'Escape' && !key.inDialog) return ctx.overlay ? { type: 'closeOverlay' } : { type: 'back' };
+  if (key.inField) return null;
+  if (key.key === 'Enter' && ctx.stage === 'exterior') return { type: 'enterHall' };
+  if (!ctx.hasPlayer) return null;
+  if (key.key === ' ') return { type: 'togglePlay' };
+  if ((key.key === 'ArrowLeft' || key.key === 'ArrowRight') && !key.onCanvas) return { type: 'seekBy', by: (key.shiftKey ? 30 : 5) * (key.key === 'ArrowLeft' ? -1 : 1) };
+  return null;
+}
+
+/** 서버실에서 캔버스에 초점이 있을 때 화살표: 랙 이동 [줄, 칸] 또는 null. */
+export function canvasArrow(key, stage) {
+  if (stage !== 'hall') return null;
+  return { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[key] ?? null;
+}
