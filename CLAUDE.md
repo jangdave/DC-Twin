@@ -66,6 +66,7 @@ PR 전에 해당하는 것을 돌린다. 하나라도 실패하면 이유를 밝
 | 데이터 정합성 | `node tools/check_data.mjs` | 몇 초 |
 | 파이썬 시험 | `uv run --python 3.13 --extra serve python -m pytest tests` (`sim/sensors`) | 1분 |
 | Warp 열 계산 시험 | `uv run --python 3.13 python -m pytest tests` (`experiments/omniverse_probe`) | 1분 |
+| 형상 사본 일치 | `uv run --python 3.13 python ../../scripts/check_geometry.py` (`experiments/omniverse_probe`, Warp 시험에도 포함) | 몇 초 |
 | 서버 | `server/run_local.ps1`(GPU L2 또는 `-Solver l0`), Docker는 `server/README.md` | |
 주의: 점검용으로 띄운 서버와 브라우저, Kit(`kit.exe`) 프로세스는 끝내고 정리한다. Kit 스크립트는 파일이 있는 상태에서 실행한다(없으면 종료되지 않는다).
 
