@@ -86,3 +86,12 @@ def test_save_and_load_roundtrip(env, tmp_path):
 def test_confidence_level_boundaries():
     assert pr.SIGMA_CAUTION < pr.SIGMA_LOW
     assert pr.INTERVAL_K > 0 and pr.INTERVAL_FLOOR > 0
+
+
+def test_holdout_without_own_result_fails_outside_old_folder(tmp_path):
+    """보류 사례 결과가 데이터 폴더에 없으면 이중 바닥 전 장면 결과로 조용히 바꾸지 않고 멈춘다(2026-11-13 재검토)."""
+    (tmp_path / "ours_progress.json").write_text("{}", encoding="utf-8")
+    spec = tmp_path / "samples.json"
+    spec.write_text(json.dumps({"samples": [{"id": "holdout_A_normal", "holdout": True, "existing_of": "rack_inlet_normal.csv"}]}), encoding="utf-8")
+    with pytest.raises(FileNotFoundError):
+        rm.load_dataset(tmp_path, spec)

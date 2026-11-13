@@ -162,9 +162,15 @@ def load_dataset(of_dir: Path, samples_json: Path, only_converged: bool = False)
         sid = s["id"]
         if s.get("holdout"):
             # 데이터 폴더에 같은 장면으로 다시 계산한 보류 결과(of_<id>.csv)가 있으면 그것을 쓴다(이중 바닥 장면은 surrogate_rf, docs/33 7장).
-            # 없으면 처음 계산한 결과(existing_of, 이중 바닥 전 장면)
+            # 처음 계산한 결과(existing_of)는 이중 바닥 전 장면이라 그 장면의 데이터 폴더(surrogate)에서만 쓴다. 다른 폴더에서 없으면
+            # 장면이 다른 두 계산을 비교하게 되므로 멈춘다(2026-11-13 재검토).
             own = of_dir / f"of_{sid}.csv"
-            of_path = own if own.exists() else RES / s["existing_of"]
+            if own.exists():
+                of_path = own
+            elif Path(of_dir).resolve() == (RES / "surrogate").resolve():
+                of_path = RES / s["existing_of"]
+            else:
+                raise FileNotFoundError(f"보류 사례 {sid}의 OpenFOAM 결과가 {of_dir}에 없다(이 장면으로 다시 계산해야 한다)")
         else:
             of_path = of_dir / f"of_{sid}.csv"
         ours_path = of_dir / f"ours_{sid}.csv"

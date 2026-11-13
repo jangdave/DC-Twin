@@ -186,13 +186,13 @@ uv run --python 3.13 python ../openfoam_baseline/compare.py --rerun-ours --scena
 | 파일 | 내용 |
 |---|---|
 | `surrogate/design_samples.py` | 시드 고정(20261021)으로 샘플 설계 + 유량 점검 -> `surrogate/samples.json` |
-| `surrogate/make_cases.py` | 샘플별 OpenFOAM 사례 정의(`surrogate/cases/<id>/`, 약 7 MB) 생성. `gen_case.py --spec --sample --conservative` 사용. **저장소에는 올리지 않는다**(`surrogate/.gitignore`, 명세에서 다시 만들 수 있다) |
+| `surrogate/make_cases.py` | 샘플별 OpenFOAM 사례 정의(`--out-dir`로 정한 폴더의 `<id>/`, 약 7 MB) 생성. 폴더는 장면마다 다르다: 이중 바닥 전 `cases`, 기본 장면 `cases_rf`, CAC `cases_cac`(`--scene`). `gen_case.py --spec --sample --conservative` 사용. **저장소에는 올리지 않는다**(`surrogate/.gitignore`, 명세에서 다시 만들 수 있다) |
 | `surrogate/run_batch.py`, `start_batch.sh` | WSL에서 샘플을 하나씩 순서대로 계산(nice 5, 16코어, 반복 한도 3500), 끝난 샘플은 건너뛰어 이어서 실행 가능, 결과 필드는 삭제 |
 | `surrogate/keepalive.py` | Windows 쪽 감독 프로그램. WSL2 가상 머신이 유휴로 내려가 계산이 죽는 것을 막고, 죽으면 다시 시작 |
-| `surrogate/ours_batch.py` | 샘플 40개 + 보류 4개를 우리 솔버로 계산(`results/surrogate/ours_<id>.csv`) |
+| `surrogate/ours_batch.py` | 학습 샘플과 보류 4개를 우리 솔버로 계산(`--res` 폴더의 `ours_<id>.csv`, `--scene`으로 장면). 결과 폴더: 이중 바닥 전 `results/surrogate`, 기본 장면 `results/surrogate_rf`, CAC `results/surrogate_cac` |
 | `results/surrogate/of_<id>.csv`, `progress.json`, `log_<id>.txt` | OpenFOAM 랙 입구 온도(제거한 랙은 행 없음), 진행 상황(상태, 반복, 시간, converged), 로그 일부 |
 
-실행: (1) `design_samples.py`, `make_cases.py` (experiments/omniverse_probe 폴더에서 `uv run --python 3.13 python ../openfoam_baseline/surrogate/...`), (2) `ours_batch.py`, (3) 무인 계산: `python surrogate/keepalive.py`를 Windows에서 분리 실행(`creationflags=DETACHED|NEW_PROCESS_GROUP|BREAKAWAY`).
+실행: (1) `design_samples.py`, `make_cases.py` (experiments/omniverse_probe 폴더에서 `uv run --python 3.13 python ../openfoam_baseline/surrogate/...`), (2) `ours_batch.py`(`make_cases`, `run_batch`, `ours_batch` 모두 폴더 인자가 필수다. 기본값이 옛 장면 폴더를 가리켜 섞일 수 있어 2026-11-13에 없앴다), (3) 무인 계산: `python surrogate/keepalive.py`를 Windows에서 분리 실행(`creationflags=DETACHED|NEW_PROCESS_GROUP|BREAKAWAY`).
 조건: 우리 솔버는 처음 120초는 팬 1.0, 10 kW 균일이고 121초부터 샘플의 팬, 전력을 적용해 정상(변화 없음)은 600초, 나머지는 900초까지 돌린 값이다(`compare.py`와 같음). 샘플 명세로 만든 사례 하나가 기존 B와 같은 값을 내는 것을 확인했다(아래).
 
 알아 둘 점:

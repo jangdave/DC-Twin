@@ -1,8 +1,8 @@
 """샘플 명세(samples.json)의 모든 샘플(보류 A, B, D, E 포함)을 현재 main의 hall60_sim으로 돌려 랙 입구 온도를 저장한다.
 
 실행 (experiments/omniverse_probe 폴더에서, GPU 사용):
-    uv run --python 3.13 python ../openfoam_baseline/surrogate/ours_batch.py [--force] [--only s01_normal ...]
-출력: results/surrogate/ours_<id>.csv (열: rack_id, temp_c), ours_progress.json
+    uv run --python 3.13 python ../openfoam_baseline/surrogate/ours_batch.py --res ../openfoam_baseline/results/surrogate_rf [--scene 장면.usda] [--force] [--only s01_normal ...]
+출력: <--res>/ours_<id>.csv (열: rack_id, temp_c), ours_progress.json
 
 조건은 compare.py와 같다: 처음 120초는 팬 1.0, 랙 10 kW 균일(제거할 랙은 처음부터 장면에서 뺀다),
 121초부터 샘플 명세의 팬 레벨(Sim.set_fans)과 줄별 전력(Sim.set_power)을 적용하고, 정상(팬 전부 1.0, 전력 10 kW 균일)은 600초, 나머지는 900초까지 돌려 마지막 시각의 센서 temp_in(랙 앞면 5 cm 앞, 높이 1.2 m)을 쓴다.
@@ -30,8 +30,8 @@ import warp as wp  # noqa: E402
 FAIL_TIME = 120
 
 
-def run_sample(smp: dict) -> dict:
-    base = h.ROOT / "usd" / "scenes" / "hall01.usda"
+def run_sample(smp: dict, base: Path | None = None) -> dict:
+    base = base or h.ROOT / "usd" / "scenes" / "hall01.usda"
     scene, tmp = base, None
     if smp["remove"]:
         tmp = Path(tempfile.gettempdir()) / f"dct_ours_{smp['id']}.usda"
@@ -69,7 +69,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--only", nargs="*", default=None)
-    ap.add_argument("--res", type=Path, default=RES, help="결과 폴더(이중 바닥 장면은 results/surrogate_rf)")
+    ap.add_argument("--res", type=Path, required=True, help="결과 폴더(필수. 장면마다 폴더가 다르다: 이중 바닥 전 surrogate, 기본 장면 surrogate_rf, CAC surrogate_cac. 기본값을 두면 옛 장면 폴더에 섞여 2026-11-13 재검토에서 없앴다)")
+    ap.add_argument("--scene", type=Path, default=None, help="장면 USD(기본 hall01.usda, CAC는 _hall01_cac.usda, docs/34 6장)")
     a = ap.parse_args()
     RES = a.res
     wp.config.quiet = True
@@ -86,10 +87,10 @@ def main() -> None:
         out = RES / f"ours_{sid}.csv"
         if out.exists() and not a.force:
             continue
-        r = run_sample(smp)
+        r = run_sample(smp, a.scene)
         out.write_text("rack_id,temp_c\n" + "".join(f"{k},{v:.3f}\n" for k, v in sorted(r["temps"].items())), encoding="utf-8")
         prog[sid] = {"status": "done", "duration_s": r["duration_s"], "wall_s": r["wall_s"], "supply_m3s": r["supply_m3s"], "aisle_leak_m3s": r["aisle_leak_m3s"],
-                     "hall60_sim_sha1": sha, "mean": round(float(np.mean(list(r["temps"].values()))), 2), "max": round(float(max(r["temps"].values())), 2)}
+                     "hall60_sim_sha1": sha, "scene": (a.scene or Path("hall01.usda")).name, "mean": round(float(np.mean(list(r["temps"].values()))), 2), "max": round(float(max(r["temps"].values())), 2)}
         prog_p.write_text(json.dumps(prog, indent=1, ensure_ascii=False), encoding="utf-8")
         print(sid, prog[sid], flush=True)
 
