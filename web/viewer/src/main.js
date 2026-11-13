@@ -11,6 +11,7 @@ import { SCENARIOS } from './sim/core.js';
 import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
 import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
+import { SourceManager } from './source_manager.js';
 import { ServerData, apiBaseFromWs } from './server_data.js';
 import { JobClient, summarize as summarizeJob } from './sim/jobs.js';
 import { JobUI } from './sim/jobs_ui.js';
@@ -136,19 +137,32 @@ async function main() {
     modelsState = 'deferred';
   }
 
-  // 데이터 출처(녹화, 시뮬레이션, 라이브/서버)는 어댑터가 같은 모양으로 감싼다(src/sources.js). 지금 쓰는 출처는 source 하나다.
-  let source = null;
+  // 데이터 출처(녹화, 시뮬레이션, 라이브/서버)는 어댑터가 같은 모양으로 감싼다(src/sources.js). 지금 쓰는 출처는 하나이고,
+  // 전환 규칙(옛 출처 닫기, 늦게 끝난 열기 버리기)은 src/source_manager.js가 맡는다(docs/30 M8). 훅은 아래 함수들이 정의된 뒤에만 불린다.
+  const sources = new SourceManager({
+    onLeave: () => store.clear(), // 다른 출처의 값이 남지 않게(같은 녹화 안에서 시나리오만 바꿀 때는 지우지 않는다)
+    onEnter: (next) => {
+      resetServerModel();
+      presentMode(next.describe()); // 열기에 실패해도 어느 출처인지는 보인다
+    },
+    onReady: (next) => present(next),
+    onFail: (e) => {
+      console.error(e);
+      badge.className = 'badge closed';
+      badge.textContent = `녹화를 열 수 없다: ${e.message}`;
+    },
+  });
   const state = {
     simScenario: params.scenario ?? 'normal',
     view: params.view ?? 'temp_in',
     selected: null,
     stage: flow.stage,
     // 아래는 지금 출처에서 읽는 값(점검 도구와 기존 코드가 같은 이름으로 읽는다)
-    get mode() { return source?.kind ?? 'rec'; }, // rec | sim | live
-    get server() { return !!source?.control; }, // 로컬 계산 서버에 조작을 보내는 라이브
-    get player() { return source?.player ?? null; },
+    get mode() { return sources.kind; }, // rec | sim | live
+    get server() { return !!sources.current?.control; }, // 로컬 계산 서버에 조작을 보내는 라이브
+    get player() { return sources.current?.player ?? null; },
     get sim() { return simSource?.runner ?? null; },
-    get live() { return source?.kind === 'live' ? source.client : null; },
+    get live() { return sources.current?.kind === 'live' ? sources.current.client : null; },
     get scenarioId() { return recSource.scenarioId ?? params.scenario ?? 'normal'; },
   };
   // 모니터링은 이상 상황 기록만, 시뮬레이션(미리 계산한 값)은 상태와 시나리오 모음 전체. 같은 파일은 한 번만 받는다.
@@ -341,33 +355,7 @@ async function main() {
     if (src.player) ui.renderTransport(src.player);
     refresh();
   }
-  let switchSeq = 0; // 출처 전환 순번. 느린 열기가 나중에 끝나도 마지막으로 누른 전환만 화면에 반영한다
-  async function useSource(next, args) {
-    const mine = ++switchSeq;
-    if (source && source !== next) {
-      source.close();
-      store.clear(); // 다른 출처의 값이 남지 않게(같은 녹화 안에서 시나리오만 바꿀 때는 지우지 않는다)
-    }
-    const prev = source;
-    source = next;
-    resetServerModel();
-    presentMode(next.describe()); // 열기에 실패해도 어느 출처인지는 보인다
-    let failure = null;
-    try {
-      await next.open(args);
-    } catch (e) {
-      failure = e;
-    }
-    if (mine !== switchSeq) return false; // 그 사이에 다른 출처나 시나리오를 골랐다: 이 결과(성공이든 실패든)는 버린다
-    if (failure) {
-      console.error(failure);
-      badge.className = 'badge closed';
-      badge.textContent = `녹화를 열 수 없다: ${failure.message}`;
-      return prev === next;
-    }
-    present(next);
-    return true;
-  }
+  const useSource = (next, args) => sources.use(next, args);
   // 모니터링에 보이는 지금 값(랙 입구·출구 온도, 공조기 팬, 급기 온도). 간이 계산의 시작값이 된다.
   function monitorSeed() {
     const num = (e) => (e && Number.isFinite(e.value) ? e.value : undefined);
@@ -504,7 +492,7 @@ async function main() {
 
   // 서버에 조작을 보낸다. 연결이 안 되어 있으면 화면에 알린다.
   function serverControl(c) {
-    if (!(source?.kind === 'live' && source.send(c))) {
+    if (!(sources.current?.kind === 'live' && sources.current.send(c))) {
       badge.textContent = '서버에 연결되어 있지 않아 조작을 보내지 못했다';
       return false;
     }
@@ -562,7 +550,7 @@ async function main() {
       simList: simSource.list,
       current: state.simScenario,
       onChange: () => {
-        if (source !== src) return; // 이미 다른 출처로 옮겨 갔다
+        if (!sources.isCurrent(src)) return; // 이미 다른 출처로 옮겨 갔다
         const d = src.describe();
         presentMode(d);
         ui.setLiveText(`${url}  ${d.badge.text}`);
@@ -759,6 +747,7 @@ async function main() {
     perfGuard(now);
     const dt = Math.min((now - last) / 1000, 0.25);
     last = now;
+    const source = sources.current;
     if (source) {
       if (source.advance(dt)) refresh();
       if (source.player) ui.renderTransport(source.player);
@@ -775,7 +764,7 @@ async function main() {
 
   // 탭이 숨겨지면 rAF가 멈추지만 라이브 연결은 계속 받는다. 큐가 쌓이지 않게 1초마다 비운다.
   setInterval(() => {
-    if (document.hidden) source?.advance(0);
+    if (document.hidden) sources.current?.advance(0);
   }, 1000);
 
   setView(state.view);
@@ -808,7 +797,7 @@ async function main() {
   Promise.race([settled, waitMax]).then(() => requestAnimationFrame(() => requestAnimationFrame(() => boot.done())));
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
-  window.__viewer = { jobs: () => ({ client: jobClient, ui: jobUI }), getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, panel, flow, queue, dispatch: (c) => queue.push(c) };
+  window.__viewer = { jobs: () => ({ client: jobClient, ui: jobUI }), getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, sourcesSettled: () => sources.settled, panel, flow, queue, dispatch: (c) => queue.push(c) };
 }
 
 main().catch((e) => {
