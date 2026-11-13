@@ -52,7 +52,7 @@
 | M11 | **형상 사본이 여럿인데 서로 맞는지 보는 자동 검사가 없다**(USD → `layout.json` 수동 내보내기, `server/data` 매니페스트와 앵커 사본, 모델 안의 형상). 랙을 옮기면 모델, 웹, 서버가 조용히 달라진다. 코드에 배치 규칙(줄 ÷ 2 + 1, 통로당 CRAC 2기), 홀 한 개, `rack_01` 이름이 박혀 있다 | 검토자 | 계획 |
 | M12 | **제품 코드가 `experiments/`에 의존한다**(`solver_l1/l2`가 `sys.path`로 `experiments`를 끼워 넣음). `sim/thermal/`은 빈 폴더 | 확인 | **고침**(2026-11-13): `hall60_sim`, `predictor`, `residual_model`을 `sim/thermal/dct_thermal/`로 옮김. 제품 코드(`solver_l1/l2`, `precise`, `kit_server`, `export_anchors`)는 이 패키지를 쓴다. 옛 위치에는 같은 모듈 객체를 돌려주는 연결 파일을 두어 실험 스크립트와 저장된 `model.pkl`이 그대로 동작한다. 남은 것: OpenFOAM 도구(`gen_case.py`, `run_case.sh`, `extract.py`)와 Warp 시험, uv 환경은 아직 `experiments/` |
 | M13 | **경로와 환경이 고정이다**: `D:/Test`가 Kit 스크립트 8개 안팎, `ue/*.ps1`, `/mnt/d/Test`가 `run_batch.py`에 박혀 있다. Windows와 WSL만 된다 | 확인(grep) | **일부 고침**(2026-11-13): 정확한 계산이 부르는 `run_case.sh`, 학습 배치(`run_batch.py`, `start_batch.sh`), Kit 서버(`DCT_REPO`가 없으면 파일 위치)는 저장소 위치를 고정하지 않는다. 지난 실험 기록 스크립트(Kit 시험, UE 시험, 옛 배치 보조)는 그대로 둔다 |
-| M14 | **긴 계산 감독이 두 번 실행될 수 있다**: `keepalive.py`가 시간 초과를 "죽음"으로 보고 다시 시작하는데 락이 없어 같은 사례를 16코어로 두 번 돌릴 수 있다. 진행 파일이 비원자 쓰기이고 git이 추적한다 | 검토자 | 계획 |
+| M14 | **긴 계산 감독이 두 번 실행될 수 있다**: `keepalive.py`가 시간 초과를 "죽음"으로 보고 다시 시작하는데 락이 없어 같은 사례를 16코어로 두 번 돌릴 수 있다. 진행 파일이 비원자 쓰기이고 git이 추적한다 | 확인(코드) | **고침**(2026-11-13): `run_batch.py`가 배치 잠금(`~/foam_runs/.run_batch.lock`, flock)을 잡지 못하면 종료 코드 3으로 끝난다(작업 폴더도 배치끼리 같아서 전역 잠금). `progress.json`은 임시 파일에 쓰고 바꿔 끼운다. `keepalive.py`는 wsl 확인 명령이 답하지 못하면(시간 초과) 다시 시작하지 않고 다음 확인을 기다리며, 고정 경로와 옛 결과 폴더 대신 `--cases`, `--res`를 받는다. WSL에서 잠금(잡힘 3, 풀림 0)과 원자 쓰기를 실행해 확인. 진행 파일은 지금 git이 추적하지 않는다 |
 
 ### 낮음
 | # | 문제 | 확인 | 상태 |
