@@ -701,6 +701,27 @@ await pc.close();
     return { parts: s.shellParts.size, west, ceiling: s.shellParts.get('ceiling').visible, plain: s._plainHall.every((o) => !o.visible) };
   });
   ok('SHELL 서버실 껍데기를 받고, 벽 밖과 천장 위에서는 그 면을 숨김', !!r && r.parts >= 10 && r.west === false && r.ceiling === false && r.plain, JSON.stringify(r));
+  // 격벽 방식 전환(docs/34, 2026-11-13 재검토): 바닥 아래 보기 켬 -> CAC -> 끔 -> HAC 뒤 HAC 바닥이 반투명으로 남지 않고,
+  // 오가도 껍데기와 흐름은 두 벌만 두고, 받기에 실패하면 판과 단추가 원래 방식으로 돌아간다
+  const c = await sp.evaluate(async () => {
+    const s = window.__viewer?.scene;
+    if (!s?.shell || !s.hasCac) return null;
+    const base = new URL('.', location.href).pathname;
+    const hotShell = s.shell;
+    s.setUnderfloor(true);
+    await s.setContainment('cold', base);
+    const coldShell = s.shell;
+    s.setUnderfloor(false);
+    await s.setContainment('hot', base);
+    const floor = s.shellParts.get('floor').material;
+    await s.setContainment('cold', base);
+    await s.setContainment('hot', base);
+    const same = s.shell === hotShell && s._variant.cold.shell === coldShell;
+    s._variant.cold = {}; // 받아 둔 것을 비워 다시 받게 한다
+    const fail = await s.setContainment('cold', 'http://127.0.0.1:9/').then(() => 'no error', () => s.containment);
+    return { opacity: floor.opacity, transparent: floor.transparent, depthWrite: floor.depthWrite, coldOther: coldShell !== hotShell, same, fail };
+  });
+  ok('CAC 격벽 전환: 바닥 상태가 껍데기마다 맞고, 반복 전환에 껍데기가 늘지 않고, 받기 실패면 HAC로 되돌림', !!c && c.opacity === 1 && !c.transparent && c.depthWrite && c.coldOther && c.same && c.fail === 'hot', JSON.stringify(c));
   await sp.close();
 }
 

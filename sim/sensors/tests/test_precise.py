@@ -42,7 +42,7 @@ class FakeRunner:
     def __init__(self):
         self.calls = []
 
-    def flow(self, fan, kw, progress, check):
+    def flow(self, fan, kw, progress, check, scene=None):
         self.calls.append(dict(fan))
         progress(0.5)
         check()
@@ -75,3 +75,16 @@ def test_precise_job_end_to_end_with_fakes(manifest, tmp_path):
         assert (folder / "job.usda").exists() and (folder / "flows.json").exists()
     finally:
         mgr.stop()
+
+
+def test_steady_runs_needed_uses_scene_key(manifest, tmp_path):
+    """남은 시간 배수는 OpenFOAMRunner.flow와 같은 저장 키(장면 표시 포함)로 저장된 흐름을 찾는다(2026-11-13 재검토)."""
+    cond = jobs.validate_conditions({"duration": 60, "failures": [{"crac": "crac_01", "t": 30}]}, manifest)
+    count = precise.steady_runs_needed(manifest, tmp_path)
+    assert count(cond) == 2.0
+    cfg = precise.Config()
+    cfg.t_supply = cond["supply"]
+    kw = precise.mean_rack_power(manifest, cfg, cond)
+    for _, fan in precise.fan_states(cond):
+        (tmp_path / f"{precise.flow_key(fan, kw, precise.scene_tag(None))}.npz").write_bytes(b"")
+    assert count(cond) == 0.0

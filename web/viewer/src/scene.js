@@ -199,6 +199,21 @@ export class HallScene {
 
   async setContainment(type, baseUrl) {
     if (type === this.containment || (type === 'cold' && !this.hasCac)) return;
+    const prev = this.containment ?? 'hot';
+    try {
+      await this._setContainment(type, baseUrl);
+    } catch (e) {
+      // 받기 실패: 판만 바뀌고 껍데기·흐름은 그대로 남지 않게 원래 방식으로 되돌린다(다시 누르면 다시 시도된다)
+      if (this.containment === type) {
+        this.containment = prev;
+        this._buildContainment(prev === 'cold' ? this.data.variants.cac.panels : this.data.panels);
+        this._dirty = true;
+      }
+      throw e;
+    }
+  }
+
+  async _setContainment(type, baseUrl) {
     this.containment = type;
     const v = type === 'cold' ? this.data.variants.cac : null;
     this._buildContainment(v ? v.panels : this.data.panels);
@@ -220,7 +235,7 @@ export class HallScene {
       this.shellParts = this._variant[key].parts;
       this.hall.add(this.shell);
       this._updateShell();
-      if (this.underfloor) this.setUnderfloor(true);
+      this.setUnderfloor(!!this.underfloor); // 꺼진 상태도 다시 적용한다(다른 껍데기에서 끈 사이 이 껍데기 바닥이 반투명으로 남지 않게)
     }
     // 공기 흐름
     if (this.airflow) {
@@ -236,6 +251,8 @@ export class HallScene {
       this.hall.remove(this.airflow.points);
       this.airflow = this._variant[key].airflow;
       this.airflow.points.visible = vis;
+      this.airflow.setActive(this.q.particles); // 보관하는 동안 바뀐 화질
+      this._flowVersion = -1; // 보관하는 동안 바뀐 팬 상태를 다음 그리기에서 다시 넣는다
       this.hall.add(this.airflow.points);
     }
     this._dirty = true;
@@ -511,6 +528,8 @@ export class HallScene {
     const [sx, sy, sz] = this.data.size;
     this._shellBounds = { minX: 0, maxX: sx * CM, minZ: -sy * CM, maxZ: 0, height: sz * CM };
     this._dirty = true;
+    // 껍데기를 받기 전에 CAC를 골랐으면 방금 붙인 HAC 껍데기를 CAC 껍데기로 바꾼다(HAC 조명이 섞이지 않게)
+    if (this.containment === 'cold') await this._setContainment('cold', baseUrl);
     return this.shellParts.size;
   }
 

@@ -230,7 +230,11 @@ async function main() {
     onFlow: (b) => scene.setAirflow(b),
     // 격벽 방식 보기(docs/34): HAC / CAC. 공기 흐름을 함께 봐야 차이가 보여서 CAC로 바꿀 때 공기 흐름을 켠다
     onContainment: async (t) => {
-      await scene.setContainment(t, BASE).catch((e) => console.warn('격벽 방식 바꾸기 실패:', e.message));
+      const ok = await scene.setContainment(t, BASE).then(() => true, (e) => (console.warn('격벽 방식 바꾸기 실패:', e.message), false));
+      if (!ok) { // 단추를 실제 보이는 방식으로 되돌린다
+        for (const x of document.querySelectorAll('#containment-group [data-cont]')) x.setAttribute('aria-pressed', String(x.dataset.cont === (scene.containment ?? 'hot')));
+        return;
+      }
       if (t === 'cold' && !scene.showAirflow) document.getElementById('flow-btn').click();
       document.getElementById('cac-note').hidden = t !== 'cold';
     },

@@ -57,7 +57,7 @@
 - **우리 계산(3장)의 짐작이 맞다: 뜨거운 공기는 랙 위쪽으로 들어온다.** CAC 고장에서 앞면 전체 높이 평균(19.85)이 센서 높이 평균(18.67)보다 1.2도 높다(HAC는 반대로 0.25도 낮다). 다만 우리 계산은 센서 높이에서 거의 오르지 않았는데(최고 18.03) OpenFOAM은 20.27까지 오른다. 우리 계산이 섞임을 덜 보는 쪽으로 어긋난다. CAC를 센서 값에 넣을 때(6장) 보정 모델이 이 차이를 배워야 한다.
 - **한계:** 정상 두 사례(HAC, CAC)는 반복 한도에서 멈췄다(속도 잔차가 기준보다 높게 남음). 같은 현상을 학습 샘플(`docs/33` 7장)에서 재고 있다. 지붕 틈 2 %는 근거 없는 가상 값이라, 고장 때 숫자는 이 값에 따라 달라진다.
 
-**웹 흐름장**: `flow_cac.bin`, `flow_cac.json`은 CAC 정상(`cac_normal_dx10`, 3000회)의 흐름을 `export_flow.py`로 우리 격자(`.npz`)에 옮긴 뒤 `export_web_flow_of.py --scene ../../usd/scenes/_hall01_cac.usda --from-npz <npz> --name flow_cac`으로 만들었다(20 cm, 0.27 MB).
+**웹 흐름장**: `flow_cac.bin`, `flow_cac.json`은 CAC 정상(`cac_normal_dx10`, 3000회)의 흐름을 `export_flow.py`로 우리 격자(`.npz`)에 옮긴 뒤 `export_web_flow_of.py --scene ../../usd/scenes/_hall01_cac.usda --from-npz <npz> --of-iterations 3000 --of-converged no --name flow_cac`으로 만들었다(20 cm, 0.27 MB).
 
 ## 5. 웹 보기
 

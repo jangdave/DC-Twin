@@ -251,13 +251,16 @@ class CFDSolver:
         return out
 
 
-def steady_runs_needed(manifest: Manifest, cache: Path, seed: int = 1):
-    """정확한 계산의 OpenFOAM 단계 배수: 저장해 둔 흐름이 없는 팬 상태의 수(남은 시간 추정용, jobs.JobManager stage_scale)."""
+def steady_runs_needed(manifest: Manifest, cache: Path, seed: int = 1, scene: Path | None = None):
+    """정확한 계산의 OpenFOAM 단계 배수: 저장해 둔 흐름이 없는 팬 상태의 수(남은 시간 추정용, jobs.JobManager stage_scale).
+    저장 키는 OpenFOAMRunner.flow와 같게 장면 표시를 넣는다(빠지면 이중 바닥 장면에서 저장된 흐름을 늘 "없음"으로 센다, 2026-11-13 재검토)."""
+    tag = scene_tag(scene)
+
     def count(cond: dict) -> float:
         cfg = Config()
         cfg.t_supply = cond["supply"]
         kw = mean_rack_power(manifest, cfg, cond, seed)
-        return float(sum(1 for _, fan in fan_states(cond) if not (Path(cache) / f"{flow_key(fan, kw)}.npz").exists()))
+        return float(sum(1 for _, fan in fan_states(cond) if not (Path(cache) / f"{flow_key(fan, kw, tag)}.npz").exists()))
     return count
 
 
@@ -288,7 +291,7 @@ def make_stages(manifest: Manifest, *, runner: OpenFOAMRunner | None = None, see
         for i, (t, fan) in enumerate(states):
             def prog(f, note=None, i=i):
                 ctx.progress((i + f) / len(states))
-            npz, meta = (runner or OpenFOAMRunner(ctx.manager.out / "flows")).flow(fan, kw, prog, ctx.check)
+            npz, meta = (runner or OpenFOAMRunner(ctx.manager.out / "flows")).flow(fan, kw, prog, ctx.check, scene=scene)
             flows[CFDSolver.fan_tuple({k: fan[k] for k in fan})] = {"npz": str(npz), "fan": fan, "meta": meta, "from_s": t}
             if not meta.get("converged"):
                 ctx.note(f"OpenFOAM이 수렴 판정을 통과하지 못했다(팬 상태 {i + 1}, 반복 {meta.get('iterations')}). 값은 마지막 반복의 흐름이다")

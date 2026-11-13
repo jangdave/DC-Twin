@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """samples.json의 샘플을 순서대로 한 번에 하나씩 OpenFOAM(16코어)으로 돌린다. WSL의 python3로 실행한다(Windows 도구 필요 없음).
 
-사용 (nohup): wsl -e bash -lc "cd ~ && nohup setsid python3 /mnt/d/Test/experiments/openfoam_baseline/surrogate/run_batch.py > ~/surrogate_batch.log 2>&1 &"
+사용 (nohup): wsl -e bash -lc "cd ~ && nohup setsid python3 /mnt/d/Test/experiments/openfoam_baseline/surrogate/run_batch.py --cases <사례 폴더> --res <결과 폴더> > ~/surrogate_batch.log 2>&1 &"
 옵션: --only id ...  --spec 경로  --np 16  --nice 5
 - 이미 끝난 샘플(progress.json 의 status done/not_converged)은 건너뛰어, 중단 후 다시 실행하면 이어서 한다.
 - 샘플마다: 사례 정의(surrogate/cases/<id>/)를 ~/foam_runs/surrogate/<id>로 복사 -> 메시 -> 계산 -> 수렴 판정 -> extract.py로 results/surrogate/of_<id>.csv
@@ -41,8 +41,8 @@ def main():
     ap.add_argument("--only", nargs="*", default=None)
     ap.add_argument("--np", type=int, default=16)
     ap.add_argument("--nice", type=int, default=5)
-    ap.add_argument("--cases", default=str(SUR / "cases"), help="사례 정의 폴더(make_cases.py --out-dir)")
-    ap.add_argument("--res", default=str(RES), help="결과 폴더(of_<id>.csv, progress.json)")
+    ap.add_argument("--cases", required=True, help="사례 정의 폴더(make_cases.py --out-dir)(필수. 장면마다 폴더가 다르다: 이중 바닥 전 surrogate, 기본 장면 surrogate_rf, CAC surrogate_cac. 기본값을 두면 옛 장면 폴더에 섞여 2026-11-13 재검토에서 없앴다)")
+    ap.add_argument("--res", required=True, help="결과 폴더(of_<id>.csv, progress.json)(필수. 장면마다 폴더가 다르다: 이중 바닥 전 surrogate, 기본 장면 surrogate_rf, CAC surrogate_cac. 기본값을 두면 옛 장면 폴더에 섞여 2026-11-13 재검토에서 없앴다)")
     ap.add_argument("--init", default=None, help="초기값으로 쓸 끝난 사례 폴더(WSL 경로). mapFields로 옮겨 반복을 줄인다(2026-11-11, docs/33 C단계)")
     a = ap.parse_args()
     RES = Path(a.res)

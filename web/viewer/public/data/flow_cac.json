@@ -24,8 +24,8 @@
    "name": "all",
    "max_ms": 12.4,
    "openfoam": {
-    "iterations": null,
-    "converged": null
+    "iterations": 3000,
+    "converged": false
    }
   }
  ]

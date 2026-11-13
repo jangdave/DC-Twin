@@ -40,7 +40,11 @@ def main() -> None:
     ap.add_argument("--cache", type=Path, default=hs.ROOT / "sim" / "out" / "jobs" / "flows")
     ap.add_argument("--from-npz", type=Path, default=None, help="이미 계산한 정상 상태 흐름(.npz) 하나로 정상 장만 만든다(예: CAC 보기, docs/34). 팬을 바꿔도 흐름은 그대로다")
     ap.add_argument("--name", default="flow", help="저장 파일 이름(flow -> flow.bin, flow.json)")
+    ap.add_argument("--of-iterations", type=int, default=None, help="--from-npz일 때 그 흐름의 OpenFOAM 반복 수(출처 기록용)")
+    ap.add_argument("--of-converged", choices=["yes", "no"], default=None, help="--from-npz일 때 수렴 여부(출처 기록용)")
     a = ap.parse_args()
+    if a.from_npz and (a.of_iterations is None or a.of_converged is None):
+        ap.error("--from-npz에는 --of-iterations와 --of-converged가 필요하다(웹 흐름 파일의 출처 기록이 비지 않게)")
     hs.DX = 0.10
     hall = hs.read_hall(a.scene)
     lay = hs.Layout(hall)
@@ -53,7 +57,7 @@ def main() -> None:
     for name, off in cases:
         fan = {c: (0.0 if c == off else 1.0) for c in cracs}
         if a.from_npz:
-            npz, m = a.from_npz, {}
+            npz, m = a.from_npz, {"iterations": a.of_iterations, "converged": None if a.of_converged is None else a.of_converged == "yes"}
         else:
             npz, m = runner.flow(fan, kw, lambda f, note=None, name=name: print(f"  {name} {f * 100:5.1f}% {note or ''}", flush=True),
                                  scene=a.scene if hall.get("plenum") else None)
