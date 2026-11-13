@@ -27,6 +27,11 @@ const web = createServer(async (req, res) => {
 await new Promise((r) => web.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${web.address().port}/`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// 조건 대기(docs/30 M8): 조건이 맞을 때까지 기다리고, 시간이 지나면 그냥 넘어간다(판정은 뒤의 ok가 한다). 고정 대기보다 CPU가 바쁠 때 덜 흔들린다.
+const until = (page, fn, arg, ms = 5000) => page.waitForFunction(fn, { timeout: ms, polling: 50 }, arg).then(() => true, () => false);
+// 메뉴를 누른 뒤: 출처 전환(열기)이 끝나고 화면 조각이 한 번 갱신될 때까지
+const settled = async (page) => { await until(page, () => window.__viewer?.sourcesSettled?.()); await sleep(300); };
+const stageIs = (page, st) => until(page, (x) => window.__viewer?.state.stage === x, st);
 const SENSORS_JSON = await readFile(path.join(DIST, 'data/sensors.json'), 'utf8');
 const results = [];
 const ok = (name, cond, extra = '') => {
@@ -228,19 +233,21 @@ const spot = await p3.evaluate(() => {
 });
 ok('건물이 화면 안에서 눌릴 위치에 있다', !!spot);
 await p3.mouse.click(spot.x, spot.y);
-await sleep(1200);
+await stageIs(p3, 'hall');
+await until(p3, () => !document.getElementById('back-btn').hidden && document.getElementById('exterior-card').hidden);
 ok('FR-81 건물을 누르면 홀로 들어감', (await p3.evaluate(() => window.__viewer.state.stage)) === 'hall' && (await vis('#stage-tools')) && (await vis('#back-btn')) && !(await vis('#exterior-card')));
 const kept = await p3.evaluate(() => ({ sc: window.__viewer.state.scenarioId, t: window.__viewer.state.player.time }));
 ok('FR-86 단계가 바뀌어도 시나리오와 재생 위치 유지', kept.sc === 'fan_fault' && kept.t >= 240, JSON.stringify(kept));
 await p3.keyboard.press('Escape');
-await sleep(1200);
+await stageIs(p3, 'exterior');
+await until(p3, () => !document.getElementById('exterior-card').hidden);
 ok('FR-83 Esc로 외관으로 돌아옴', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior' && (await vis('#exterior-card')));
 await p3.evaluate(() => document.getElementById('canvas').focus());
 await p3.keyboard.press('Enter');
-await sleep(1200);
+await stageIs(p3, 'hall');
 ok('Enter로 홀 들어가기', (await p3.evaluate(() => window.__viewer.state.stage)) === 'hall');
 await p3.click('#back-btn');
-await sleep(300);
+await stageIs(p3, 'exterior');
 ok('"외관으로" 단추', (await p3.evaluate(() => window.__viewer.state.stage)) === 'exterior');
 const rej = await p3.evaluate(() => {
   const v = window.__viewer;
@@ -342,14 +349,14 @@ await pu.focus('#tab-summary');
 await pu.keyboard.press('ArrowRight');
 ok('UX 탭은 좌우 화살표로 옮겨 감', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'detail');
 await pu.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
-await sleep(400);
+await settled(pu);
 const ux2 = await pu.evaluate(() => ({ control: !document.getElementById('tab-control').hidden, active: document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab }));
 ok('UX 직접 시뮬레이션이면 "조작" 탭이 나타나 열림', ux2.control && ux2.active === 'control', JSON.stringify(ux2));
 await pu.evaluate(() => window.__viewer.selectEquipment('rack_21', false));
 await sleep(300);
 ok('UX 조작 중에 장비를 골라도 조작 탭에 머무름', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'control');
 await pu.evaluate(() => document.querySelector('#rail [data-mode="rec"]').click());
-await sleep(400);
+await settled(pu);
 const ux3 = await pu.evaluate(() => ({ control: document.getElementById('tab-control').hidden, active: document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab }));
 ok('UX 녹화로 돌아가면 조작 탭이 사라지고 요약으로 감', ux3.control && ux3.active !== 'control', JSON.stringify(ux3));
 await pu.close();
@@ -519,14 +526,14 @@ await p5.evaluate(() => window.__viewer.selectEquipment('rack_05', true));
 await sleep(200);
 ok('SIM 랙을 선택하면 "선택한 랙만" 슬라이더가 나타남', await vis5('#sim-selected'));
 await p5.select('#scenario-select', 'power_spike');
-await sleep(500);
+await until(p5, () => window.__viewer.state.simScenario === 'power_spike' && window.__viewer.state.sim.engine.fan.crac_02 === 1);
 const reset = await p5.evaluate(() => ({ fan: window.__viewer.state.sim.engine.fan.crac_02, t: window.__viewer.state.sim.time, sc: window.__viewer.state.simScenario, slider: document.querySelector('#sim-fans input[aria-label="CRAC_02 팬 속도"]').value }));
 ok('SIM 시나리오를 바꾸면 처음부터 다시 시작하고 슬라이더도 되돌아옴', reset.fan === 1 && reset.t < 20 && reset.sc === 'power_spike' && reset.slider === '100', JSON.stringify(reset));
 await p5.click('#rail [data-mode="rec"]');
-await sleep(800);
+await until(p5, () => window.__viewer.state.mode === 'rec' && document.getElementById('sim-panel').hidden && !document.getElementById('timebar').hidden && document.getElementById('mode-badge').textContent.includes('녹화'));
 ok('SIM 녹화 재생으로 돌아오면 패널이 숨고 시간 막대가 다시 보임', !(await vis5('#sim-panel')) && (await vis5('#timebar')) && (await p5.$eval('#mode-badge', (e) => e.textContent)).includes('녹화'));
 await p5.click('#rail [data-mode="sim"]');
-await sleep(500);
+await until(p5, () => window.__viewer.state.mode === 'sim' && !document.getElementById('sim-panel').hidden);
 ok('SIM 다시 간이 계산으로 전환', (await vis5('#sim-panel')) && (await p5.evaluate(() => window.__viewer.state.mode)) === 'sim');
 await p5.screenshot({ path: path.join(OUT, 'sim_mode.png') });
 
@@ -564,12 +571,12 @@ await pc.close();
   await sleep(500);
   const r1 = await rp.evaluate(() => ({ rail: !document.getElementById('rail').hidden, mon: document.querySelector('#rail [data-mode="rec"]').getAttribute('aria-pressed') }));
   await rp.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
-  await sleep(800);
+  await settled(rp);
   const r2 = await rp.evaluate(() => ({ mode: window.__viewer.state.mode, heat: window.__viewer.scene.heat, ctl: !document.getElementById('tab-control').hidden, sim: document.querySelector('#rail [data-mode="sim"]').getAttribute('aria-pressed'), mon: document.querySelector('#rail [data-mode="rec"]').getAttribute('aria-pressed'), bar: !document.getElementById('transport').hidden }));
   ok('RAIL 상단에 녹화 재생 단추 없음, 외관에서는 메뉴 숨김, 서버실에서는 모니터링이 선택됨', !ext.rail && !ext.topRec && r1.rail && r1.mon === 'true', JSON.stringify({ ext, r1 }));
   ok('RAIL 시뮬레이션 메뉴: 시뮬레이션 모드, 색칠 켜짐, 조작 탭과 재생 막대 보임', r2.mode === 'sim' && r2.heat && r2.ctl && r2.sim === 'true' && r2.mon === 'false' && r2.bar, JSON.stringify(r2));
   await rp.evaluate(() => document.querySelector('#rail [data-mode="rec"]').click());
-  await sleep(500);
+  await settled(rp);
   ok('RAIL 모니터링으로 돌아오면 기록 데이터 모드, 재생 막대 숨김', await rp.evaluate(() => window.__viewer.state.mode === 'rec' && document.getElementById('transport').hidden));
   await rp.close();
 }
@@ -617,7 +624,7 @@ await pc.close();
   await ep.goto(`${base}?stage=hall`, { waitUntil: 'networkidle0' });
   const t0 = await ep.evaluate(() => ({ energy: !document.getElementById('tab-energy').hidden, prep: !document.getElementById('tab-prep').hidden }));
   await ep.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
-  await sleep(1500);
+  await settled(ep);
   const t1 = await ep.evaluate(() => ({ energy: !document.getElementById('tab-energy').hidden, prep: !document.getElementById('tab-prep').hidden }));
   ok('ENERGY 시뮬레이션 전에는 에너지·용량, 이상 대비 탭이 없고 시뮬레이션에서 나타남', !t0.energy && !t0.prep && t1.energy && t1.prep, JSON.stringify({ t0, t1 }));
   await ep.evaluate(() => document.getElementById('tab-energy').click());
@@ -778,7 +785,7 @@ await pc.close();
   const y = await cp.evaluate(() => ({ badge: document.getElementById('tab-alarm-count').textContent, head: document.getElementById('alarm-count').textContent, active: window.__viewer.store.activeAlarms(), log: window.__viewer.store.alarmLog.length }));
   ok('값 알람 탭 배지는 지금 이상인 센서 수이고 기록 줄 수와 구분해 보여 줌', Number(y.badge) === y.active && y.active !== y.log && y.head.includes(`지금 ${y.active}건`) && y.head.includes(`기록 ${y.log}건`), JSON.stringify(y));
   await cp.$eval('#rail [data-mode="sim"]', (e) => e.click());
-  await sleep(1500);
+  await settled(cp);
   const z = await cp.evaluate(async () => {
     const rec = await (await fetch('data/rec/normal.json')).json();
     const sim = window.__viewer.state.sim;
@@ -853,7 +860,7 @@ await pc.close();
   await rp.evaluate(() => { window.__viewer.startLibrary('supply_24'); }); // 느린 녹화를 열기 시작하고(기다리지 않는다)
   await sleep(200);
   await rp.$eval('#rail [data-mode="sim"]', (e) => e.click()); // 곧바로 간이 계산으로 바꾼다
-  await sleep(4000); // 느린 녹화가 그 뒤에 도착한다
+  await sleep(4000); // 느린 녹화가 그 뒤에 도착한다(전환이 끝나도 옛 열기는 아직 진행 중이라 조건 대기를 쓰지 않는다)
   const R = await rp.evaluate(() => ({ stateMode: window.__viewer.state.mode, wsMode: window.__ws().mode, badge: document.getElementById('mode-badge').textContent, rail: [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()), tabs: !document.getElementById('tab-control').hidden }));
   ok('ROBUST 느린 시나리오 열기가 나중에 끝나도 마지막에 고른 간이 계산이 유지되고 화면 표시와 실제 출처가 같음', R.stateMode === 'sim' && R.wsMode === 'sim' && /간이/.test(R.badge) && JSON.stringify(R.rail) === '["간이 계산"]' && R.tabs, JSON.stringify(R));
   // 그래픽 컨텍스트 손실: 안내가 보이고, 복구되면 사라진다
@@ -967,7 +974,7 @@ await pc.close();
   await sleep(500);
   ok('LIVE 시뮬레이션으로 옮기면 서버 연결이 끊김', mock.wss.clients.size === 0, `${mock.wss.clients.size}개 연결`);
   await lp.$eval('#rail [data-mode="rec"]', (e) => e.click());
-  await sleep(600);
+  await settled(lp);
   const R = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, live: window.__viewer.state.live, server: window.__viewer.state.server, panel: !document.getElementById('sim-panel').hidden, serverOn: document.querySelector('[data-mode="server"]').classList.contains('on') }));
   // docs/31: 서버에 연결해 둔 뒤 모니터링으로 돌아가면 녹화가 아니라 그 서버의 실시간 값으로 다시 연결한다
   await lp.waitForFunction(() => window.__viewer.state.server, { timeout: 10000 }).catch(() => {});
@@ -1143,7 +1150,7 @@ await pc.close();
   await sp.click('#heat-btn');
   await sleep(300);
   await sp.evaluate(() => document.querySelector('#rail [data-mode="rec"]').click());
-  await sleep(800);
+  await settled(sp);
   const S3 = await sp.evaluate(() => ({ split: window.__viewer.scene._split, bar: !document.getElementById('split-bar').hidden }));
   ok('SPLIT 모니터링 메뉴로 가면 나눠 비교가 꺼짐', S3.split === 0 && !S3.bar, JSON.stringify(S3));
   await sp.close();
@@ -1245,7 +1252,7 @@ await pc.close();
   const tin = () => qp.evaluate(() => Object.fromEntries([...window.__viewer.store.latest.entries()].filter(([k]) => k.endsWith('-TEMP-IN')).map(([k, e]) => [k, e.value])));
   const before = await tin();
   await qp.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
-  await sleep(1200);
+  await settled(qp);
   const after = await tin();
   const gap = Math.max(...Object.keys(before).map((k) => Math.abs(after[k] - before[k])));
   const Q = await qp.evaluate(() => ({ badge: document.getElementById('mode-badge').textContent, title: document.getElementById('sc-title').textContent, cmp: document.querySelector('#pane-energy .cmp')?.textContent ?? '' }));
