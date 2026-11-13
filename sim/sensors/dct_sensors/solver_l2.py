@@ -26,6 +26,9 @@ from .manifest import Manifest
 from .solvers import Controls
 
 REPO = Path(__file__).resolve().parents[3]
+# 줄 안에서 랙 하나가 줄 평균과 이만큼(kW) 넘게 다르면 그 줄의 신뢰 등급을 ok에서 caution으로 내린다(docs/30 H3).
+# 학습 샘플은 줄 안의 랙 전력이 같다. 평소 랙마다 다른 기본 전력(6~8.5 kW)과 흔들림은 평균에서 약 1.5 kW 안이므로 그보다 넉넉히 잡는다.
+RACK_SPREAD_KW = 4.0
 SURROGATE_DIR = REPO / "experiments" / "surrogate_model"
 
 
@@ -125,8 +128,17 @@ class L2Solver:
         return {
             "fan": {f"CRAC_{c.split('_')[1]}": float(controls.fan.get(c, 1.0)) for c in self.m.cracs},
             "row_power_kw": [sum(v) / len(v) if v else self.cfg.power_ref for v in per_row],
+            "rack_power_kw": {rack_title(n): float(controls.power.get(n, self.cfg.power_ref)) for n in self.m.rack_names},  # 범위 검사용(모델 입력은 아니다)
             "remove": [],
         }
+
+    def uneven_rows(self, sample: dict) -> set[int]:
+        """랙 하나가 줄 평균과 RACK_SPREAD_KW보다 크게 다른 줄 번호(1부터)."""
+        out = set()
+        for n, (row, _) in self.m.racks.items():
+            if abs(sample["rack_power_kw"][rack_title(n)] - sample["row_power_kw"][row - 1]) > RACK_SPREAD_KW:
+                out.add(row)
+        return out
 
     def step(self, dt: float, controls: Controls) -> dict[str, float]:
         out = self.base.step(dt, controls)
@@ -135,7 +147,9 @@ class L2Solver:
         shift = self.cfg.t_supply - self.cfg.t_supply_ref
         ours = {rack_title(n): out[f"{n}/temp_in"] - shift for n in self.m.rack_names if f"{n}/temp_in" in out}
         info = {"supply_m3s": float(info["supply_m3s"]), "aisle_leak_m3s": [float(x) for x in info["aisle_leak_m3s"]]}
-        r = self.predictor.predict(self.sample_of(controls), ours, info)
+        sample = self.sample_of(controls)
+        r = self.predictor.predict(sample, ours, info)
+        uneven = self.uneven_rows(sample)
         self.last_reason = r.reason
         self.estimates = {}
         if r.fallback:
@@ -158,6 +172,8 @@ class L2Solver:
                 # 보정 모델은 기준 급기 온도(18도)에서만 배웠다. 급기가 다르면 "온도장 전체가 같은 폭으로 이동한다"는 선형 가정으로 옮겨 쓰는데
                 # 이 가정은 18도 밖에서 검증하지 않았다. 그래서 가장 높은 등급(ok)을 주지 않고 caution으로 제한한다.
                 level = "caution"
+            if level == "ok" and self.m.racks[n][0] in uneven:
+                level = "caution"  # 줄 안의 전력이 고르지 않다: 학습한 적 없는 조건(RACK_SPREAD_KW)
             self.estimates[key] = {"lower": round(val - (float(r.corrected[t]) - float(r.lower90[t])), 3),
                                    "upper": round(val + (float(r.upper90[t]) - float(r.corrected[t])), 3), "confidence": level}
         return out

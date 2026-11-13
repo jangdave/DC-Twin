@@ -76,6 +76,12 @@ class ResidualPredictor:
         margin = 1.0
         if any(p < lo - margin or p > hi + margin for p in sample["row_power_kw"]):
             return f"줄 전력이 학습 범위({lo:g}~{hi:g} kW) 밖"
+        # 학습 샘플은 줄 안의 랙 전력이 모두 같다. 줄 평균이 범위 안이어도 랙 하나가 범위 밖이면(예: 한 랙만 3배) 배운 적 없는 조건이다(docs/30 H3).
+        # 랙별 전력은 넣는 쪽이 줄 때만 본다(L2 서버가 준다. 샘플 명세로 부르는 검증 코드는 줄 평균만 준다)
+        rack = sample.get("rack_power_kw") or {}
+        bad = sorted(n for n, p in rack.items() if p < lo - margin or p > hi + margin)
+        if bad:
+            return f"랙 전력이 학습 범위({lo:g}~{hi:g} kW) 밖: {', '.join(bad[:3])}{' 외' if len(bad) > 3 else ''}"
         if any(not (0.0 <= f <= 1.0) for f in sample["fan"].values()):
             return "팬 레벨이 0~1 밖"
         if len(sample.get("remove", [])) > self.max_removed:
