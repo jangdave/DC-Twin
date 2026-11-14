@@ -916,14 +916,14 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   const { createRequire } = await import('node:module');
   const { WebSocketServer } = createRequire(import.meta.url)(path.join(HERE, '../../../gateway/node_modules/ws'));
   const apiLog = [];
-  const startMock = async ({ withApi, token = null }) => {
+  const startMock = async ({ withApi, token = null, containment = undefined }) => {
     const http = createServer(async (req, res) => {
       const p = new URL(req.url, 'http://x').pathname;
       if (!withApi || !p.startsWith('/api/')) return res.writeHead(404).end();
       apiLog.push(p);
       const send = (obj) => res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }).end(typeof obj === 'string' ? obj : JSON.stringify(obj));
       try {
-        if (p === '/api/meta') return send({ name: 'mock', solver: 'l0', library: true, controls: ['supply_temp'] });
+        if (p === '/api/meta') return send({ name: 'mock', solver: 'l0', library: true, controls: ['supply_temp'], ...(containment ? { containment } : {}) });
         // 이 컴퓨터의 서버만 주는 "외부 솔버 결과" 항목(합성 모의). 공개 사이트의 목록에는 없다.
         const extEntry = { id: 'ext_mock', title: '외부 모의 결과', note: '시험용 합성 항목', group: 'external', source: 'external', tool: '모의', n: 300 };
         if (p === '/api/library') {
@@ -1062,6 +1062,18 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   await fp.close();
   bare.wss.close();
   bare.http.close();
+  // 서버가 CAC로 계산 중이면(/api/meta containment cold, server/run_local.ps1 -Cac) HAC 보기에서도 "값은 CAC 계산(서버)"를 알린다(docs/34 6장)
+  const coldSrv = await startMock({ withApi: true, containment: 'cold' });
+  const kp = await browser.newPage();
+  await kp.setViewport({ width: 1440, height: 860 });
+  await kp.goto(`${base}?stage=hall&server=${encodeURIComponent(coldSrv.url)}`, { waitUntil: 'networkidle0' });
+  await kp.waitForFunction(() => window.__viewer?.state.live, { timeout: 15000 });
+  await until(kp, () => !document.getElementById('cac-note').hidden, undefined, 10000);
+  const K = await kp.evaluate(() => ({ note: document.getElementById('cac-note').hidden ? null : document.getElementById('cac-note').textContent, view: window.__viewer.scene.containment, group: !document.getElementById('containment-group').hidden }));
+  ok('CAC 서버: 서버가 CAC로 계산 중이면 HAC 보기에서도 "값은 CAC 계산(서버)"가 보임', K.note === '값은 CAC 계산(서버)' && K.view === 'hot', JSON.stringify(K));
+  await kp.close();
+  coldSrv.wss.close();
+  coldSrv.http.close();
 }
 
 // 원격 서버 링크(docs/30 M6): ?server=가 이 컴퓨터 밖이면 붙기 전에 묻고, "연결하지 않음"이면 녹화로 시작하고 연결 시도가 없다

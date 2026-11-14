@@ -26,6 +26,7 @@ uv run --python 3.13 --with websockets python -m dct_sensors.serve --manifest ..
 ```
 - `--solver l0`은 CPU로 되는 간단한 모델, `l1`은 Warp, `l2`는 Warp + 보정 모델(신뢰 막대가 나옴).
 - 시작할 때 열 상태를 예열하느라 수십 초 걸린다. 기본은 `127.0.0.1`에만 열린다.
+- **냉기 통로 격리(CAC) 장면**: `--scene ..\..\usd\scenes\_hall01_cac.usda`(또는 `run_local.ps1 -Cac`). L2는 장면을 보고 CAC 결과로 배운 보정 모델(`model_cac.pkl`)을 쓰고, `/api/meta`의 `containment`가 `cold`가 된다. 웹은 이 값을 보고 "값은 CAC 계산(서버)"를 표시한다. 데이터 API가 주는 미리 계산한 값은 HAC다([docs/34](../docs/34_cac_hac.md) 6장).
 - 이 방법은 **직접 실행해서 확인했다**(2026-11-04, RTX 5090): 데이터 API, 급기 온도 조작(냉각 전력 32.00 → 26.24 kW, 가정한 0.82배와 같음), 범위 밖 값 거절, 경로 탈출 404, 허용하지 않은 출처의 CORS 머리글 없음, 웹 화면과의 연결.
 
 ### B. 이 컴퓨터, CPU만 (L0)

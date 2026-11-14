@@ -171,6 +171,7 @@ async function main() {
   const recCache = new Map();
   const sensorIds = sensors.map((s) => s.sensorId);
   // 미리 계산한 값은 서버에 연결되어 있으면 서버에서 받고, 안 되면 사이트에 포함된 파일을 쓴다(대체 경로).
+  let serverMeta = null; // 서버의 /api/meta(격벽 방식 등). 연결에 실패하면 비운다
   const dataLink = new DataLink(); // 서버 데이터 연결(서버를 연달아 바꿀 때 늦게 온 옛 응답을 버린다, src/server_data.js)
   let jobClient = null; // 서버 시뮬레이션 작업 연결(docs/31). 서버가 작업을 받을 때만 만든다
   let serverToken = null; // 서버 연결 창에서 넣은 접근 토큰(작업 연결에도 쓴다. 저장하지 않는다)
@@ -349,12 +350,18 @@ async function main() {
   function syncCacNote() {
     const note = document.getElementById('cac-note');
     const src = sources.current;
-    const cac = scene.containment === 'cold' && src && (src.kind === 'rec' || src.kind === 'lib') && cacValues(src.fileOf(src.scenarioId));
-    note.hidden = scene.containment !== 'cold';
-    note.textContent = cac ? '값도 CAC 계산' : '값은 HAC 기준';
-    note.title = cac
-      ? 'CAC 장면으로 계산한 녹화(Warp 열 계산 + CAC 결과로 배운 보정 모델, docs/34 6장). 랙을 뺀 조합은 보정 뒤에도 오차가 크다'
-      : 'CAC 보기에서 이 메뉴는 격벽, 조명, 공기 흐름만 바뀐다. 온도 색과 센서 값은 HAC로 계산한 값이다';
+    const viewCold = scene.containment === 'cold';
+    // 서버 실시간 값은 서버가 알려 준 격벽 방식(/api/meta의 containment, server/run_local.ps1 -Cac)을 따른다
+    const serverCold = src?.kind === 'live' && serverMeta?.containment === 'cold';
+    const recCold = viewCold && src && (src.kind === 'rec' || src.kind === 'lib') && cacValues(src.fileOf(src.scenarioId));
+    const cac = recCold || serverCold;
+    note.hidden = !viewCold && !cac; // HAC 보기에서도 서버 값이 CAC면 알린다
+    note.textContent = cac ? (viewCold ? '값도 CAC 계산' : '값은 CAC 계산(서버)') : '값은 HAC 기준';
+    note.title = serverCold
+      ? '서버가 냉기 통로 격리(CAC) 장면과 CAC 보정 모델로 계산 중이다(docs/34 6장)'
+      : cac
+        ? 'CAC 장면으로 계산한 녹화(Warp 열 계산 + CAC 결과로 배운 보정 모델, docs/34 6장). 랙을 뺀 조합은 보정 뒤에도 오차가 크다'
+        : 'CAC 보기에서 이 메뉴는 격벽, 조명, 공기 흐름만 바뀐다. 온도 색과 센서 값은 HAC로 계산한 값이다';
   }
   function presentMode(d) {
     ui.setMode(d.badge.mode, d.badge.text);
@@ -552,6 +559,8 @@ async function main() {
     if (r.ok) {
       try {
         const { lib } = r;
+        serverMeta = lib.meta ?? null;
+        syncCacNote();
         connectJobs(wsUrl, lib.meta);
         libSource.index = lib.index;
         if (lib.groups.length) libSource.groups = lib.groups;
@@ -565,6 +574,8 @@ async function main() {
       }
     }
     {
+      serverMeta = null;
+      syncCacNote();
       restoreStaticLib();
       console.warn('서버의 미리 계산한 값을 쓰지 않는다:', e.message);
       ui.setDataSource(e.status === 401 || e.status === 429 ? `이 사이트에 포함된 파일 (${e.message})` : '이 사이트에 포함된 파일 (서버에 데이터 API 없음)');
