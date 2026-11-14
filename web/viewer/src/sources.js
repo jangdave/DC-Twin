@@ -40,10 +40,12 @@ class SecondClock {
 // ---- 녹화(모니터링 기록)와 라이브러리(미리 계산한 상태와 시나리오 모음) ----
 // 둘은 같은 재생 방식이고 목록과 표시만 다르다. alias 항목(file)은 다른 항목의 녹화 파일을 쓴다.
 export class RecSource {
-  // opts: { store, sensorIds, index(목록), loadJson(file) -> 녹화 JSON, cache(여러 출처가 같은 파일을 한 번만 받게 공유), kind, badgeText, groups }
-  constructor({ store, sensorIds, index, loadJson, cache = new Map(), kind = 'rec', badgeText = '녹화 재생 · 실시간 아님', groups = null }) {
+  // opts: { store, sensorIds, index(목록), loadJson(file) -> 녹화 JSON, cache(여러 출처가 같은 파일을 한 번만 받게 공유), kind, badgeText, groups,
+  //         badgeSuffix(file) -> 표시 뒤에 붙일 말(격벽 방식 등, 없으면 '') }
+  constructor({ store, sensorIds, index, loadJson, cache = new Map(), kind = 'rec', badgeText = '녹화 재생 · 실시간 아님', groups = null, badgeSuffix = null }) {
     this.kind = kind;
     this.badgeText = badgeText;
+    this.badgeSuffix = badgeSuffix;
     this.groups = groups;
     this.control = false;
     this.store = store;
@@ -56,8 +58,12 @@ export class RecSource {
     this._clock = new SecondClock();
   }
 
+  fileOf(id) {
+    return this.index.find((x) => x.id === id)?.file ?? id; // alias는 가리키는 녹화를 쓴다
+  }
+
   async _load(id) {
-    const file = this.index.find((x) => x.id === id)?.file ?? id; // alias는 가리키는 녹화를 쓴다
+    const file = this.fileOf(id);
     if (!this.cache.has(file)) this.cache.set(file, parseRecording(await this.loadJson(file), this.sensorIds));
     return this.cache.get(file);
   }
@@ -95,7 +101,7 @@ export class RecSource {
       kind: this.kind,
       control: false,
       // 항목의 출처가 외부 솔버면 우리 모델이 만든 값이 아니므로 표시를 바꾼다(잘못된 출처 표시를 막는다)
-      badge: { mode: this.kind, text: meta?.source === 'external' ? `외부 솔버 결과${meta.tool ? ` (${meta.tool})` : ''} · 이 컴퓨터의 서버만 줌` : this.badgeText },
+      badge: { mode: this.kind, text: meta?.source === 'external' ? `외부 솔버 결과${meta.tool ? ` (${meta.tool})` : ''} · 이 컴퓨터의 서버만 줌` : this.badgeText + (this.badgeSuffix?.(this.fileOf(this.scenarioId)) ?? '') },
       panel: 'none',
       scenarios: { list: this.index, current: this.scenarioId, groups: this.groups },
       card: { title: meta?.title ?? this.scenarioId, desc: meta?.note ?? '', events: rec?.events ?? [], seekable: true },

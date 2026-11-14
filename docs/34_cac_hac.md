@@ -62,7 +62,8 @@
 ## 5. 웹 보기
 
 - 홀 안 표시 줄의 **격벽: HAC / CAC** 단추. CAC를 고르면 격벽, 조명(서버실 껍데기 `hall_shell_cac.glb`), 공기 흐름(`flow_cac`, 정상 상태 하나)이 바뀌고 공기 흐름을 켠다.
-- CAC에서는 "값은 HAC 기준"이라고 표시한다. 온도 색, 센서 값, 녹화, 시뮬레이션 메뉴는 HAC로 계산한 값 그대로다. CAC 흐름장은 정상 상태 하나뿐이라 팬을 바꿔도 흐름은 그대로다.
+- **값(2026-11-14)**: 모니터링 녹화와 미리 계산한 값(10개)은 CAC를 고르면 같은 시나리오, 같은 재생 시각의 **CAC 녹화**(`data/rec/cac/`, CAC 장면 + `model_cac.pkl`, `make_sim_library.py --variant cac`)로 바뀌고 표시에 "CAC 계산", 표시 줄에 "값도 CAC 계산"이 붙는다. 간이 계산(브라우저 L0)과 서버 실시간 값은 HAC 계산뿐이라 "값은 HAC 기준"으로 표시한다. 서버가 준 미리 계산한 값(데이터 API)도 HAC다. CAC 흐름장은 정상 상태 하나뿐이라 팬을 바꿔도 흐름은 그대로다.
+- 한계: CAC 녹화는 6장의 CAC 보정 모델로 만들었다. 랙을 뺀 조합은 보정 뒤에도 오차가 크다(보류 E 3.5도). 지금 녹화 10개에는 랙 제거가 없다.
 - 장면 자료: `scene.json`의 `variants.cac`(판 목록, 껍데기, 흐름 파일 이름). 원본은 `experiments/openfoam_baseline/layout_cac.json`(`export_layout.py ../../usd/scenes/_hall01_cac.usda layout_cac.json`).
 
 ## 6. CAC 학습 데이터와 보정 모델 (2026-11-14)
@@ -109,6 +110,6 @@
 나머지 15개를 HAC 때(`docs/33` 7.1)와 같은 방법으로 4500회까지 250회마다 저장해 3000회 이후 흔들림을 잰다(8코어씩 2개 동시, 결과 `results/surrogate_cac_osc/`).
 
 ### 6.2 다음 단계와 다른 방법
-- CAC 센서 값: CAC 전용 보정 모델(`model_cac.pkl`)과 CAC 녹화로 웹에서 CAC를 고르면 값도 CAC로 바꾼다.
+- CAC 센서 값: 했다(5장, `model_cac.pkl`과 CAC 녹화). 서버(Kit, `serve.py`)의 CAC 장면 실행은 아직이다(`--scene`으로 L1/L2는 되지만 서버 메뉴에 격벽 선택이 없다).
 - 우리 계산의 빈 랙 자리 처리 개선(`docs/32` V4): 빈자리를 지나는 흐름의 저항이나 섞임을 OpenFOAM에 맞춘다.
 - 다른 방법: 웹에서 CAC 격벽만 그리고 흐름은 HAC 것을 그대로 쓰기 — 공기 흐름이 격벽을 뚫고 지나가 보여 쓰지 않았다.
