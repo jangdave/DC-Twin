@@ -179,7 +179,7 @@ ok('FR-40 알람 항목을 누르면 장비 선택', (await page.evaluate(() => 
 
 // 5) 시나리오와 보기 값 전환(FR-21, 53)
 await page.select('#scenario-select', 'power_spike');
-await sleep(500);
+await settled(page); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
 const sc = await page.evaluate(() => ({ id: window.__viewer.state.scenarioId, t: window.__viewer.state.player.time, sel: window.__viewer.state.selected }));
 ok('FR-53 시나리오 전환: 시각 0, 선택 유지', sc.id === 'power_spike' && sc.t < 1 && sc.sel === 'crac_01', JSON.stringify(sc));
 await page.click('#heat-btn'); // 서버실 기본 보기에서는 색칠이 꺼져 있어 먼저 켠다
@@ -772,20 +772,20 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   const rail = () => mp.evaluate(() => [...document.querySelectorAll('#rail button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent.trim()));
   const click = (sel) => mp.$eval(sel, (e) => e.click());
   await click('#rail [data-mode="sim"]');
-  await sleep(300);
+  await settled(mp); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   ok('MENU 간이 계산만 눌림', JSON.stringify(await rail()) === '["간이 계산"]');
   await click('#cctv-btn');
   await sleep(500);
   const r1 = await rail();
   ok('MENU 간이 계산 중 CCTV를 열면 CCTV만 눌림(동시에 눌리지 않음)', JSON.stringify(r1) === '["CCTV"]', JSON.stringify(r1));
   await click('#rail [data-mode="sim"]');
-  await sleep(300);
+  await settled(mp); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   const r2 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, mode: window.__viewer.state.mode }));
   ok('MENU CCTV 중 간이 계산을 누르면 CCTV가 닫히고 간이 계산만 눌림', r2.cctv && r2.mode === 'sim' && JSON.stringify(await rail()) === '["간이 계산"]', JSON.stringify(r2));
   await click('#cctv-btn');
   await sleep(300);
   await click('#rail [data-mode="rec"]');
-  await sleep(500);
+  await settled(mp); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   const r3 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, mode: window.__viewer.state.mode }));
   ok('MENU CCTV 중 모니터링을 누르면 CCTV가 닫히고 모니터링만 눌림', r3.cctv && r3.mode === 'rec' && JSON.stringify(await rail()) === '["모니터링"]', JSON.stringify(r3));
   await click('#cctv-btn');
@@ -993,13 +993,13 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   await lp.$eval('#rail [data-mode="lib"]', (e) => e.click());
   await lp.waitForFunction(() => window.__viewer.state.mode === 'lib' && window.__viewer.state.player, { timeout: 10000 });
   await lp.select('#scenario-select', 'supply_22');
-  await sleep(800);
+  await settled(lp); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   const D1 = await lp.evaluate(() => ({ mode: window.__viewer.state.mode, src: document.getElementById('data-source').textContent, hidden: document.getElementById('data-source').hidden, cool: window.__viewer.store.aggregates.cooling_power }));
   ok('DATA 서버에 연결한 뒤의 시뮬레이션 값은 서버에서 받고 화면에 출처가 보임', apiLog.includes('/api/library/supply_22') && /서버\(http:\/\/127\.0\.0\.1:\d+\)에서 받음/.test(D1.src) && !D1.hidden && D1.cool < 30, JSON.stringify({ apiLog, D1 }));
   // 서버가 준 외부 솔버 결과: 그룹으로 묶여 보이고, 고르면 서버에서 받아 동작하며, 화면에 "로컬 전용"이 보인다
   const E0 = await lp.evaluate(() => ({ groups: [...document.querySelectorAll('#scenario-select optgroup')].map((g) => g.label), src: document.getElementById('data-source').textContent, opts: document.querySelectorAll('#scenario-select option').length }));
   await lp.select('#scenario-select', 'ext_mock');
-  await sleep(800);
+  await settled(lp); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   const E1 = await lp.evaluate(() => ({ it: window.__viewer.store.aggregates.it_power, sel: document.getElementById('scenario-select').value, badge: document.getElementById('mode-badge').textContent }));
   ok('EXT 서버가 준 외부 솔버 결과가 "외부 솔버 결과 (로컬 전용)" 그룹으로 보이고 고르면 서버에서 받아 동작함', E0.groups.includes('외부 솔버 결과 (로컬 전용)') && E0.opts === 13 && /외부 솔버 결과 1개 포함, 서버가 줄 때만 보임/.test(E0.src) && apiLog.includes('/api/library/ext_mock') && E1.sel === 'ext_mock' && E1.it > 550 && /외부 솔버 결과 \(모의\)/.test(E1.badge) && !/Warp/.test(E1.badge), JSON.stringify({ E0, E1 }));
   await sleep(500);
@@ -1056,7 +1056,7 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   await fp.$eval('#rail [data-mode="lib"]', (e) => e.click());
   await fp.waitForFunction(() => window.__viewer.state.mode === 'lib' && window.__viewer.state.player, { timeout: 10000 });
   await fp.select('#scenario-select', 'supply_24');
-  await sleep(800);
+  await settled(fp); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   const F = await fp.evaluate(() => ({ src: document.getElementById('data-source').textContent, cool: window.__viewer.store.aggregates.cooling_power, opts: document.querySelectorAll('#scenario-select option').length }));
   ok('DATA 서버에 데이터 API가 없어도 사이트의 파일로 미리 계산한 값이 동작하고 출처를 알림(외부 솔버 결과는 없음)', /서버에 데이터 API 없음/.test(F.src) && F.cool < 28 && F.opts === 12, JSON.stringify(F));
   await fp.close();
@@ -1109,11 +1109,12 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   await sleep(500);
   const vis = () => lp.evaluate(() => ({ layer: getComputedStyle(document.getElementById('labels')).visibility, shown: [...document.querySelectorAll('.aisle-label')].filter((e) => !e.hidden && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(document.getElementById('labels')).visibility !== 'hidden').length }));
   const L1 = await vis();
+  const labelsShown = (want) => until(lp, (w) => (getComputedStyle(document.getElementById('labels')).visibility === 'visible' && [...document.querySelectorAll('.aisle-label')].filter((e) => !e.hidden).length >= 6) === w, want, 10000);
   await lp.click('#back-btn');
-  await sleep(1500);
+  await labelsShown(false); // 카메라 이동이 끝나야 바뀐다(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   const L2 = await vis();
   await lp.click('#enter-btn');
-  await sleep(1800);
+  await labelsShown(true);
   const L3 = await vis();
   ok('LABEL 통로 이름을 켜고 외관으로 나가면 보이지 않고, 서버실로 돌아오면 다시 보임', L1.shown >= 6 && L2.shown === 0 && L3.shown >= 6, JSON.stringify({ L1, L2, L3 }));
   await lp.close();
