@@ -58,7 +58,7 @@ console.log(`      (랙 지표: ${[...rackMetrics].join(', ')} / 센서 ${sensor
 // ---- 3. 녹화 ----
 const byId = new Map(sensors.map((s) => [s.sensorId, s]));
 const fileOf = (it) => it.file ?? it.id; // alias 항목(예: 급기 18도)은 다른 항목의 녹화 파일을 가리킨다
-ok('시나리오 목록과 녹화 파일이 같음', JSON.stringify((await readdir(path.join(DATA, 'rec'))).sort()) === JSON.stringify([...new Set(index.map((i) => `${fileOf(i)}.json`))].sort()), '');
+ok('시나리오 목록과 녹화 파일이 같음', JSON.stringify((await readdir(path.join(DATA, 'rec'))).filter((f) => f.endsWith('.json')).sort()) === JSON.stringify([...new Set(index.map((i) => `${fileOf(i)}.json`))].sort()), '');
 const recOf = new Map();
 for (const it of index.filter((x) => !x.file)) {
   const r = await json(path.join(DATA, 'rec', `${it.id}.json`));
@@ -140,6 +140,25 @@ if (libDef) ok('라이브러리: 정의(sim/library.json)와 웹 목록의 항�
   void mean;
 }
 
+// CAC 녹화(docs/34 6장): 있으면 모든 항목이 있고, HAC 녹화와 같은 길이·센서이며, 모두 같은 CAC 보정 모델로 만들어졌다
+if (existsSync(path.join(DATA, 'rec', 'cac'))) {
+  const items = index.filter((x) => !x.file);
+  const files = (await readdir(path.join(DATA, 'rec', 'cac'))).sort();
+  ok('CAC 녹화: 목록의 모든 항목(alias 제외)에 CAC 녹화가 있고 cacBytes가 붙음', JSON.stringify(files) === JSON.stringify(items.map((i) => `${i.id}.json`).sort()) && index.every((i) => i.cacBytes > 0), files.join());
+  const cms = [];
+  let bad = [];
+  for (const it of items) {
+    const r = await json(path.join(DATA, 'rec', 'cac', `${it.id}.json`));
+    const h = recOf.get(it.id);
+    const okShape = r.n === h.n && Object.keys(r.values).length === Object.keys(h.values).length && Object.values(r.values).every((v) => v.length === r.n && v.every(Number.isFinite));
+    if (!okShape) bad.push(it.id);
+    cms.push([it.id, r.meta?.model]);
+  }
+  ok('CAC 녹화: HAC 녹화와 길이, 센서 수가 같고 비어 있는 값이 없음', bad.length === 0, bad.join());
+  const shas = new Set(cms.map(([, m]) => `${m?.model_sha256}|${m?.samples_json_sha256}`));
+  ok(`CAC 녹화: 모두 CAC 보정 모델(containment cold, 오래되지 않음) 하나로 만들어짐 (${shas.size}종)`, cms.every(([, m]) => m?.containment === 'cold' && m.stale !== true) && shas.size === 1, [...shas].join(' / '));
+} else console.log('건너뜀  CAC 녹화 없음(data/rec/cac)');
+
 // 모든 녹화가 같은 보정 모델로 만들어졌고 오래된 모델이 아니다(이전에는 이벤트 녹화 4개와 새 6개가 서로 다른 모델 버전이었다)
 {
   const models = [...recOf.entries()].map(([id, r]) => [id, r.meta?.model]);
@@ -180,6 +199,7 @@ if (src.every(existsSync) && (await readdir(path.join(ROOT, 'sim/out/recordings'
     ok('재생성: sim_init.json이 웹 자료와 같음', (await readFile(path.join(tmp, 'sim_init.json'), 'utf8')) === (await readFile(path.join(DATA, 'sim_init.json'), 'utf8')), '');
     ok('재생성: library.json이 웹 자료와 같음', (await readFile(path.join(tmp, 'library.json'), 'utf8')) === (await readFile(path.join(DATA, 'library.json'), 'utf8')), '');
     for (const it of index.filter((x) => !x.file)) ok(`재생성: rec/${it.id}.json이 웹 자료와 같음`, (await readFile(path.join(tmp, 'rec', `${it.id}.json`), 'utf8')) === (await readFile(path.join(DATA, 'rec', `${it.id}.json`), 'utf8')), '');
+    if (existsSync(path.join(DATA, 'rec', 'cac'))) for (const it of index.filter((x) => !x.file)) ok(`재생성: rec/cac/${it.id}.json이 웹 자료와 같음`, existsSync(path.join(tmp, 'rec', 'cac', `${it.id}.json`)) && (await readFile(path.join(tmp, 'rec', 'cac', `${it.id}.json`), 'utf8')) === (await readFile(path.join(DATA, 'rec', 'cac', `${it.id}.json`), 'utf8')), '');
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

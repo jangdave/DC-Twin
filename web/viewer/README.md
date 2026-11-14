@@ -41,6 +41,7 @@ npm run data
 ```
 
 원본의 센서 생성기 녹화(`sim/out/recordings/*_l2.jsonl`)는 저장소에 없다(`sim/sensors`에서 `--solver l2`로 만든다, [docs/11](../../docs/11_data_spec.md)).
+냉기 통로 격리(CAC) 녹화(`*_l2_cac.jsonl`, `scripts/make_sim_library.py --variant cac`)가 모두 있으면 `build_data`가 `public/data/rec/cac/`도 만든다. 서버실의 격벽 단추에서 CAC를 고르면 모니터링 녹화와 미리 계산한 값이 같은 시각의 CAC 녹화로 바뀐다(간이 계산과 서버 값은 HAC, [docs/34](../../docs/34_cac_hac.md) 5장).
 
 ## 장비 모양(glb) 다시 만들기
 

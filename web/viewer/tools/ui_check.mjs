@@ -474,7 +474,7 @@ await p7.evaluate(() => document.getElementById('heat-btn').click());
 const h1 = await p7.evaluate(() => ({ heat: window.__viewer.scene.heat, front: window.__viewer.scene.rackFront.visible, legend: !document.getElementById('legend').hidden, views: !document.getElementById('view-group').hidden }));
 ok('HEAT 단추로 켜면 색칠, 범례, 보기 값이 나타남', h1.heat && h1.front && h1.legend && h1.views, JSON.stringify(h1));
 await p7.evaluate(() => window.__viewer.state.player.seek(200)); // 60초에 CRAC_02 정지
-await sleep(1200);
+await until(p7, () => window.__viewer.scene.airflow.fan[1] < 0.05, undefined, 10000); // 속도장 갱신은 화면 갱신 뒤에 온다(고정 대기는 바쁠 때 흔들렸다, docs/30 M8)
 const fan = await p7.evaluate(() => window.__viewer.scene.airflow.fan.map((v) => +v.toFixed(2)));
 ok('FLOW CRAC_02가 멈추면 속도장에 반영됨(팬 비율 0)', fan[1] < 0.05 && fan[0] > 0.9, JSON.stringify(fan));
 const card = await p4.evaluate(() => ({ title: document.getElementById('sc-title').textContent, desc: document.getElementById('sc-desc').textContent.length, max: document.getElementById('sc-max').textContent, ev: [...document.querySelectorAll('#sc-events li')].map((l) => l.textContent) }));
@@ -731,6 +731,37 @@ await pc.close();
   ok('CAC 격벽 전환: 바닥 상태가 껍데기마다 맞고, 반복 전환에 껍데기가 늘지 않고, 받기 실패면 HAC로 되돌림', !!c && c.opacity === 1 && !c.transparent && c.depthWrite && c.coldOther && c.same && c.fail === 'hot', JSON.stringify(c));
   await sp.close();
 }
+
+// CAC 값(docs/34 6장): CAC를 고르면 모니터링 녹화가 같은 시나리오, 같은 시각의 CAC 녹화로 바뀌고 표시가 따라온다.
+// 간이 계산(HAC 계산뿐)으로 가면 "값은 HAC 기준"으로 바뀌고, HAC로 돌아오면 원래 녹화 값이다
+if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
+  const cp = await browser.newPage();
+  await cp.setViewport({ width: 1440, height: 900 });
+  await cp.goto(`${base}?stage=hall&scenario=fan_fault&t=250&panel=open`, { waitUntil: 'networkidle0' });
+  await cp.waitForFunction(() => window.__viewer?.state.player && !document.getElementById('containment-group').hidden, { timeout: 30000 });
+  const snap = () => cp.evaluate(() => {
+    const v = window.__viewer;
+    const t = [...v.store.latest.entries()].filter(([k]) => k.endsWith('-TEMP-IN')).map(([, e]) => e.value);
+    return { t: Math.round(v.state.player?.time ?? -1), max: Math.max(...t), mean: t.reduce((a, b) => a + b, 0) / t.length, badge: document.getElementById('mode-badge').textContent, note: document.getElementById('cac-note').hidden ? null : document.getElementById('cac-note').textContent, mode: v.state.mode, model: v.state.player?.rec?.meta?.model?.containment ?? null };
+  });
+  await cp.evaluate(() => { window.__viewer.state.player.playing = false; });
+  const H = await snap();
+  await cp.click('#containment-group [data-cont="cold"]');
+  await until(cp, () => document.getElementById('mode-badge').textContent.includes('CAC') && window.__viewer.sourcesSettled(), undefined, 15000);
+  const C = await snap();
+  await cp.click('#rail [data-mode="sim"]');
+  await settled(cp);
+  const S = await snap();
+  await cp.click('#rail [data-mode="rec"]');
+  await settled(cp);
+  await cp.click('#containment-group [data-cont="hot"]');
+  await until(cp, () => !document.getElementById('mode-badge').textContent.includes('CAC') && window.__viewer.sourcesSettled(), undefined, 15000);
+  const H2 = await snap();
+  ok('CAC 값: CAC를 고르면 같은 시각의 CAC 녹화(CAC 모델)로 바뀌고 표시가 "CAC 계산", 간이 계산은 "값은 HAC 기준", HAC로 돌아오면 표시가 없어짐',
+    H.model !== 'cold' && C.model === 'cold' && C.t === H.t && Math.abs(C.mean - H.mean) > 0.05 && C.badge.includes('CAC 계산') && C.note === '값도 CAC 계산' && S.mode === 'sim' && S.note === '값은 HAC 기준' && !S.badge.includes('CAC 계산') && H2.model !== 'cold' && H2.note === null && !H2.badge.includes('CAC'),
+    JSON.stringify({ H, C, S, H2 }));
+  await cp.close();
+} else console.log('건너뜀  CAC 값: 웹 자료에 CAC 녹화가 없음');
 
 // 메뉴 상태: 왼쪽 메뉴에서 눌린 단추는 항상 하나뿐(src/workspace.js의 규칙)
 {

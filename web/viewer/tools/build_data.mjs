@@ -2,7 +2,8 @@
 //   node tools/build_data.mjs [--out public/data]
 // 원본: experiments/openfoam_baseline/layout.json(장면 USD에서 뽑은 상자 좌표), sim/out/sensor_manifest.json, sim/out/recordings/*_l2.jsonl
 // 결과: scene.json, sensors.json, index.json, rec/<시나리오>.json (센서별 배열로 줄인 녹화)
-import { createReadStream, readFileSync } from 'node:fs';
+//       CAC 녹화(sim/out/recordings/<id>_l2_cac.jsonl, make_sim_library.py --variant cac)가 모두 있으면 rec/cac/<id>.json도 만든다(docs/34 6장)
+import { createReadStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -159,18 +160,32 @@ async function main() {
   await writeFile(path.join(out, 'scene.json'), JSON.stringify(buildScene(layout, cacLayout)));
   await writeFile(path.join(out, 'sensors.json'), JSON.stringify(sensors));
   const index = [];
+  // CAC 녹화는 모든 항목이 있을 때만 만든다(일부만 있으면 웹에서 메뉴마다 격벽 방식이 섞인다)
+  const cacFiles = SCENARIOS.map((sc) => path.join(ROOT, 'sim/out/recordings', sc.file.replace('_l2.jsonl', '_l2_cac.jsonl')));
+  const withCac = cacFiles.every((f) => existsSync(f));
+  if (withCac) await mkdir(path.join(out, 'rec', 'cac'), { recursive: true });
+  else if (cacFiles.some((f) => existsSync(f))) console.warn('CAC 녹화가 일부만 있어 만들지 않는다(make_sim_library.py --variant cac로 모두 만든다)');
   for (const sc of SCENARIOS) {
     const rec = await convertRecording(path.join(ROOT, 'sim/out/recordings', sc.file), sc.id, ids);
     const text = JSON.stringify(rec);
     await writeFile(path.join(out, 'rec', `${sc.id}.json`), text);
-    index.push({ id: sc.id, title: sc.title, note: sc.note, group: sc.group, ...(sc.value !== undefined ? { value: sc.value } : {}), n: rec.n, bytes: Buffer.byteLength(text) });
+    const item = { id: sc.id, title: sc.title, note: sc.note, group: sc.group, ...(sc.value !== undefined ? { value: sc.value } : {}), n: rec.n, bytes: Buffer.byteLength(text) };
     console.log(`${sc.id}: ${rec.n}초, 센서 ${ids.length}개, ${(Buffer.byteLength(text) / 1e6).toFixed(2)} MB, 알람 ${rec.alarms.length}건`);
+    if (withCac) {
+      const cac = await convertRecording(cacFiles[SCENARIOS.indexOf(sc)], sc.id, ids);
+      if (cac.meta?.model?.containment !== 'cold') throw new Error(`${sc.id}: CAC 녹화가 CAC 보정 모델로 만들어지지 않았다(${JSON.stringify(cac.meta?.model?.source)})`);
+      const ct = JSON.stringify(cac);
+      await writeFile(path.join(out, 'rec', 'cac', `${sc.id}.json`), ct);
+      item.cacBytes = Buffer.byteLength(ct);
+      console.log(`  CAC: 알람 ${cac.alarms.length}건, ${(item.cacBytes / 1e6).toFixed(2)} MB`);
+    }
+    index.push(item);
   }
   // alias 항목(예: 급기 18도 = 정상 가동)은 같은 녹화 파일을 가리킨다. 용량을 두 번 쓰지 않는다.
   for (const e of LIBRARY.entries.filter((x) => x.alias)) {
     const target = index.find((x) => x.id === e.alias);
     if (!target) throw new Error(`alias 대상이 없다: ${e.id} -> ${e.alias}`);
-    index.push({ id: e.id, title: e.title, note: e.note, group: e.group, ...(e.value !== undefined ? { value: e.value } : {}), file: e.alias, n: target.n, bytes: target.bytes });
+    index.push({ id: e.id, title: e.title, note: e.note, group: e.group, ...(e.value !== undefined ? { value: e.value } : {}), file: e.alias, n: target.n, bytes: target.bytes, ...(target.cacBytes ? { cacBytes: target.cacBytes } : {}) });
   }
   await writeFile(path.join(out, 'index.json'), JSON.stringify(index));
   await writeFile(path.join(out, 'library.json'), JSON.stringify({ version: LIBRARY.version, groups: LIBRARY.groups }));

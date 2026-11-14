@@ -182,7 +182,11 @@ async function main() {
     libSource.groups = staticLib.groups;
     if (state.mode === 'lib') ui.setScenarios(libSource.index, libSource.scenarioId, libSource.groups);
   };
+  // 냉기 통로 격리(CAC) 녹화(docs/34 6장): 사이트에 CAC 녹화가 있는 항목은 CAC를 고르면 그 값을 쓴다(서버 데이터는 HAC만 준다)
+  const cacFiles = new Set(index.filter((i) => i.cacBytes && !i.file).map((i) => i.id));
+  const cacValues = (file) => scene.containment === 'cold' && cacFiles.has(file);
   const loadRec = async (file) => {
+    if (cacValues(file)) return getJson(`data/rec/cac/${file}.json`);
     if (dataLink.usable) {
       try {
         return await dataLink.current.rec(file);
@@ -195,8 +199,9 @@ async function main() {
     }
     return getJson(`data/rec/${file}.json`);
   };
-  const recSource = new RecSource({ store, sensorIds, index: index.filter((i) => !i.group || i.group === 'event'), loadJson: loadRec, cache: recCache });
-  const libSource = new LibSource({ store, sensorIds, index, loadJson: loadRec, cache: recCache, groups: libGroups });
+  const cacSuffix = (file) => (scene.containment !== 'cold' ? '' : cacValues(file) ? ' · CAC 계산' : ' · 값은 HAC 기준');
+  const recSource = new RecSource({ store, sensorIds, index: index.filter((i) => !i.group || i.group === 'event'), loadJson: loadRec, cache: recCache, badgeSuffix: cacSuffix });
+  const libSource = new LibSource({ store, sensorIds, index, loadJson: loadRec, cache: recCache, groups: libGroups, badgeSuffix: cacSuffix });
   staticLib.index = libSource.index;
   staticLib.groups = libSource.groups;
   let simSource = null; // 패널이 만들어진 뒤에 만든다
@@ -251,7 +256,11 @@ async function main() {
         return;
       }
       if (t === 'cold' && !scene.showAirflow) document.getElementById('flow-btn').click();
-      document.getElementById('cac-note').hidden = t !== 'cold';
+      // 녹화와 미리 계산한 값은 같은 시나리오, 같은 시각에서 그 격벽 방식의 녹화로 다시 연다(캐시는 방식마다 다르므로 비운다)
+      recCache.clear();
+      const src = sources.current;
+      if (src && (src.kind === 'rec' || src.kind === 'lib') && src.scenarioId) await useSource(src, { scenarioId: src.scenarioId, t: src.player?.time ?? 0 });
+      syncCacNote();
     },
     // 바닥 아래 보기는 공기 흐름과 함께 봐야 뜻이 있어서 켤 때 공기 흐름도 켠다
     onUnderfloor: (b) => {
@@ -336,8 +345,20 @@ async function main() {
 
   // ---- 출처 전환: 어떤 출처든 이 경로 하나로 바뀐다 ----
   // 모드 표시와 패널(출처가 정하는 부분). 연결 상태가 바뀔 때도 쓴다.
+  // CAC 보기에서 지금 보이는 값이 CAC 계산인지 HAC 값인지 알린다(간이 계산과 서버 실시간 값은 HAC 계산뿐)
+  function syncCacNote() {
+    const note = document.getElementById('cac-note');
+    const src = sources.current;
+    const cac = scene.containment === 'cold' && src && (src.kind === 'rec' || src.kind === 'lib') && cacValues(src.fileOf(src.scenarioId));
+    note.hidden = scene.containment !== 'cold';
+    note.textContent = cac ? '값도 CAC 계산' : '값은 HAC 기준';
+    note.title = cac
+      ? 'CAC 장면으로 계산한 녹화(Warp 열 계산 + CAC 결과로 배운 보정 모델, docs/34 6장). 랙을 뺀 조합은 보정 뒤에도 오차가 크다'
+      : 'CAC 보기에서 이 메뉴는 격벽, 조명, 공기 흐름만 바뀐다. 온도 색과 센서 값은 HAC로 계산한 값이다';
+  }
   function presentMode(d) {
     ui.setMode(d.badge.mode, d.badge.text);
+    syncCacNote();
     dispatch({ type: 'mode', mode: d.badge.mode, control: d.control });
     syncJobCta?.();
   }

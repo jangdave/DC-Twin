@@ -102,8 +102,8 @@
           <div id="containment-group" class="tool-group" role="group" aria-label="격벽 방식" hidden>
             <span class="tool-title">격벽</span>
             <button type="button" data-cont="hot" aria-pressed="true" title="열기 통로 격리(HAC, Hot Aisle Containment): 랙 뒤 열기 통로를 지붕과 옆판으로 막는다. 모든 센서 값의 기준">HAC</button>
-            <button type="button" data-cont="cold" aria-pressed="false" title="냉기 통로 격리(CAC, Cold Aisle Containment): 랙 앞 냉기 통로를 지붕과 문으로 막는다. 격벽, 조명, 공기 흐름(정상 상태)만 바뀌고 센서 값은 HAC 계산 그대로다">CAC</button>
-            <span id="cac-note" class="tool-note" hidden title="CAC 보기에서는 격벽, 조명, 공기 흐름(정상 상태, OpenFOAM)만 바뀐다. 온도 색과 센서 값은 HAC로 계산한 값이다">값은 HAC 기준</span>
+            <button type="button" data-cont="cold" aria-pressed="false" title="냉기 통로 격리(CAC, Cold Aisle Containment): 랙 앞 냉기 통로를 지붕과 문으로 막는다. 격벽, 조명, 공기 흐름(정상 상태)이 바뀌고, 모니터링 녹화와 미리 계산한 값은 CAC로 계산한 녹화로 바뀐다(간이 계산과 서버 값은 HAC)">CAC</button>
+            <span id="cac-note" class="tool-note" hidden title="CAC 보기에서 이 메뉴는 격벽, 조명, 공기 흐름만 바뀐다. 온도 색과 센서 값은 HAC로 계산한 값이다">값은 HAC 기준</span>
           </div>
           <div id="layers" class="tool-group" role="group" aria-label="표시">
             <span class="tool-title">표시</span>

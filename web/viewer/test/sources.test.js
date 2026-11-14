@@ -200,6 +200,17 @@ describe('LibSource(미리 계산한 값)', () => {
     expect(d.scenarios.groups).toEqual([{ id: 'event', title: '이상 상황' }]);
     expect(d.card.seekable).toBe(true);
   });
+  it('표시 뒤에 붙일 말(격벽 방식)은 지금 항목의 녹화 파일로 정한다(alias는 가리키는 파일, docs/34 6장)', async () => {
+    const asked = [];
+    const src = new LibSource({ store: new SensorStore(sensors), sensorIds: ids, index, loadJson: async (file) => read(`../public/data/rec/${file}.json`), badgeSuffix: (file) => (asked.push(file), ' · CAC 계산') });
+    await src.open({ scenarioId: 'supply_18' });
+    expect(src.fileOf('supply_18')).toBe('normal');
+    expect(src.describe().badge.text).toBe('미리 계산한 값 · Warp 열 시뮬레이션 + 보정 모델 · CAC 계산');
+    expect(asked.at(-1)).toBe('normal');
+    const plain = new LibSource({ store: new SensorStore(sensors), sensorIds: ids, index, loadJson: async (file) => read(`../public/data/rec/${file}.json`) });
+    await plain.open({ scenarioId: 'normal' });
+    expect(plain.describe().badge.text).toBe('미리 계산한 값 · Warp 열 시뮬레이션 + 보정 모델');
+  });
   it('alias 항목(급기 18도)은 가리키는 녹화 파일을 받고 같은 파일은 한 번만 받는다', async () => {
     const { src, loaded } = mk(new Map());
     await src.open({ scenarioId: 'supply_18' });
