@@ -11,9 +11,7 @@
 | 파일 | 내용 |
 |---|---|
 | `export_layout.py` | 장면 USD에서 형상을 읽어 `layout.json` 저장(`hall60_sim.read_hall` 사용) |
-| `gen_case.py` | 장면에서 OpenFOAM 사례 정의를 만든다(`cases/<이름>/`). 칸 나눔, 유량은 `hall60_sim.Layout`과 `crac_returns`를 읽어 그대로 쓴다 |
-| `run_case.sh` | 사례를 WSL 홈(`~/foam_runs/`)으로 복사해 메시 -> 계산 -> 합치기까지 실행 |
-| `extract.py` | 결과 필드에서 랙 입구 온도 CSV 추출(WSL의 python3) |
+| `gen_case.py`, `run_case.sh`, `extract.py`, `export_flow.py` | **연결 파일**(2026-11-15). 코드는 `sim/openfoam/`(설명은 그 폴더의 README). 아래 예전 명령이 그대로 동작하고, `run_case.sh`는 예전처럼 이 폴더의 `cases/`를 쓴다 |
 | `restart_lu.sh` | 수렴한 결과에서 이어서 2차 정확도 방식으로 다시 계산 |
 | `compare.py` | 우리 솔버와 OpenFOAM 비교 표 |
 | `cases/` | 만들어 둔 사례 정의(작은 텍스트, 합계 약 1 MB). 메시와 결과 필드는 저장소에 두지 않음 |

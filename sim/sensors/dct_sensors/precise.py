@@ -28,9 +28,8 @@ from .manifest import Manifest
 from .solvers import Controls
 
 REPO = Path(__file__).resolve().parents[3]
-OMNI = REPO / "experiments" / "omniverse_probe"  # OpenFOAM 사례 도구(gen_case.py)를 돌리는 uv 환경
-THERMAL = REPO / "sim" / "thermal"  # 열 계산 패키지 dct_thermal(docs/30 M12)
-OFB = REPO / "experiments" / "openfoam_baseline"
+THERMAL = REPO / "sim" / "thermal"  # 열 계산 패키지 dct_thermal(docs/30 M12). OpenFOAM 사례 도구(gen_case.py)도 이 uv 환경에서 돈다
+OFT = REPO / "sim" / "openfoam"  # OpenFOAM 도구(사례 만들기, 실행, 흐름 꺼내기. 2026-11-15 experiments/에서 옮김)
 SCENE = REPO / "usd" / "scenes" / "hall01.usda"
 NU, PR, PRT = 1.5e-5, 0.71, 0.85  # OpenFOAM 사례와 같은 값(공기 점성, 프란틀 수, 난류 프란틀 수)
 EXPECTED_ITERS = 2000  # OpenFOAM 반복 수 추정(10 cm, 실제 1,077~1,849회: openfoam_baseline/README.md)
@@ -122,17 +121,18 @@ class OpenFOAMRunner:
             progress(1.0, "저장해 둔 흐름")
             return npz, json.loads(meta_p.read_text(encoding="utf-8"))
         name = f"job_{key}"
-        case = OFB / "cases" / name
+        cases = self.cache / "cases"  # 사례 정의는 잠깐만 둔다(끝나면 지움)
+        case = cases / name
         spec = self.cache / f"{key}.spec.json"
         spec.write_text(json.dumps({"id": name, "fan": {eq_name(k): v for k, v in fan.items()}, "row_power_kw": [10.0] * 6,
                                     "rack_power_kw": rack_kw, "remove": []}, ensure_ascii=False), encoding="utf-8")
         t0 = time.time()
         progress(0.0, "사례 만들기")
-        r = subprocess.run([self.uv, "run", "--python", "3.13", "python", str(OFB / "gen_case.py"), "--spec", str(spec), "--out", str(case), *(["--scene", str(Path(scene).resolve())] if scene else [])],
-                           cwd=OMNI, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        r = subprocess.run([self.uv, "run", "--python", "3.13", "python", str(OFT / "gen_case.py"), "--spec", str(spec), "--out", str(case), *(["--scene", str(Path(scene).resolve())] if scene else [])],
+                           cwd=THERMAL, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
             raise RuntimeError(f"OpenFOAM 사례 만들기 실패: {r.stderr[-400:]}")
-        proc = subprocess.Popen([self.wsl, "-e", "bash", wsl_path(OFB / "run_case.sh"), name, str(self.cores)],
+        proc = subprocess.Popen([self.wsl, "-e", "bash", wsl_path(OFT / "run_case.sh"), name, str(self.cores), wsl_path(cases)],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         it = 0
         try:
@@ -154,7 +154,7 @@ class OpenFOAMRunner:
             found = re.findall(r"^Time = (\d+)", log, re.M)
             it = int(found[-1]) if found else it
             progress(0.96, "흐름 꺼내기")
-            r = self._wsl(f"python3 {wsl_path(OFB / 'export_flow.py')} ~/foam_runs/{name} {wsl_path(npz)}")
+            r = self._wsl(f"python3 {wsl_path(OFT / 'export_flow.py')} ~/foam_runs/{name} {wsl_path(npz)}")
             if r.returncode != 0 or not npz.exists():
                 raise RuntimeError(f"OpenFOAM 흐름 꺼내기 실패(반복 {it}): {(r.stderr or r.stdout)[-400:]}")
             meta = {"key": key, "iterations": it, "converged": converged, "seconds": round(time.time() - t0, 1), "fan": fan, "rack_kw": rack_kw}
