@@ -27,6 +27,7 @@ RES = BASE / "results"
 # 학습 데이터 폴더. 기본 장면에 이중 바닥과 바닥 아래 장애물을 켠 뒤(2026-11-11, docs/33 C단계) 그 장면으로 다시 계산한 surrogate_rf를 쓴다.
 # 예전(바닥 아래 공간 없음) 데이터는 results/surrogate에 남아 있다.
 DATA = RES / "surrogate_rf"
+DATA_CAC = RES / "surrogate_cac"  # 냉기 통로 격리(CAC) 장면으로 같은 샘플을 계산한 결과(docs/34 6장)
 
 
 def read_csv(path: Path) -> dict[str, float]:

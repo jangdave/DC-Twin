@@ -42,8 +42,10 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def load_default_predictor():
+def load_default_predictor(cac: bool = False):
     """model.pkl을 읽거나, 없으면 저장소의 학습 결과로 학습한다. 읽은 모델에는 출처(`provenance`)를 붙인다.
+
+    cac=True(냉기 통로 격리 장면, docs/34 6장)면 CAC 결과(`surrogate_cac`)로 만든 `model_cac.pkl`을 쓴다. 장면마다 학습 데이터가 다르다.
 
     model.pkl은 저장소에 없다(gitignore). 학습 이력(`model.meta.json`, 저장소에 있음)의 samples.json 해시가 지금 samples.json과 다르면
     모델이 지금 데이터와 맞지 않으므로 거부한다(다시 학습한다: `cd experiments/surrogate_model && uv run python train_predictor.py`).
@@ -59,7 +61,8 @@ def load_default_predictor():
     # 코드를 옮기기 전에 저장한 model.pkl은 모듈 이름 predictor로 클래스를 찾는다(docs/30 M12)
     sys.modules.setdefault("predictor", pr)
     sys.modules.setdefault("residual_model", rm)
-    pkl = SURROGATE_DIR / "model.pkl"
+    pkl = SURROGATE_DIR / ("model_cac.pkl" if cac else "model.pkl")
+    data_dir = rm.DATA_CAC if cac else rm.DATA
     import json
     import os
 
@@ -68,23 +71,25 @@ def load_default_predictor():
         pred = pr.ResidualPredictor.load(pkl)
         meta_path = pkl.with_suffix(".meta.json")
         meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else None
-        prov = {"source": "model.pkl", "model_sha256": _sha256(pkl)}
+        prov = {"source": pkl.name, "model_sha256": _sha256(pkl), "containment": "cold" if cac else "hot"}
         if meta is None:
             prov.update({"history": None, "stale": None})  # 학습 이력이 없다: 어떤 데이터로 만들었는지 알 수 없다
         else:
             # 학습 데이터 폴더가 다르면(예: 이중 바닥 전 데이터 surrogate로 만든 모델) 지금 장면과 맞지 않는다
-            stale = meta.get("samples_json_sha256") != _sha256(samples_json) or meta.get("data_dir", "surrogate") != rm.DATA.name
+            stale = meta.get("samples_json_sha256") != _sha256(samples_json) or meta.get("data_dir", "surrogate") != data_dir.name
             prov.update({"trained_at": meta["trained_at"], "n_samples": meta["n_samples"], "samples_json_sha256": meta["samples_json_sha256"], "git_commit": meta["code"]["git_commit"], "power_range_kw": meta["power_range_kw"], "stale": stale})
             if stale and os.environ.get("DCT_ALLOW_STALE_MODEL") != "1":
                 raise StaleModelError("model.pkl이 지금 학습 데이터(samples.json)와 맞지 않는다(학습 이력의 해시가 다르다). 다시 학습한다: "
-                                      "cd experiments/surrogate_model && uv run --python 3.13 python train_predictor.py  (일부러 옛 모델을 쓰려면 DCT_ALLOW_STALE_MODEL=1)")
+                                      "cd experiments/surrogate_model && uv run --python 3.13 python train_predictor.py"
+                                      + (" --data-dir ../openfoam_baseline/results/surrogate_cac --out model_cac.pkl" if cac else "") + "  (일부러 옛 모델을 쓰려면 DCT_ALLOW_STALE_MODEL=1)")
         pred.provenance = prov
         return pred
 
     specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
-    data = [d for d in rm.load_dataset(rm.DATA, samples_json, False) if not d["holdout"]]
+    data = [d for d in rm.load_dataset(data_dir, samples_json, False) if not d["holdout"]]
     pred = pr.ResidualPredictor().fit(data, specs)
-    pred.provenance = {"source": "fit_on_the_fly", "model_sha256": None, "samples_json_sha256": _sha256(samples_json), "n_samples": len(data), "stale": False}
+    pred.provenance = {"source": "fit_on_the_fly", "model_sha256": None, "samples_json_sha256": _sha256(samples_json), "n_samples": len(data), "stale": False,
+                       "data_dir": data_dir.name, "containment": "cold" if cac else "hot"}
     return pred
 
 
@@ -100,7 +105,9 @@ class L2Solver:
 
             base = L1Solver(manifest, cfg, **kw)
         self.base, self.m, self.cfg = base, manifest, cfg
-        self.predictor = predictor if predictor is not None else load_default_predictor()
+        # 장면이 냉기 통로 격리(CAC)면 CAC 결과로 배운 보정 모델을 쓴다(L1이 장면에서 판단한 값, docs/34 6장)
+        self.cac = bool(getattr(getattr(base, "lay", None), "cac", False))
+        self.predictor = predictor if predictor is not None else load_default_predictor(self.cac)
         self.estimates: dict[str, dict] = {}
         self._corr: dict[str, float] = {}   # 센서 키 -> 지연을 거친 보정량
         self.fallback_steps = 0
