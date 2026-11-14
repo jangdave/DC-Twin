@@ -1,12 +1,12 @@
 {
  "version": 1,
- "trained_at": "2026-11-14T10:07:32+00:00",
- "model_sha256": "86f440124f924ee09aaabbe5f68c8e2ba17f7817233bfc05edeb45f04532c4fa",
+ "trained_at": "2026-11-14T15:46:25+00:00",
+ "model_sha256": "f19c429597110d809e28bdd12c822d71774ee1b11504a1dc9af90b94b751eb32",
  "samples_json_sha256": "56c756b1cf5585b79ac92b490635bcbb330628fdda173c9d13193a48cbc22983",
  "data_dir": "surrogate_cac",
  "code": {
-  "git_commit": "d92edf120b2154583eaebc422e8466d61b039399",
-  "dirty": true,
+  "git_commit": "9f39e86851ab82421d64d8a6bdf175059a11a1ad",
+  "dirty": false,
   "python": "3.13.9",
   "scikit_learn": "1.9.1",
   "numpy": "2.5.4"
