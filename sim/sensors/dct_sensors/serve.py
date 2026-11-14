@@ -264,6 +264,15 @@ def _num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf")
 
 
+def solver_meta(sol) -> tuple[str, dict | None]:
+    """격벽 방식("hot"/"cold")과 보정 모델 출처 요약(docs/34 6장). 화면이 서버 값이 HAC인지 CAC인지 표시한다.
+    L2는 cac 속성, L1은 lay.cac로 장면을 판단한다. L0은 장면을 읽지 않으므로 HAC."""
+    containment = "cold" if getattr(sol, "cac", False) or getattr(getattr(sol, "lay", None), "cac", False) else "hot"
+    prov = getattr(sol, "provenance", None)
+    model = {k: prov.get(k) for k in ("source", "containment", "trained_at", "n_samples", "stale")} if isinstance(prov, dict) else None
+    return containment, model
+
+
 class Server:
     def __init__(self, engine: Engine, speed: float = 1.0, api: DataApi | None = None, token: str | None = None, clock=time.monotonic, jobs=None):
         self.engine = engine
@@ -574,9 +583,10 @@ def main(argv: list[str] | None = None) -> int:
         mgr = jobs_mod.JobManager(m, out, precise.make_stages(m), stage_scale={"steady": precise.steady_runs_needed(m, out / "flows")})
     jobs_meta = {"enabled": mgr is not None, "durationRange": [60, 1800], "supplyRange": list(SUPPLY_RANGE), "powerRange": list(POWER_RANGE), "maxQueue": 3,
                  "model": "openfoam_flow+fv" if mgr else None}
-    api = DataApi(data_dir if data_dir and Path(data_dir).exists() else None, origins, extra_dirs=args.extra_data_dir, token=token, public_data=not args.private_data, meta={"name": "dct-sim-server", "version": 1, "solver": args.solver, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE), "jobs": jobs_meta})
+    containment, model_meta = solver_meta(engine.solver)
+    api = DataApi(data_dir if data_dir and Path(data_dir).exists() else None, origins, extra_dirs=args.extra_data_dir, token=token, public_data=not args.private_data, meta={"name": "dct-sim-server", "version": 1, "solver": args.solver, "containment": containment, "model": model_meta, "scenarios": sorted(SCENARIOS), "controls": ["scenario", "crac_fan", "rack_power_scale", "supply_temp", "speed"], "supplyRange": list(SUPPLY_RANGE), "jobs": jobs_meta})
     print(f"[서버] 인증: {'켬(토큰 ' + str(len(token)) + '자, 데이터 읽기는 ' + ('비공개' if args.private_data else '공개') + ')' if token else '끔(이 컴퓨터에서만 열려 있음)' if is_loopback(args.host) else '끔(--no-auth, 누구나 조작 가능)'}", file=sys.stderr)
-    print(f"[서버] solver {args.solver}, 시나리오 {args.scenario}, ws://{args.host}:{args.port}/ws, 데이터 API http://{args.host}:{args.port}/api/meta (라이브러리 {api.meta['libraryEntries']}개)", file=sys.stderr)
+    print(f"[서버] solver {args.solver}, 격벽 {'CAC' if containment == 'cold' else 'HAC'}, 시나리오 {args.scenario}, ws://{args.host}:{args.port}/ws, 데이터 API http://{args.host}:{args.port}/api/meta (라이브러리 {api.meta['libraryEntries']}개)", file=sys.stderr)
     try:
         asyncio.run(serve(engine, args.host, args.port, args.speed, origins, api=api, token=token, jobs=mgr))
     except KeyboardInterrupt:

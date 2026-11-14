@@ -257,3 +257,13 @@ class TestSupplyControl:
     def test_out_of_range_is_rejected_by_generator(self, engine):
         with pytest.raises(ValueError):
             engine.control("supply_temp", "hall", 40.0)
+
+
+def test_solver_meta_reports_containment_and_model():
+    """서버 메타의 격벽 방식과 모델 출처(docs/34 6장): L2는 cac, L1은 lay.cac, L0은 HAC."""
+    from types import SimpleNamespace
+
+    assert sv.solver_meta(SimpleNamespace()) == ("hot", None)
+    assert sv.solver_meta(SimpleNamespace(lay=SimpleNamespace(cac=True)))[0] == "cold"
+    l2 = SimpleNamespace(cac=True, provenance={"source": "model_cac.pkl", "containment": "cold", "trained_at": "t", "n_samples": 68, "stale": False, "model_sha256": "x"})
+    assert sv.solver_meta(l2) == ("cold", {"source": "model_cac.pkl", "containment": "cold", "trained_at": "t", "n_samples": 68, "stale": False})
