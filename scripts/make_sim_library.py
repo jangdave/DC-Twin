@@ -1,11 +1,13 @@
 """sim/library.json의 항목마다 센서 녹화(.jsonl)를 만든다(L2: Warp 열 시뮬레이션 + 보정 모델). GPU와 scikit-learn이 필요하다.
 
     cd experiments/omniverse_probe
-    uv run --python 3.13 python ../../scripts/make_sim_library.py [--only supply_20 load_70] [--solver l2]
+    uv run --python 3.13 python ../../scripts/make_sim_library.py [--only supply_20 load_70] [--solver l2] [--variant cac]
 
 - 결과: sim/out/recordings/<id>_l2.jsonl (gitignore). 이어서 `cd web/viewer && node tools/build_data.mjs`로 웹 자료로 바꾼다.
 - 항목의 config는 센서 생성기의 `--config`(Config 필드를 덮어쓰는 JSON)로 넘긴다. alias 항목은 다른 항목의 녹화를 가리키므로 만들지 않는다.
 - 같은 코드, 같은 시드(1)로 만들어 다시 만들면 같은 결과가 나온다.
+- `--variant cac`: 냉기 통로 격리 장면(`usd/scenes/_hall01_cac.usda`, `build_scene.py`로 만든다)으로 계산해 `<id>_l2_cac.jsonl`에 쓴다.
+  L2는 장면을 보고 CAC 보정 모델(`model_cac.pkl`)을 고른다(docs/34 6장). 웹 자료는 `build_data.mjs`가 `data/rec/cac/`로 바꾼다.
 """
 from __future__ import annotations
 
@@ -23,6 +25,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", nargs="*", default=None, help="이 id만 만든다")
     ap.add_argument("--solver", default="l2", choices=["l0", "l1", "l2"])
+    ap.add_argument("--variant", default=None, choices=["cac"], help="격벽 방식 변형(cac: 냉기 통로 격리 장면)")
     args = ap.parse_args()
     lib = json.loads((ROOT / "sim" / "library.json").read_text(encoding="utf-8"))
     out_dir = ROOT / "sim" / "out" / "recordings"
@@ -32,12 +35,17 @@ def main() -> int:
     for e in lib["entries"]:
         if "alias" in e or (args.only and e["id"] not in args.only):
             continue
-        out = out_dir / f"{e['id']}_{args.solver}.jsonl"
+        out = out_dir / f"{e['id']}_{args.solver}{'_' + args.variant if args.variant else ''}.jsonl"
         with tempfile.TemporaryDirectory() as td:
             cfg = Path(td) / "cfg.json"
             cfg.write_text(json.dumps(e.get("config", {})), encoding="utf-8")
             cmd = [sys.executable, "-m", "dct_sensors", "--manifest", str(ROOT / "sim" / "out" / "sensor_manifest.json"), "--scenario", e["scenario"],
                    "--solver", args.solver, "--time-scale", "0", "--quiet", "--config", str(cfg), "--out", str(out)]
+            if args.variant == "cac":
+                scene = ROOT / "usd" / "scenes" / "_hall01_cac.usda"
+                if not scene.exists():
+                    raise SystemExit(f"CAC 장면이 없다: {scene} (cd scripts/usd_tools && uv run --python 3.13 python build_scene.py ../../usd/scenes/hall01_cac.config.json ../../usd/scenes/_hall01_cac.usda)")
+                cmd += ["--scene", str(scene)]
             print(f"== {e['id']} -> {out.name}", flush=True)
             r = subprocess.run(cmd, env={**__import__("os").environ, "PYTHONPATH": env_path})
             failed += r.returncode != 0

@@ -252,3 +252,19 @@ def test_shifted_supply_keeps_lower_levels_as_they_are(manifest):
     l2 = L2Solver(manifest, cfg, base=FakeBase(manifest, cfg), predictor=pred)
     l2.step(1.0, Controls({c: 1.0 for c in manifest.cracs}, {n: 7.0 for n in manifest.rack_names}))
     assert {e["confidence"] for e in l2.estimates.values()} == {"caution"}
+
+
+def test_cac_scene_uses_cac_model(manifest, monkeypatch):
+    """L1이 냉기 통로 격리(CAC) 장면이라고 판단하면 CAC 결과로 배운 보정 모델을 고른다(docs/34 6장)."""
+    import dct_sensors.solver_l2 as l2mod
+
+    asked = []
+    monkeypatch.setattr(l2mod, "load_default_predictor", lambda cac=False: asked.append(cac) or OkPredictor())
+    cfg = Config()
+    hac_base, cac_base = FakeBase(manifest, cfg), FakeBase(manifest, cfg)
+    hac_base.lay = SimpleNamespace(cac=False)
+    cac_base.lay = SimpleNamespace(cac=True)
+    assert not L2Solver(manifest, cfg, base=hac_base).cac
+    assert L2Solver(manifest, cfg, base=cac_base).cac
+    assert L2Solver(manifest, cfg, base=FakeBase(manifest, cfg)).cac is False  # 장면 정보가 없으면 HAC
+    assert asked == [False, True, False]
