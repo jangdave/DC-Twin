@@ -1,7 +1,7 @@
 """샘플 명세(samples.json)의 모든 샘플(보류 A, B, D, E 포함)을 현재 main의 hall60_sim으로 돌려 랙 입구 온도를 저장한다.
 
 실행 (experiments/omniverse_probe 폴더에서, GPU 사용):
-    uv run --python 3.13 python ../openfoam_baseline/surrogate/ours_batch.py --res ../openfoam_baseline/results/surrogate_rf [--scene 장면.usda] [--force] [--only s01_normal ...]
+    uv run --python 3.13 python ../openfoam_baseline/surrogate/ours_batch.py --res ../openfoam_baseline/results/surrogate_rf [--scene 장면.usda] [--spec 샘플.json] [--force] [--only s01_normal ...]
 출력: <--res>/ours_<id>.csv (열: rack_id, temp_c), ours_progress.json
 
 조건은 compare.py와 같다: 처음 120초는 팬 1.0, 랙 10 kW 균일(제거할 랙은 처음부터 장면에서 뺀다),
@@ -71,12 +71,13 @@ def main() -> None:
     ap.add_argument("--only", nargs="*", default=None)
     ap.add_argument("--res", type=Path, required=True, help="결과 폴더(필수. 장면마다 폴더가 다르다: 이중 바닥 전 surrogate, 기본 장면 surrogate_rf, CAC surrogate_cac. 기본값을 두면 옛 장면 폴더에 섞여 2026-11-13 재검토에서 없앴다)")
     ap.add_argument("--scene", type=Path, default=None, help="장면 USD(기본 hall01.usda, CAC는 _hall01_cac.usda, docs/34 6장)")
+    ap.add_argument("--spec", type=Path, default=HERE / "samples.json", help="샘플 명세(기본 samples.json, 4차 샘플은 samples_v4.json)")
     a = ap.parse_args()
     RES = a.res
     wp.config.quiet = True
     wp.init()
     RES.mkdir(parents=True, exist_ok=True)
-    samples = json.loads((HERE / "samples.json").read_text(encoding="utf-8"))["samples"]
+    samples = json.loads(a.spec.read_text(encoding="utf-8"))["samples"]
     sha = hashlib.sha1(Path(h.__file__).read_bytes()).hexdigest()[:12]
     prog_p = RES / "ours_progress.json"
     prog = json.loads(prog_p.read_text(encoding="utf-8")) if prog_p.exists() else {}
