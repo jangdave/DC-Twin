@@ -1,0 +1,538 @@
+{
+ "seed_v5": 20261116,
+ "note": "랙 제거 + CRAC 2대 고장(design_samples_v5.py)",
+ "samples": [
+  {
+   "id": "s75_remove_two_off",
+   "group": "remove_two_off",
+   "fan": {
+    "CRAC_01": 0.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 0.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    11.6,
+    13.7,
+    13.0,
+    11.5,
+    11.7,
+    8.7
+   ],
+   "remove": [
+    "Rack_42"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 59,
+    "supply_m3s": 47.04,
+    "leak_m3s": [
+     9.6,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     18.24,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s76_remove_two_off",
+   "group": "remove_two_off",
+   "fan": {
+    "CRAC_01": 0.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 0.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    13.4,
+    6.7,
+    11.9,
+    12.2,
+    12.6,
+    7.1
+   ],
+   "remove": [
+    "Rack_12",
+    "Rack_13"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 58,
+    "supply_m3s": 46.08,
+    "leak_m3s": [
+     9.6,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     17.28,
+     19.2,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s77_remove_two_off",
+   "group": "remove_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 0.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 0.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    12.9,
+    13.8,
+    8.6,
+    8.9,
+    12.6,
+    13.8
+   ],
+   "remove": [
+    "Rack_23",
+    "Rack_24",
+    "Rack_25"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 57,
+    "supply_m3s": 38.4,
+    "leak_m3s": [
+     0.0,
+     16.32,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     16.32,
+     19.2,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s78_remove_two_off",
+   "group": "remove_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 0.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 0.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    10.2,
+    8.3,
+    10.6,
+    10.1,
+    12.3,
+    11.2
+   ],
+   "remove": [
+    "Rack_43",
+    "Rack_44",
+    "Rack_45"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 57,
+    "supply_m3s": 35.52,
+    "leak_m3s": [
+     0.0,
+     19.2,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     16.32,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s79_remove_two_off",
+   "group": "remove_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 0.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 0.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    10.8,
+    13.5,
+    6.6,
+    10.1,
+    13.6,
+    12.6
+   ],
+   "remove": [
+    "Rack_13",
+    "Rack_14",
+    "Rack_15"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 57,
+    "supply_m3s": 35.52,
+    "leak_m3s": [
+     0.0,
+     0.0,
+     19.2,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     16.32,
+     19.2,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s80_remove_two_off",
+   "group": "remove_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 0.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 0.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    12.9,
+    8.6,
+    11.4,
+    12.0,
+    11.6,
+    9.8
+   ],
+   "remove": [
+    "Rack_03",
+    "Rack_04"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 58,
+    "supply_m3s": 36.48,
+    "leak_m3s": [
+     0.0,
+     0.0,
+     19.2,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     7.68,
+     19.2,
+     19.2,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s81_remove_two_off",
+   "group": "remove_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 0.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 0.0
+   },
+   "row_power_kw": [
+    9.1,
+    7.1,
+    9.5,
+    11.3,
+    10.2,
+    7.8
+   ],
+   "remove": [
+    "Rack_01",
+    "Rack_02",
+    "Rack_03"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 57,
+    "supply_m3s": 45.12,
+    "leak_m3s": [
+     0.0,
+     0.0,
+     0.0,
+     9.6
+    ],
+    "aisle_exhaust_m3s": [
+     6.72,
+     19.2,
+     19.2,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s82_remove_two_off",
+   "group": "remove_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 0.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 0.0
+   },
+   "row_power_kw": [
+    6.1,
+    13.0,
+    9.6,
+    6.7,
+    11.2,
+    9.8
+   ],
+   "remove": [
+    "Rack_52",
+    "Rack_53",
+    "Rack_54"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 57,
+    "supply_m3s": 48.0,
+    "leak_m3s": [
+     0.0,
+     0.0,
+     0.0,
+     6.72
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     19.2,
+     6.72
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s83_remove_diff_two_off",
+   "group": "remove_diff_two_off",
+   "fan": {
+    "CRAC_01": 0.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 0.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    9.4,
+    11.9,
+    13.4,
+    7.7,
+    6.4,
+    9.7
+   ],
+   "remove": [
+    "Rack_54",
+    "Rack_55",
+    "Rack_56"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 57,
+    "supply_m3s": 45.12,
+    "leak_m3s": [
+     0.0,
+     9.6,
+     0.0,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     19.2,
+     6.72
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s84_remove_diff_two_off",
+   "group": "remove_diff_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 0.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 0.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    6.8,
+    12.7,
+    9.4,
+    6.6,
+    10.5,
+    8.5
+   ],
+   "remove": [
+    "Rack_38",
+    "Rack_39"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 58,
+    "supply_m3s": 38.4,
+    "leak_m3s": [
+     0.0,
+     9.6,
+     7.68,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     17.28,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s85_remove_diff_two_off",
+   "group": "remove_diff_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 0.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 0.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    7.7,
+    13.2,
+    8.8,
+    7.2,
+    6.9,
+    7.4
+   ],
+   "remove": [
+    "Rack_29"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 59,
+    "supply_m3s": 47.04,
+    "leak_m3s": [
+     0.0,
+     0.0,
+     9.6,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     18.24,
+     19.2,
+     9.6
+    ],
+    "ok": true
+   }
+  },
+  {
+   "id": "s86_remove_diff_two_off",
+   "group": "remove_diff_two_off",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 0.0,
+    "CRAC_03": 0.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    7.2,
+    8.6,
+    12.5,
+    7.5,
+    11.2,
+    13.8
+   ],
+   "remove": [
+    "Rack_35",
+    "Rack_36"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 58,
+    "supply_m3s": 38.4,
+    "leak_m3s": [
+     0.0,
+     9.6,
+     7.68,
+     0.0
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     19.2,
+     17.28,
+     9.6
+    ],
+    "ok": true
+   }
+  }
+ ]
+}
