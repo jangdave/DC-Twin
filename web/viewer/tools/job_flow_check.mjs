@@ -48,16 +48,16 @@ try {
   const st = await page.evaluate(() => {
     const v = window.__viewer;
     const a = v.scene.airflow;
-    return { mode: v.state.mode, lib: v.libScenario(), seq: a.seq, fields: a.seqFans?.length, field: a.field, title: document.getElementById('flow-btn').title };
+    return { mode: v.state.mode, badge: document.getElementById('mode-badge').textContent, seq: a.seq, fields: a.seqFans?.length, field: a.field, title: document.getElementById('flow-btn').title };
   });
-  ok('결과를 열면 이 작업의 OpenFOAM 흐름을 씀', got && st.seq && st.lib?.startsWith('job_'), JSON.stringify(st));
+  ok('결과를 열면 이 작업의 OpenFOAM 흐름을 씀', got && st.seq && st.badge.includes('서버 계산 결과'), JSON.stringify(st));
   // 공기 흐름을 켜고 고장 뒤 시각으로 옮기면 그 팬 상태의 장을 고른다
   await page.evaluate(() => { const b = document.getElementById('flow-btn'); if (b.getAttribute('aria-pressed') !== 'true') b.click(); });
   const nf = st.fields ?? 0;
   if (nf > 1) {
-    await page.evaluate(() => window.__viewer.state.player.seek(window.__viewer.state.player.duration ?? 200));
+    await page.evaluate(() => { const pl = window.__viewer.state.player; pl.playing = false; pl.seek(Math.min(200, pl.duration - 1)); }); // 고장(60초) 뒤. 반복 재생으로 처음으로 돌아가지 않게 멈춘다
     const moved = await page.waitForFunction(() => window.__viewer.scene.airflow.field > 0, { timeout: 15000 }).then(() => true, () => false);
-    ok('고장 뒤로 옮기면 그 팬 상태의 장으로 바뀜', moved, JSON.stringify(await page.evaluate(() => ({ field: window.__viewer.scene.airflow.field, fan: window.__viewer.scene.airflow.fan }))));
+    ok('고장 뒤로 옮기면 그 팬 상태의 장으로 바뀜', moved, JSON.stringify(await page.evaluate(() => { const v = window.__viewer; const a = v.scene.airflow; return { field: a.field, fan: a.fan, t: v.state.player?.time, dur: v.state.player?.duration, crac02: v.store.metric('crac_02', 'fan_speed')?.value, vis: a.points.visible, stage: v.scene.stage }; })));
   }
   await new Promise((r) => setTimeout(r, 1500));
   await page.screenshot({ path: path.join(OUT, 'job_flow.png') });
