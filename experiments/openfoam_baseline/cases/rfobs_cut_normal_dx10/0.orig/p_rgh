@@ -1,0 +1,114 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      p_rgh;
+}
+
+dimensions [0 2 -2 0 0 0 0];
+internalField uniform 0;
+boundaryField
+{
+    floor
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    ceiling
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    fixedWalls
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    solidWalls
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_sup_01
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_sup_02
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_sup_03
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_sup_04
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_sup_05
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_sup_06
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_sup_07
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_sup_08
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_ret_01
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_ret_02
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_ret_03
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_ret_04
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_ret_05
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_ret_06
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_ret_07
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+    crac_ret_08
+    {
+        type fixedFluxPressure;
+        value uniform 0;
+    }
+}

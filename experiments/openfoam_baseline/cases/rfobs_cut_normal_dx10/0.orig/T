@@ -1,0 +1,102 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      T;
+}
+
+dimensions [0 0 0 1 0 0 0];
+internalField uniform 297.15;
+boundaryField
+{
+    floor
+    {
+        type zeroGradient;
+    }
+    ceiling
+    {
+        type zeroGradient;
+    }
+    fixedWalls
+    {
+        type zeroGradient;
+    }
+    solidWalls
+    {
+        type zeroGradient;
+    }
+    crac_sup_01
+    {
+        type fixedValue;
+        value uniform 291.15;
+    }
+    crac_sup_02
+    {
+        type fixedValue;
+        value uniform 291.15;
+    }
+    crac_sup_03
+    {
+        type fixedValue;
+        value uniform 291.15;
+    }
+    crac_sup_04
+    {
+        type fixedValue;
+        value uniform 291.15;
+    }
+    crac_sup_05
+    {
+        type fixedValue;
+        value uniform 291.15;
+    }
+    crac_sup_06
+    {
+        type fixedValue;
+        value uniform 291.15;
+    }
+    crac_sup_07
+    {
+        type fixedValue;
+        value uniform 291.15;
+    }
+    crac_sup_08
+    {
+        type fixedValue;
+        value uniform 291.15;
+    }
+    crac_ret_01
+    {
+        type zeroGradient;
+    }
+    crac_ret_02
+    {
+        type zeroGradient;
+    }
+    crac_ret_03
+    {
+        type zeroGradient;
+    }
+    crac_ret_04
+    {
+        type zeroGradient;
+    }
+    crac_ret_05
+    {
+        type zeroGradient;
+    }
+    crac_ret_06
+    {
+        type zeroGradient;
+    }
+    crac_ret_07
+    {
+        type zeroGradient;
+    }
+    crac_ret_08
+    {
+        type zeroGradient;
+    }
+}

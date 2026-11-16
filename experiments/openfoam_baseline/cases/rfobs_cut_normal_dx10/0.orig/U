@@ -1,0 +1,126 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      U;
+}
+
+dimensions [0 1 -1 0 0 0 0];
+internalField uniform (0 0 0);
+boundaryField
+{
+    floor
+    {
+        type noSlip;
+    }
+    ceiling
+    {
+        type noSlip;
+    }
+    fixedWalls
+    {
+        type noSlip;
+    }
+    solidWalls
+    {
+        type noSlip;
+    }
+    crac_sup_01
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate 4.8000;
+        value uniform (0 0 0);
+    }
+    crac_sup_02
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate 9.6000;
+        value uniform (0 0 0);
+    }
+    crac_sup_03
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate 9.6000;
+        value uniform (0 0 0);
+    }
+    crac_sup_04
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate 4.8000;
+        value uniform (0 0 0);
+    }
+    crac_sup_05
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate 4.8000;
+        value uniform (0 0 0);
+    }
+    crac_sup_06
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate 9.6000;
+        value uniform (0 0 0);
+    }
+    crac_sup_07
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate 9.6000;
+        value uniform (0 0 0);
+    }
+    crac_sup_08
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate 4.8000;
+        value uniform (0 0 0);
+    }
+    crac_ret_01
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate -4.8000;
+        value uniform (0 0 0);
+    }
+    crac_ret_02
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate -9.6000;
+        value uniform (0 0 0);
+    }
+    crac_ret_03
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate -9.6000;
+        value uniform (0 0 0);
+    }
+    crac_ret_04
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate -4.8000;
+        value uniform (0 0 0);
+    }
+    crac_ret_05
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate -4.8000;
+        value uniform (0 0 0);
+    }
+    crac_ret_06
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate -9.6000;
+        value uniform (0 0 0);
+    }
+    crac_ret_07
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate -9.6000;
+        value uniform (0 0 0);
+    }
+    crac_ret_08
+    {
+        type flowRateInletVelocity;
+        volumetricFlowRate -4.8000;
+        value uniform (0 0 0);
+    }
+}
