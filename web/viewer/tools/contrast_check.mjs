@@ -184,6 +184,15 @@ async function suite(width, height, tag) {
   }
   await page.evaluate(() => window.__viewer.selectEquipment('rack_05', true));
   await scan(page, `${tag} 랙 선택`);
+  if (width >= 900) {
+    // 랙에 마우스를 올리면 뜨는 말풍선(어두운 테마에서 흰 바탕에 흰 글자였던 것, 2026-11-16)
+    await sleep(900); // 랙 선택으로 시작한 카메라 이동이 끝나기를 기다린다
+    const pt = await page.evaluate(() => { const c = document.getElementById('canvas'); const q = window.__viewer.scene.screenOf('rack_05', c); const r = c.getBoundingClientRect(); return { x: r.left + q.x, y: r.top + q.y + 14 }; });
+    await page.mouse.move(pt.x, pt.y);
+    await page.waitForFunction(() => { const t = document.getElementById('tooltip'); return t && !t.hidden && t.textContent.trim(); }, { timeout: 5000 }).catch(() => {});
+    await scan(page, `${tag} 랙 위 말풍선`);
+    await page.mouse.move(5, 5);
+  }
   await click(page, '#heat-btn');
   await scan(page, `${tag} 온도 색칠`);
   await click(page, '#timeline-btn');
