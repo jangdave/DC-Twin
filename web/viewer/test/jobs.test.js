@@ -64,18 +64,20 @@ describe('작업 연결', () => {
     expect(FakeWS.last.sent[1]).toEqual({ type: 'job', action: 'submit', conditions: { duration: 60 } });
   });
   it('작업 알림, 결과, 오류만 받고 실시간 값은 무시한다', () => {
-    const got = { jobs: [], res: [], err: [] };
-    const c = new JobClient('ws://x', { WebSocketImpl: FakeWS, onJob: (j) => got.jobs.push(j), onResult: (id, r) => got.res.push([id, r]), onError: (e) => got.err.push(e) });
+    const got = { jobs: [], res: [], err: [], flow: [] };
+    const c = new JobClient('ws://x', { WebSocketImpl: FakeWS, onJob: (j) => got.jobs.push(j), onResult: (id, r) => got.res.push([id, r]), onFlow: (id, f) => got.flow.push([id, f.encoding]), onError: (e) => got.err.push(e) });
     c.start();
     FakeWS.last.onopen();
     const msg = (o) => FakeWS.last.onmessage({ data: JSON.stringify(o) });
     msg({ type: 'sample', sensorId: 'X', value: 1 });
     msg({ type: 'job', job: { id: 'abc123', state: 'running', progress: 0.5 } });
     msg({ type: 'job_result', id: 'abc123', rec: { version: 1 } });
+    msg({ type: 'job_flow', id: 'abc123', flow: { encoding: 'sequence' } });
     msg({ type: 'error', message: '길이는 60~1800이어야 한다' });
     expect(got.jobs).toHaveLength(1);
     expect(c.jobs.get('abc123').progress).toBe(0.5);
     expect(got.res).toEqual([['abc123', { version: 1 }]]);
     expect(got.err).toEqual(['길이는 60~1800이어야 한다']);
+    expect(got.flow).toEqual([['abc123', 'sequence']]); // 정확한 계산의 공기 흐름(docs/31 7장)
   });
 });

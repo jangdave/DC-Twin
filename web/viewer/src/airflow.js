@@ -32,6 +32,20 @@ export async function loadFlow(baseUrl, name = 'flow') {
   return { meta, data: new Int8Array(buf) };
 }
 
+// 서버 작업이 보낸 흐름(job_flow, sim/sensors/dct_sensors/web_flow.py)을 loadFlow와 같은 모양으로 바꾼다.
+// encoding "sequence": 장마다 그 작업의 팬 상태 하나의 흐름 값(차이가 아님)이고, data_b64에 int8로 들어 있다.
+export function flowFromJob(obj) {
+  const meta = { ...obj };
+  delete meta.data_b64;
+  if (meta.encoding !== 'sequence' || !Array.isArray(meta.fields) || !meta.fields.length) throw new Error('작업 흐름 형식이 아니다');
+  const bin = atob(String(obj.data_b64 ?? ''));
+  const data = new Int8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) data[i] = (bin.charCodeAt(i) << 24) >> 24;
+  const [nx, ny, nz] = meta.shape;
+  if (data.length !== nx * ny * nz * 3 * meta.fields.length) throw new Error('작업 흐름 크기가 shape와 맞지 않는다');
+  return { meta, data };
+}
+
 export class Airflow {
   // flow: loadFlow 결과, data: scene.json, store: SensorStore, rackKeys/cracKeys: 장비 키 목록
   constructor(flow, data, store, rackKeys, cracKeys, { count = 7000, rng = Math.random } = {}) {
@@ -52,7 +66,11 @@ export class Airflow {
     this.active = count; // 계산하고 그리는 입자 수. 화질을 낮추면 줄어든다
     this.nField = flow.meta.fields.length;
     this.diff = flow.meta.encoding === 'diff';
-    this.fan = new Array(this.nField - 1).fill(1);
+    // 작업 흐름(sequence): 장마다 팬 상태가 있고, 지금 팬 값과 가장 가까운 장을 그대로 쓴다(겹치지 않는다)
+    this.seq = flow.meta.encoding === 'sequence';
+    this.seqFans = this.seq ? flow.meta.fields.map((f) => cracKeys.map((k) => f.fan?.[k] ?? 1)) : null;
+    this.field = 0;
+    this.fan = this.seq ? this.seqFans[0].slice() : new Array(this.nField - 1).fill(1);
     this.u = new Float32Array(this.nx * this.ny * this.nz * 3);
     this._compose();
     this.rackId = new Int16Array(this.nx * this.ny * this.nz).fill(-1);
@@ -128,6 +146,12 @@ export class Airflow {
     const f = this.fan.map((_, i) => Math.min(1, Math.max(0, fans[i] ?? 1)));
     if (f.every((v, i) => Math.abs(v - this.fan[i]) < 0.01)) return false;
     this.fan = f;
+    if (this.seq) {
+      const d = this.seqFans.map((g) => g.reduce((acc, v, i) => acc + (v - f[i]) ** 2, 0));
+      const best = d.indexOf(Math.min(...d));
+      if (best === this.field) return false;
+      this.field = best;
+    }
     this._compose();
     return true;
   }
@@ -137,6 +161,11 @@ export class Airflow {
     const n = this.nx * this.ny * this.nz * 3;
     const w = this.fan.map((f) => 1 - f);
     const s = this.scale;
+    if (this.seq) {
+      const o = this.field * n;
+      for (let c = 0; c < n; c++) this.u[c] = this.raw[o + c] * s;
+      return;
+    }
     for (let c = 0; c < n; c++) {
       const base = this.raw[c];
       let v = base;

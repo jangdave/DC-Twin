@@ -15,22 +15,24 @@ from dct_sensors.config import Config  # noqa: E402
 from test_serve import free_port, recv_until  # noqa: E402
 
 
-def fake_stages():
+def fake_stages(flow=False):
     def stage(name):
         def fn(ctx):
             for k in range(1, 3):
                 ctx.check()
                 ctx.progress(k / 2)
+            if name == "steady" and flow:  # 정확한 계산이면 steady 단계가 웹 흐름을 남긴다(precise.write_web_flow)
+                (ctx.folder / "web_flow.json").write_text(json.dumps({"encoding": "sequence", "fields": [{"from_s": 0}]}), encoding="utf-8")
             if name == "result":
                 (ctx.folder / "result.json").write_text(json.dumps({"version": 1, "n": 1, "dt": 1, "values": {}}), encoding="utf-8")
         return fn
     return {s: stage(s) for s in ("usd", "steady", "transient", "result")}
 
 
-def run(manifest, tmp_path, body, with_jobs=True):
+def run(manifest, tmp_path, body, with_jobs=True, flow=False):
     async def main():
         engine = sv.Engine(manifest, Config(), "l0", "normal", seed=3)
-        mgr = jobs.JobManager(manifest, tmp_path, fake_stages()) if with_jobs else None
+        mgr = jobs.JobManager(manifest, tmp_path, fake_stages(flow)) if with_jobs else None
         port = free_port()
         ready, box = asyncio.Event(), []
         task = asyncio.create_task(sv.serve(engine, "127.0.0.1", port, speed=20.0, ready=ready, server_box=box, jobs=mgr))
@@ -82,6 +84,22 @@ def test_submit_progress_and_result(manifest, tmp_path):
     assert res["rec"]["version"] == 1
     assert any(j["id"] == first["job"]["id"] for j in lst["jobs"])
     assert "길이" in err["message"]  # 조건 검사 오류가 그대로 보인다
+
+
+def test_result_also_sends_job_flow_when_present(manifest, tmp_path):
+    """정확한 계산 결과를 달라고 하면 그 작업의 공기 흐름(job_flow)도 결과 뒤에 온다(docs/31 7장)."""
+    async def body(url):
+        async with websockets.connect(url, max_size=None) as ws:
+            await ws.send(json.dumps({"type": "job", "action": "submit", "conditions": {"duration": 60}}))
+            jid = (await recv_until(ws, lambda m: m.get("type") == "job"))["job"]["id"]
+            await recv_until(ws, lambda m: m.get("type") == "job" and m["job"]["id"] == jid and m["job"]["state"] == "done")
+            await ws.send(json.dumps({"type": "job", "action": "result", "id": jid}))
+            res = await recv_until(ws, lambda m: m.get("type") == "job_result")
+            fl = await recv_until(ws, lambda m: m.get("type") == "job_flow")
+            return jid, res, fl
+
+    jid, res, fl = run(manifest, tmp_path, body, flow=True)
+    assert res["id"] == jid and fl["id"] == jid and fl["flow"]["encoding"] == "sequence"
 
 
 def test_jobs_off_rejects(manifest, tmp_path):

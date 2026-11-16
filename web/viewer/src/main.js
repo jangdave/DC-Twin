@@ -12,6 +12,7 @@ import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
 import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
 import { SourceManager } from './source_manager.js';
+import { flowFromJob } from './airflow.js';
 import { ServerModel, cacNote, keyAction, monitorSeed as seedFrom } from './hall_logic.js';
 import { bindCanvasInput } from './canvas_input.js';
 import { DataLink, apiBaseFromWs } from './server_data.js';
@@ -148,7 +149,10 @@ async function main() {
       resetServerModel();
       presentMode(next.describe()); // 열기에 실패해도 어느 출처인지는 보인다
     },
-    onReady: (next) => present(next),
+    onReady: (next) => {
+      syncJobFlow(next); // 작업 결과면 그 작업의 흐름, 아니면 미리 계산한 흐름
+      present(next);
+    },
     onFail: (e) => {
       console.error(e);
       badge.className = 'badge closed';
@@ -314,7 +318,27 @@ async function main() {
       cache: new Map(),
       badgeText: precise ? '서버 계산 결과 · OpenFOAM 흐름 + Warp 온도 계산(시각화 목적)' : '서버 계산 결과 · Warp 열 계산 + 보정 모델(시각화 목적)',
     });
+    src.jobId = id; // 이 작업의 공기 흐름이 오면(정확한 계산) 재생하는 동안 그 흐름을 그린다
     await useSource(src, { scenarioId: `job_${id}`, t: 0 });
+  }
+  // 정확한 계산 작업의 공기 흐름(docs/31 7장): 결과 녹화 바로 뒤에 온다. 그 결과를 재생하는 동안만 쓰고, 다른 출처로 가면 미리 계산한 흐름으로 돌아간다.
+  const jobFlows = new Map(); // 작업 id -> flowFromJob 결과(최근 3개만 둔다)
+  function takeJobFlow(id, raw) {
+    try {
+      jobFlows.set(id, flowFromJob(raw));
+      while (jobFlows.size > 3) jobFlows.delete(jobFlows.keys().next().value);
+    } catch (e) {
+      console.warn('작업 공기 흐름을 쓰지 못해 미리 계산한 흐름으로 보인다:', e.message);
+      return;
+    }
+    syncJobFlow(sources.current);
+  }
+  const flowBtn = document.getElementById('flow-btn');
+  const flowTitle = flowBtn?.title ?? '';
+  function syncJobFlow(src) {
+    const flow = src?.jobId ? jobFlows.get(src.jobId) : null;
+    const on = scene.setJobFlow(flow ?? null);
+    if (flowBtn) flowBtn.title = on ? '공기 흐름: 이 계산의 OpenFOAM 흐름(시각화 목적, 실측 아님)' : flowTitle;
   }
   const rackRow = new Map(sceneData.racks.map((r) => [r.name.toLowerCase(), r.row]));
   const insight = new InsightPanel({
@@ -588,6 +612,7 @@ async function main() {
       token: serverToken,
       onJob: (j) => jc === jobClient && jobUI.render(j),
       onResult: (id, rec) => jc === jobClient && playJobResult(id, rec),
+      onFlow: (id, flow) => jc === jobClient && takeJobFlow(id, flow),
       onError: (m) => jc === jobClient && jobUI.setError(m),
       onState: () => jc === jobClient && syncJobCta(),
     });
