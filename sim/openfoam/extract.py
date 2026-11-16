@@ -96,7 +96,8 @@ for c in hall["cracs"]:
     ys, ye = int(round(y0 / 100 / dx)), int(round(y1 / 100 / dx))
     xs, xe = int(round(x0 / 100 / dx)), int(round(x1 / 100 / dx))
     xi = xe if sign > 0 else xs - 1
-    tret = np.nanmean(Tg[xi, ys:ye, int((0.1 + ZOFF / 100) / dx):int((1.9 + ZOFF / 100) / dx)])
+    r0, r1 = c.get("return_z_cm", (10.0, 190.0))  # 회수구 높이(cm, 바닥에서). 회수 후드가 있으면 그 앞면(docs/35)
+    tret = np.nanmean(Tg[xi, ys:ye, int((r0 + ZOFF) / 100 / dx):int((r1 + ZOFF) / 100 / dx)])
     out_kw += 1.2 * q * (tret - 18.0)
 summary = {
     "result_time": tdir.name, "dx_m": dx,
