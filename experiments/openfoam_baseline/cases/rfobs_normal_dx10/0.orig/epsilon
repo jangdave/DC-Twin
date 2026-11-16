@@ -1,0 +1,114 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      epsilon;
+}
+
+dimensions [0 2 -3 0 0 0 0];
+internalField uniform 0.05;
+boundaryField
+{
+    floor
+    {
+        type epsilonWallFunction;
+        value uniform 0.05;
+    }
+    ceiling
+    {
+        type epsilonWallFunction;
+        value uniform 0.05;
+    }
+    fixedWalls
+    {
+        type epsilonWallFunction;
+        value uniform 0.05;
+    }
+    solidWalls
+    {
+        type epsilonWallFunction;
+        value uniform 0.05;
+    }
+    crac_sup_01
+    {
+        type turbulentMixingLengthDissipationRateInlet;
+        mixingLength 0.05;
+        value uniform 0.05;
+    }
+    crac_sup_02
+    {
+        type turbulentMixingLengthDissipationRateInlet;
+        mixingLength 0.05;
+        value uniform 0.05;
+    }
+    crac_sup_03
+    {
+        type turbulentMixingLengthDissipationRateInlet;
+        mixingLength 0.05;
+        value uniform 0.05;
+    }
+    crac_sup_04
+    {
+        type turbulentMixingLengthDissipationRateInlet;
+        mixingLength 0.05;
+        value uniform 0.05;
+    }
+    crac_sup_05
+    {
+        type turbulentMixingLengthDissipationRateInlet;
+        mixingLength 0.05;
+        value uniform 0.05;
+    }
+    crac_sup_06
+    {
+        type turbulentMixingLengthDissipationRateInlet;
+        mixingLength 0.05;
+        value uniform 0.05;
+    }
+    crac_sup_07
+    {
+        type turbulentMixingLengthDissipationRateInlet;
+        mixingLength 0.05;
+        value uniform 0.05;
+    }
+    crac_sup_08
+    {
+        type turbulentMixingLengthDissipationRateInlet;
+        mixingLength 0.05;
+        value uniform 0.05;
+    }
+    crac_ret_01
+    {
+        type zeroGradient;
+    }
+    crac_ret_02
+    {
+        type zeroGradient;
+    }
+    crac_ret_03
+    {
+        type zeroGradient;
+    }
+    crac_ret_04
+    {
+        type zeroGradient;
+    }
+    crac_ret_05
+    {
+        type zeroGradient;
+    }
+    crac_ret_06
+    {
+        type zeroGradient;
+    }
+    crac_ret_07
+    {
+        type zeroGradient;
+    }
+    crac_ret_08
+    {
+        type zeroGradient;
+    }
+}

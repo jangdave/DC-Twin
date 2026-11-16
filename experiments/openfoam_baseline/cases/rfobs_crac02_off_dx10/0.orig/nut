@@ -1,0 +1,104 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      nut;
+}
+
+dimensions [0 2 -1 0 0 0 0];
+internalField uniform 0;
+boundaryField
+{
+    floor
+    {
+        type nutkWallFunction;
+        value uniform 0;
+    }
+    ceiling
+    {
+        type nutkWallFunction;
+        value uniform 0;
+    }
+    fixedWalls
+    {
+        type nutkWallFunction;
+        value uniform 0;
+    }
+    solidWalls
+    {
+        type nutkWallFunction;
+        value uniform 0;
+    }
+    crac_sup_01
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_sup_03
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_sup_04
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_sup_05
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_sup_06
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_sup_07
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_sup_08
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_ret_01
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_ret_03
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_ret_04
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_ret_05
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_ret_06
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_ret_07
+    {
+        type calculated;
+        value uniform 0;
+    }
+    crac_ret_08
+    {
+        type calculated;
+        value uniform 0;
+    }
+}
