@@ -78,6 +78,16 @@ Blender로 직접 모델링한 **가상 데이터센터**를 OpenUSD로 정의�
    [Omniverse ovrtx] ─같은 USD 장면을 그림─▶ 비교 실험(E2)
 ```
 
+**지금 실제로 동작하는 경로 (2026-11-16):** 위 그림은 처음 설계다. MQTT 브로커(Mosquitto)와 Unreal 연결은 아직 실제로 돌려 보지 않았다(Unreal은 후순위). 지금 동작하는 것은 다음 두 가지다.
+
+```
+[미리 계산한 녹화(L2)] ─JSON 파일─▶ [웹 보기 화면(web/viewer)]   (GitHub Pages, 서버 없음)
+[시뮬레이션 서버(Kit 안 serve.py)] ─WebSocket─▶ [웹 보기 화면]       (로컬, 접근 토큰)
+    · 센서 생성기, Warp 열 계산 + 보정 모델, OpenFOAM 작업 실행기
+```
+
+게이트웨이(`gateway/`)는 MQTT 경로를 보여 주는 예제로 남겨 두었다([30](30_architecture_review.md) 6장).
+
 ## 6. 부품 요약
 
 | 부품 | 위치 | 역할 | 상세 |

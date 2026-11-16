@@ -28,7 +28,7 @@ class JsonlPublisher:
 
 
 class MqttPublisher:
-    """샘플을 MQTT 주소로 보낸다(QoS 0, retain 켬). 페이로드는 {ts, value, unit, quality}. 알람, 집계, 시나리오 줄은 보내지 않는다(게이트웨이가 만든다).
+    """샘플을 MQTT 주소로 보낸다(QoS 0, retain 켬). 페이로드는 {ts, value, unit, quality}이고, 보정 모델(L2) 값이면 lower, upper, confidence가 더 붙는다(docs/11 표). 알람, 집계, 시나리오 줄은 보내지 않는다(게이트웨이가 만든다).
 
     paho-mqtt가 필요하다(`uv sync --extra mqtt`). 브로커(Mosquitto 등)는 이 저장소가 설치하지 않는다.
     """
