@@ -1,18 +1,31 @@
 {
  "version": 1,
- "trained_at": "2026-11-14T15:46:25+00:00",
- "model_sha256": "f19c429597110d809e28bdd12c822d71774ee1b11504a1dc9af90b94b751eb32",
+ "trained_at": "2026-11-16T02:16:09+00:00",
+ "model_sha256": "ae06c99dd170668ab2deb1b62c728cdec02322010a8c7effc4393ba4de77d0bd",
  "samples_json_sha256": "56c756b1cf5585b79ac92b490635bcbb330628fdda173c9d13193a48cbc22983",
  "data_dir": "surrogate_cac",
+ "extra": [
+  {
+   "samples_json": "samples_v4.json",
+   "samples_json_sha256": "1d60c6a5aaa149615207250ea1f74535911f8442dfea878b277853327e357f18",
+   "data_dir": "surrogate_cac_v4"
+  },
+  {
+   "samples_json": "samples_v5.json",
+   "samples_json_sha256": "6808c97f9da737becb7899652d66fa182f01dcdbcba14342384b269638bb85e9",
+   "data_dir": "surrogate_cac_v5"
+  }
+ ],
+ "n_features": 25,
  "code": {
-  "git_commit": "9f39e86851ab82421d64d8a6bdf175059a11a1ad",
+  "git_commit": "cb789b48d056603ce36ce3786c4a93fe8e374910",
   "dirty": false,
   "python": "3.13.9",
   "scikit_learn": "1.9.1",
   "numpy": "2.5.4"
  },
  "only_converged": false,
- "n_samples": 68,
+ "n_samples": 86,
  "sample_ids": [
   "s01_normal",
   "s02_normal",
@@ -81,11 +94,29 @@
   "s65_one_crac_off_low_load",
   "s66_fan_derated_low_load",
   "s67_fan_derated_low_load",
-  "s68_same_aisle_two_off_low_load"
+  "s68_same_aisle_two_off_low_load",
+  "s69_remove_two_off",
+  "s70_remove_two_off",
+  "s71_remove_two_off",
+  "s72_remove_two_off",
+  "s73_remove_two_off",
+  "s74_remove_two_off",
+  "s75_remove_two_off",
+  "s76_remove_two_off",
+  "s77_remove_two_off",
+  "s78_remove_two_off",
+  "s79_remove_two_off",
+  "s80_remove_two_off",
+  "s81_remove_two_off",
+  "s82_remove_two_off",
+  "s83_remove_diff_two_off",
+  "s84_remove_diff_two_off",
+  "s85_remove_diff_two_off",
+  "s86_remove_diff_two_off"
  ],
  "status_counts": {
-  "done": 53,
-  "not_converged": 15
+  "done": 64,
+  "not_converged": 22
  },
  "excluded": {
   "holdout_A_normal": "보류(학습에서 제외)",
@@ -95,7 +126,7 @@
  },
  "power_range_kw": [
   4.0,
-  13.9
+  14.0
  ],
  "max_removed_racks": 3,
  "hyper": {
