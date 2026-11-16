@@ -28,6 +28,9 @@ RES = BASE / "results"
 # 예전(바닥 아래 공간 없음) 데이터는 results/surrogate에 남아 있다.
 DATA = RES / "surrogate_rf"
 DATA_CAC = RES / "surrogate_cac"  # 냉기 통로 격리(CAC) 장면으로 같은 샘플을 계산한 결과(docs/34 6장)
+# CAC 모델에만 더하는 학습 샘플(랙 제거 + 공조기 두 대 정지 18개, experiments/results/E9_residual_features.md). (명세 파일, 결과 폴더)
+# HAC 모델에는 더하지 않는다: 더하면 HAC 보류 E가 나빠져 채택 기준을 넘지 못했다.
+EXTRA_CAC = [(BASE / "surrogate" / "samples_v4.json", RES / "surrogate_cac_v4"), (BASE / "surrogate" / "samples_v5.json", RES / "surrogate_cac_v5")]
 
 
 def read_csv(path: Path) -> dict[str, float]:
@@ -44,6 +47,8 @@ class Geometry:
     cold_aisle: np.ndarray      # 앞면이 닿는 냉기 통로
     n_hot: int
     n_cold: int
+    rack_xy: np.ndarray = None  # 랙 바닥 중심 (x, y), m. 빈자리, 공조기까지 거리에 쓴다(2026-11-16, E9)
+    crac_xy: np.ndarray = None  # CRAC_01~08 바닥 중심 (x, y), m
 
 
 def load_geometry(layout_json: Path | None = None) -> Geometry:
@@ -77,7 +82,10 @@ def load_geometry(layout_json: Path | None = None) -> Geometry:
         front_y = r["max"][1] if sign > 0 else r["min"][1]
         hot[i] = int(np.argmin([abs(back_y - c) for c in hot_centers]))
         cold[i] = int(np.argmin([abs(front_y - c) for c in cold_centers]))
-    return Geometry(names, row, pos_from_end, row_len, hot, cold, len(hot_centers), len(cold_centers))
+    rack_xy = np.array([[(r["min"][d] + r["max"][d]) / 200.0 for d in range(2)] for r in racks])
+    crac_by = {c["name"]: c for c in hall["cracs"]}
+    crac_xy = np.array([[(crac_by[f"CRAC_{k + 1:02d}"]["min"][d] + crac_by[f"CRAC_{k + 1:02d}"]["max"][d]) / 200.0 for d in range(2)] for k in range(8)])
+    return Geometry(names, row, pos_from_end, row_len, hot, cold, len(hot_centers), len(cold_centers), rack_xy, crac_xy)
 
 
 def crac_aisle(n_aisles: int = 4) -> list[int]:
@@ -98,6 +106,12 @@ def sample_features(geo: Geometry, sample: dict, ours: dict[str, float], ours_in
     supply = float(ours_info["supply_m3s"])
     row_p = np.array(sample["row_power_kw"], dtype=float)
     idx_by_name = {n: i for i, n in enumerate(geo.names)}
+    # 빈자리와 공조기 위치(2026-11-16 추가, experiments/results/E9_residual_features.md): 빈자리 뒤 열기 통로의 가동 정도, 꺼진/켜진 공조기까지 거리
+    rem_idx = [idx_by_name[m] for m in removed]
+    rem_hot = [geo.hot_aisle[j] for j in rem_idx]
+    rem_aisle_fan = float(min((aisle_fan[a] for a in rem_hot), default=1.0))
+    off_xy = geo.crac_xy[[k for k in range(8) if fan[k] == 0.0]]
+    on_xy = geo.crac_xy[[k for k in range(8) if fan[k] > 0.0]]
     rows, ours_vec, names = [], [], []
     for n in geo.names:
         if n in removed or n not in ours:
@@ -132,14 +146,29 @@ def sample_features(geo: Geometry, sample: dict, ours: dict[str, float], ours_in
             near_removed,
             cold_removed,
             geo.cold_aisle[i],
+            *_place_features(geo, i, n, rem_idx, rem_hot, removed, off_xy, on_xy, rem_aisle_fan, aisle_fan[ha]),
         ])
         ours_vec.append(ours[n])
         names.append(n)
     return np.array(rows, dtype=float), np.array(ours_vec), names
 
 
+def _place_features(geo: Geometry, i: int, name: str, rem_idx, rem_hot, removed, off_xy, on_xy, rem_aisle_fan: float, own_aisle_fan: float) -> list[float]:
+    """빈자리와 공조기 위치 특징 8개. 해당하는 것이 없으면 칸 수 10, 거리 FAR_M을 쓴다."""
+    c = geo.rack_xy[i]
+    slot = min((abs(int(m[-2:]) - int(name[-2:])) for m, j in zip(removed, rem_idx) if geo.row[j] == geo.row[i]), default=10)  # 같은 줄은 랙 번호가 이어진다
+    dist_rm = min((float(np.linalg.norm(geo.rack_xy[j] - c)) for j in rem_idx), default=FAR_M)
+    hot_rm = float(sum(1 for a in rem_hot if a == geo.hot_aisle[i]))
+    d_off = float(np.min(np.linalg.norm(off_xy - c, axis=1))) if len(off_xy) else FAR_M
+    d_on = float(np.min(np.linalg.norm(on_xy - c, axis=1))) if len(on_xy) else FAR_M
+    return [float(slot), dist_rm, hot_rm, 1.0 if removed else 0.0, d_off, d_on, rem_aisle_fan, (1.0 - own_aisle_fan) * hot_rm]
+
+
+FAR_M = 30.0
 FEATURE_NAMES = ["ours", "ours-18", "row_power/10", "pos_from_end", "is_end", "row_len", "row", "hot_aisle_fan", "hot_aisle_leak", "total_leak",
-                 "supply/57.6", "mean_fan", "n_fan_off", "mean_power/10", "near_removed", "cold_removed", "cold_aisle"]
+                 "supply/57.6", "mean_fan", "n_fan_off", "mean_power/10", "near_removed", "cold_removed", "cold_aisle",
+                 "slots_to_removed", "dist_to_removed_m", "removed_same_hot", "any_removed", "dist_to_off_crac_m", "dist_to_on_crac_m",
+                 "removed_aisle_fan", "hot_aisle_off_x_removed"]
 
 
 def pattern_key(sample: dict) -> str:

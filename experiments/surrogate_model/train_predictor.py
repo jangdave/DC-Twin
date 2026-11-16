@@ -2,7 +2,8 @@
 
 사용 (이 폴더에서):
     uv run --python 3.13 python train_predictor.py [--only-converged] [--out model.pkl]
-    CAC 장면용(docs/34 6장): ... train_predictor.py --data-dir ../openfoam_baseline/results/surrogate_cac --out model_cac.pkl
+    CAC 장면용(docs/34 6장, E9): ... train_predictor.py --cac --out model_cac.pkl
+        (= --data-dir ../openfoam_baseline/results/surrogate_cac + residual_model.EXTRA_CAC의 추가 18개)
 센서 생성기(L2)가 `ResidualPredictor.load("model.pkl")`로 읽어서 `predict(...)`를 부른다.
 """
 from __future__ import annotations
@@ -26,11 +27,21 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--only-converged", action="store_true", help="수렴한 샘플만 학습에 쓴다(기본은 미수렴 9개 포함)")
 ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parent / "model.pkl")
 ap.add_argument("--data-dir", type=Path, default=rm.DATA, help="OpenFOAM 결과 폴더(기본 HAC surrogate_rf, CAC는 surrogate_cac)")
+ap.add_argument("--extra", nargs=2, action="append", default=[], metavar=("SAMPLES_JSON", "DATA_DIR"),
+                help="추가 학습 샘플(명세 파일과 결과 폴더). 여러 번 줄 수 있다. CAC 모델은 4·5차 랙 제거 + 두 대 정지 18개를 더한다(E9)")
+ap.add_argument("--cac", action="store_true", help="CAC 모델: --data-dir surrogate_cac와 rm.EXTRA_CAC(추가 18개)를 쓴다")
 a = ap.parse_args()
+if a.cac:
+    a.data_dir = rm.DATA_CAC
+    a.extra = [[str(sj), str(dd)] for sj, dd in rm.EXTRA_CAC]
 DATA = a.data_dir.resolve()
 samples_json = rm.BASE / "surrogate" / "samples.json"
 specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
 data = [d for d in rm.load_dataset(DATA, samples_json, a.only_converged) if not d["holdout"]]
+extra = [(Path(sj).resolve(), Path(dd).resolve()) for sj, dd in a.extra]
+for sj, dd in extra:
+    specs.update({s["id"]: s for s in json.loads(sj.read_text(encoding="utf-8"))["samples"]})
+    data += [d for d in rm.load_dataset(dd, sj, a.only_converged) if not d["holdout"]]
 p = pr.ResidualPredictor().fit(data, specs)
 p.save(a.out)
 print(f"학습 샘플 {len(data)}개로 학습, 저장: {a.out} ({a.out.stat().st_size / 1e6:.1f} MB)")
@@ -51,6 +62,8 @@ def git(*args: str) -> str:
 
 used = {d["id"] for d in data}
 progress = json.loads((DATA / "progress.json").read_text(encoding="utf-8"))
+for _, dd in extra:
+    progress.update(json.loads((dd / "progress.json").read_text(encoding="utf-8")))
 excluded = {sid: ("보류(학습에서 제외)" if specs[sid].get("holdout") else progress.get(sid, {}).get("status", "결과 파일 없음")) for sid in specs if sid not in used}
 # dirty: 학습에 쓴 코드와 데이터가 커밋과 다르면 True
 meta = {
@@ -59,7 +72,9 @@ meta = {
     "model_sha256": sha256(a.out),
     "samples_json_sha256": sha256(samples_json),
     "data_dir": DATA.name,
-    "code": {"git_commit": git("rev-parse", "HEAD"), "dirty": bool(git("status", "--porcelain", "--untracked-files=no", "--", ":(top)experiments/surrogate_model", ":(top)experiments/openfoam_baseline/surrogate/samples.json", ":(top)experiments/openfoam_baseline/results/" + DATA.name)), "python": platform.python_version(), "scikit_learn": sklearn.__version__, "numpy": np.__version__},
+    "extra": [{"samples_json": sj.name, "samples_json_sha256": sha256(sj), "data_dir": dd.name} for sj, dd in extra],
+    "n_features": len(rm.FEATURE_NAMES),
+    "code": {"git_commit": git("rev-parse", "HEAD"), "dirty": bool(git("status", "--porcelain", "--untracked-files=no", "--", ":(top)experiments/surrogate_model", ":(top)experiments/openfoam_baseline/surrogate/samples.json", ":(top)experiments/openfoam_baseline/results/" + DATA.name, ":(top)sim/thermal/dct_thermal", *[":(top)experiments/openfoam_baseline/results/" + dd.name for _, dd in extra])), "python": platform.python_version(), "scikit_learn": sklearn.__version__, "numpy": np.__version__},
     "only_converged": a.only_converged,
     "n_samples": len(data),
     "sample_ids": sorted(used),
