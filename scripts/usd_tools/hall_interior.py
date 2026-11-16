@@ -285,6 +285,64 @@ def containment_type(cfg: dict) -> str:
     return t
 
 
+def hot_end(cfg: dict) -> str:
+    """열기 통로 끝 모양(HAC만). "full": 격벽이 공조기 앞면까지 바닥부터 막는다(2026-11-16 이전, 설정에 값이 없으면 이것).
+    "door_duct": 줄 끝에 문을 달고, 줄 끝 ~ 공조기 사이는 머리 위 덕트로만 잇는다. 그 아래는 사람이 다니는 통로이고
+    공조기는 위에 얹은 회수 후드의 앞면(높이 공조기 윗면 ~ 덕트 윗면)으로 빨아들인다(docs/35)."""
+    t = cfg["containment"].get("hot_end", "full")
+    if t not in ("full", "door_duct"):
+        raise ValueError(f"containment.hot_end은 full 또는 door_duct: {t}")
+    return t
+
+
+def duct_top(cfg: dict) -> float:
+    """door_duct 방식에서 열기 통로와 덕트의 윗면 높이(cm, 바닥에서)."""
+    return float(cfg["containment"].get("duct", {}).get("top_z", 380))
+
+
+def return_z(cfg: dict) -> tuple[float, float] | None:
+    """공조기 회수구 높이 범위(cm, 바닥에서). door_duct이면 회수 후드 앞면(공조기 윗면 ~ 덕트 윗면), 아니면 None(계산의 기본값)."""
+    if containment_type(cfg) != "hot" or hot_end(cfg) != "door_duct":
+        return None
+    return (float(cfg["crac"]["height"]), duct_top(cfg))
+
+
+def hot_aisle_boxes(lay, cfg: dict) -> list[tuple[str, tuple, tuple, int, float]]:
+    """열기 통로 격벽 상자 목록 [(이름, 아래 꼭짓점, 위 꼭짓점, 가로대 축, 가로대 간격)]. 장면 생성(build_scene, 상자/메시)이 함께 쓴다."""
+    ct, cr = cfg["containment"], cfg["crac"]
+    t, rz = ct["panel_thickness"], ct["roof_z"]
+    W = lay.width
+    xa, xb = cr["depth"], W - cr["depth"]
+    n = len(lay.hot_aisles)
+    out = []
+    duct = hot_end(cfg) == "door_duct"
+    dz1 = duct_top(cfg) if duct else 0.0
+    for k, (ya, yb) in enumerate(lay.hot_aisles, start=1):
+        sides = [(o, (ya - t, ya) if o == -1 else (yb, yb + t)) for o in (-1, 1) if not ((k == 1 and o == -1) or (k == n and o == 1))]
+        tagn = lambda o: "N" if o == 1 else "S"  # noqa: E731
+        if not duct:
+            out.append((f"HotAisle_{k:02d}_Roof", (xa, ya, rz), (xb, yb, rz + t), 0, 120.0))
+            for o, (lo_y, hi_y) in sides:
+                for tag, (x0, x1) in (("W", (xa, lay.rack_x0)), ("E", (lay.rack_x1, xb))):
+                    out.append((f"HotAisle_{k:02d}_Side{tagn(o)}_{tag}", (x0, lo_y, 0), (x1, hi_y, rz), 0, 0.0))
+            continue
+        # 열기 통로를 덕트 높이(dz1)까지 올리고 벽에서 벽까지 덮는다. 랙 위(rz ~ dz1)는 옆판으로 막아 통로 전체가 덕트와 한 공간이 된다.
+        # 처음에는 지붕을 줄 끝 60 cm만 비우고 덕트를 2.0 ~ 2.8 m로 두었는데, 입구와 덕트가 좁아 풍속이 20 m/s까지 올라갔다(docs/35 5장).
+        out.append((f"HotAisle_{k:02d}_Roof", (0.0, ya, dz1), (W, yb, dz1 + t), 0, 120.0))
+        for o, (lo_y, hi_y) in sides:
+            out.append((f"HotAisle_{k:02d}_Side{tagn(o)}", (0.0, lo_y, rz), (W, hi_y, dz1), 0, 0.0))
+        for tag, door, (fx0, fx1) in (("W", (lay.rack_x0 - t, lay.rack_x0), (0.0, lay.rack_x0)), ("E", (lay.rack_x1, lay.rack_x1 + t), (lay.rack_x1, W))):
+            # 줄 끝 문(미닫이): 통로 폭 전체, 바닥 ~ 랙 높이
+            out.append((f"HotAisle_{k:02d}_Door_{tag}", (door[0], ya, 0), (door[1], yb, rz), 1, 0.0))
+            # 덕트 바닥판: 줄 끝 ~ 벽(사람이 다니는 통로 위). 벽까지 덮어 공조기(폭 90)와 통로(120) 사이 틈을 막는다
+            out.append((f"HotAisle_{k:02d}_DuctFloor_{tag}", (fx0, ya, rz), (fx1, yb, rz + t), 0, 0.0))
+            # 회수 후드: 공조기 윗면 ~ 덕트 윗면, 공조기 폭. 앞면이 회수구다(윗면 0.9 m2만으로는 흡입구 둘레 풍속이 10 m/s를 넘었다)
+            hx0, hx1 = (0.0, xa) if tag == "W" else (xb, W)
+            ym = (ya + yb) / 2
+            out.append((f"HotAisle_{k:02d}_Hood_{tag}", (hx0, ym - cr["width"] / 2, cr["height"]), (hx1, ym + cr["width"] / 2, dz1), 0, 0.0))
+    return out
+
+
 def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) -> dict:
     """열기 통로 격벽. 각 prim(dct:assetType=containment)은 Xform이고 자식으로 Frame(알루미늄 틀)과 Glass(반투명 패널)를 둔다.
     prim 전체의 경계 상자는 이전 Cube와 같다(틀이 바깥 가장자리를 채운다)."""
@@ -301,6 +359,11 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
         x.GetPrim().CreateAttribute("dct:assetType", Sdf.ValueTypeNames.Token, custom=True).Set("containment")
         sz = [hi[i] - lo[i] for i in range(3)]
         fr = MeshB()
+        if "_Hood_" in path:  # 회수 후드: 유리 없이 금속 상자
+            fr.box(lo, hi, "frame")
+            author_mesh(stage, f"{path}/Frame", fr, mats)
+            tri["Frame"] += fr.triangles()
+            return
         flat = [i for i in range(3) if i != 2]  # 틀이 놓이는 평면: 수평(지붕)이면 (x, y), 수직(옆면)이면 (x, z)
         if sz[2] <= t + 1e-6:  # 지붕: 수평 판. 두께 t는 z
             fr.box((lo[0], lo[1], lo[2]), (hi[0], lo[1] + bar, hi[2]), "frame")
@@ -308,7 +371,7 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
             fr.box((lo[0], lo[1] + bar, lo[2]), (lo[0] + bar, hi[1] - bar, hi[2]), "frame")
             fr.box((hi[0] - bar, lo[1] + bar, lo[2]), (hi[0], hi[1] - bar, hi[2]), "frame")
             k = 1
-            while lo[0] + cross_pitch * k < hi[0] - bar - 20.0:
+            while cross_pitch > 0 and lo[0] + cross_pitch * k < hi[0] - bar - 20.0:  # 간격 0이면 가로대 없음(덕트 판)
                 cx = lo[0] + cross_pitch * k
                 fr.box((cx - bar / 2, lo[1] + bar, lo[2]), (cx + bar / 2, hi[1] - bar, hi[2]), "frame")
                 k += 1
@@ -345,15 +408,8 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
             panel(f"{cont}/ColdAisle_{k:02d}_Door_W", (lay.rack_x0 - t, ya, 0), (lay.rack_x0, yb, rz + t), 1, 0.0)
             panel(f"{cont}/ColdAisle_{k:02d}_Door_E", (lay.rack_x1, ya, 0), (lay.rack_x1 + t, yb, rz + t), 1, 0.0)
         return tri
-    for k, (ya, yb) in enumerate(lay.hot_aisles, start=1):
-        panel(f"{cont}/HotAisle_{k:02d}_Roof", (xa, ya, rz), (xb, yb, rz + t), 0, 120.0)
-        for outward in (-1, 1):
-            if (k == 1 and outward == -1) or (k == len(lay.hot_aisles) and outward == 1):
-                continue
-            edge = ya if outward == -1 else yb
-            lo_y, hi_y = (edge - t, edge) if outward == -1 else (edge, edge + t)
-            for tag, (x0, x1) in (("W", (xa, lay.rack_x0)), ("E", (lay.rack_x1, xb))):
-                panel(f"{cont}/HotAisle_{k:02d}_Side{'N' if outward == 1 else 'S'}_{tag}", (x0, lo_y, 0), (x1, hi_y, rz), 0, 0.0)
+    for name, lo, hi, axis, pitch in hot_aisle_boxes(lay, cfg):
+        panel(f"{cont}/{name}", lo, hi, axis, pitch)
     return tri
 
 

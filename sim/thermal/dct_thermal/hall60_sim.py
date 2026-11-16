@@ -105,6 +105,10 @@ def read_hall_from_stage(stage) -> dict:
                 f = m.TransformDir(Gf.Vec3d(0, -1, 0))  # 에셋의 앞쪽은 로컬 -Y
                 axis = int(np.argmax([abs(f[0]), abs(f[1])]))
                 item["front"] = (axis, 1 if f[axis] > 0 else -1)  # (축, 부호): 앞면이 향하는 방향
+            if kind == "crac":
+                rz = prim.GetAttribute("dct:returnZ")  # 회수구 높이 범위(cm, 바닥에서). 없으면 RETURN_Z_CM(회수 후드가 있으면 그 앞면, docs/35)
+                if rz and rz.HasAuthoredValue():
+                    item["return_z_cm"] = [float(v) for v in rz.Get()]
             hall[{"rack": "racks", "crac": "cracs", "vent": "vents", "containment": "panels"}[kind]].append(item)
         elif kind == "sensor":
             m = UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default()).ExtractTranslation()
@@ -190,7 +194,8 @@ class Layout:
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
             self.solid[xs:xe, ys:ye, zs:ze] = True
             axis, sign = c["front"]  # 회수면(앞면)이 향하는 방향
-            zr0, zr1 = rng(RETURN_Z_CM[0] + self.z_off_cm, RETURN_Z_CM[1] + self.z_off_cm, nz)  # 회수구 높이는 바닥(이중 바닥이면 그 윗면)에서 잰다
+            r0, r1 = c.get("return_z_cm", RETURN_Z_CM)
+            zr0, zr1 = rng(r0 + self.z_off_cm, r1 + self.z_off_cm, nz)  # 회수구 높이는 바닥(이중 바닥이면 그 윗면)에서 잰다
             if axis == 0:
                 xr = slice(xe, xe + 1) if sign > 0 else slice(xs - 1, xs)
                 self.ret_id[xr, ys:ye, zr0:zr1] = idx

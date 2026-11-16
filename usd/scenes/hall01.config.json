@@ -5,13 +5,13 @@
   "rows": {
     "count": 6,
     "racks_per_row": 10,
-    "cold_aisle": 120,
-    "hot_aisle": 100,
-    "end_clearance": 150,
+    "cold_aisle": 180,
+    "hot_aisle": 120,
+    "end_clearance": 240,
     "_note": "줄 2개가 냉기 통로를 사이에 두고 마주 본다. 바깥쪽 두 통로 폭 포함, 열기 통로는 줄 사이와 양 바깥쪽에 모두 4개"
   },
   "crac": { "asset": "../assets/crac.usda", "width": 90, "depth": 100, "height": 220, "per_side": 4 },
-  "containment": { "panel_thickness": 5, "roof_z": 200 },
+  "containment": { "panel_thickness": 5, "roof_z": 200, "hot_end": "door_duct", "duct": { "top_z": 380, "_note": "줄 끝 문 + 머리 위 덕트(2026-11-16, docs/35). 열기 통로를 top_z(cm)까지 올려 벽에서 벽까지 덮고, 줄 끝 ~ 벽 사이는 높이 roof_z에 덕트 바닥판을 둔다. 그 아래는 사람이 다니는 통로다"} },
   "raised_floor": {
     "enabled": true, "plenum_depth": 60, "tile_open_ratio": 0.25,
     "_note": "이중 바닥 아래 공간(가상 값: 깊이 60 cm, 타일 열린 비율 25 %). 공조기가 바닥 아래로 불어 넣는다. 2026-11-11 기본값으로 켬(docs/33 C단계)",

@@ -205,7 +205,8 @@ mergePatchPairs ();
             nm_s = f"crac_sup_{i+1:02d}"
             s += f"    {{ name {nm_s}_f; type faceSet; action new; source boxToFace; sourceInfo {{ box {vec((xs * dx + 0.01, ys * dx + 0.01, zb - 0.01))} {vec((xe * dx - 0.01, ye * dx - 0.01, zb + 0.01))}; }} }}\n"
             crac_sup.append((nm_s, float(q[i])))
-        zr0, zr1 = h.rng(h.RETURN_Z_CM[0] + z_off, h.RETURN_Z_CM[1] + z_off, nz)
+        r0, r1 = c.get("return_z_cm", h.RETURN_Z_CM)  # 회수 후드가 있으면 그 앞면 높이(docs/35)
+        zr0, zr1 = h.rng(r0 + z_off, r1 + z_off, nz)
         plane = (xe if sign > 0 else xs) * dx if axis == 0 else (ye if sign > 0 else ys) * dx
         if axis == 0:
             lo = (plane - 0.01, ys * dx + 0.01, zr0 * dx + 0.01); hi = (plane + 0.01, ye * dx - 0.01, zr1 * dx - 0.01)

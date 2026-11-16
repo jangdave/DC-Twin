@@ -174,12 +174,17 @@ export class HallScene {
       g.add(mesh);
       return mesh;
     };
-    const roofs = panelsData.filter((p) => p.name.endsWith('_Roof'));
-    const sides = panelsData.filter((p) => !p.name.endsWith('_Roof'));
+    // 줄 끝 문 + 머리 위 덕트 장면(docs/35): 덕트 바닥판은 지붕처럼, 공조기 위 회수 후드는 불투명한 금속 상자로 그린다
+    const kind = (p) => (p.name.includes('_Hood_') ? 'hood' : p.name.endsWith('_Roof') || p.name.includes('_DuctFloor_') ? 'roof' : 'side');
+    const roofs = panelsData.filter((p) => kind(p) === 'roof');
+    const sides = panelsData.filter((p) => kind(p) === 'side');
+    const hoods = panelsData.filter((p) => kind(p) === 'hood');
     boxMesh(sides, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
     boxMesh(roofs, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
-    if (panelsData.length) {
-      const edgeGeos = panelsData.map((p) => new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)).applyMatrix4(this._boxMatrix(p)));
+    if (hoods.length) boxMesh(hoods, new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.3, roughness: 0.6 })).renderOrder = 0;
+    const framed = panelsData.filter((p) => kind(p) !== 'hood');
+    if (framed.length) {
+      const edgeGeos = framed.map((p) => new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)).applyMatrix4(this._boxMatrix(p)));
       const edges = new THREE.LineSegments(mergeGeometries(edgeGeos, false), new THREE.LineBasicMaterial({ color: 0x8fc0f0, transparent: true, opacity: 0.85 }));
       edgeGeos.forEach((x) => x.dispose());
       edges.renderOrder = 3;
