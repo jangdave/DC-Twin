@@ -316,7 +316,7 @@ def make_stages(manifest: Manifest, *, runner: OpenFOAMRunner | None = None, see
             npz, meta = (runner or OpenFOAMRunner(ctx.manager.out / "flows")).flow(fan, kw, prog, ctx.check, scene=scene)
             flows[CFDSolver.fan_tuple({k: fan[k] for k in fan})] = {"npz": str(npz), "fan": fan, "meta": meta, "from_s": t}
             if not meta.get("converged"):
-                ctx.note(f"OpenFOAM이 수렴 판정을 통과하지 못했다(팬 상태 {i + 1}, 반복 {meta.get('iterations')}). 값은 마지막 반복의 흐름이다")
+                ctx.note(f"OpenFOAM이 수렴 판정을 통과하지 못했다(팬 상태 {i + 1}, 반복 {meta.get('iterations')}). 값은 마지막 반복의 흐름이다. 정상에 가까운 조건에서 흔하고, 학습 샘플에서는 1,500회를 더 돌려도 랙 입구 온도가 0.1도 안에서만 흔들렸다(docs/33 7.1, docs/34 6.1)")
         ctx.data["flows"] = flows
         (ctx.folder / "flows.json").write_text(json.dumps([{k: v for k, v in f.items() if k != "npz"} for f in flows.values()], ensure_ascii=False, indent=1), encoding="utf-8")
         try:
