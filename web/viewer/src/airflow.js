@@ -216,7 +216,9 @@ export class Airflow {
       const v = vents[Math.floor(this.rng() * vents.length)];
       this.pos[o] = (v.min[0] + this.rng() * (v.max[0] - v.min[0])) * CM;
       this.pos[o + 1] = (v.min[1] + this.rng() * (v.max[1] - v.min[1])) * CM;
-      this.pos[o + 2] = 0.15 + this.rng() * 0.3;
+      // 이중 바닥이면 타일 표면에서 출발해 바닥에서 솟아오르게 한다. 예전(0.15~0.45 m 공중)에는 방의 찬 공기 입자의 약 89 %가
+      // 랙 앞 공중에서 갑자기 생겨 랙에서 찬 공기가 나오는 것처럼 보였다(2026-11-16 사용자 지적, 30초에 공중 22,335개 / 바닥을 뚫고 2,850개)
+      this.pos[o + 2] = this.plenum ? 0.01 + this.rng() * 0.04 : 0.15 + this.rng() * 0.3;
     }
     this.vel[o] = this.vel[o + 1] = this.vel[o + 2] = 0;
     for (let h = 0; h < SEG; h++) this.hist.set(this.pos.subarray(o, o + 3), (p * SEG + h) * 3);
