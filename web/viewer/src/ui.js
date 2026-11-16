@@ -555,7 +555,7 @@ export class UI {
         box.append(bar);
         if (Number.isFinite(tin.lower) && Number.isFinite(tin.upper)) {
           const half = (tin.upper - tin.lower) / 2;
-          box.append(el('div', 'muted', `90% 구간 ${fmt(tin.lower, 2)} ~ ${fmt(tin.upper, 2)} °C (± ${fmt(half, 2)})`));
+          box.append(el('div', 'muted', `95% 구간 ${fmt(tin.lower, 2)} ~ ${fmt(tin.upper, 2)} °C (± ${fmt(half, 2)})`));
         }
       } else {
         box.append(el('div', 'muted', '보정 정보 없음'));
@@ -607,7 +607,7 @@ export function describeEvent(e) {
   return `${e.kind} ${e.target ?? ''}`.trim();
 }
 
-// 추이 그래프: 값 선, 90% 구간 띠, 알람 기준선(점선)
+// 추이 그래프: 값 선, 95% 구간 띠, 알람 기준선(점선)
 export function drawChart(canvas, hist, info) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = canvas.clientWidth || 300;
@@ -660,7 +660,7 @@ export function drawChart(canvas, hist, info) {
     g.stroke();
     g.fillText(v.toFixed(1), 2, y(v) + 3);
   }
-  // 90% 구간 띠
+  // 95% 구간 띠
   const band = hist.map((p, i) => [i, p.lower, p.upper]).filter((b) => Number.isFinite(b[1]) && Number.isFinite(b[2]));
   if (band.length > 1) {
     g.fillStyle = 'rgba(37, 110, 244, 0.16)';

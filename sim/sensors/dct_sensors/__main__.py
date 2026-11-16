@@ -4,7 +4,7 @@
 
 - `--time-scale`: 1이면 실시간, 10이면 10배 빠르게, 0이면 기다리지 않고 가능한 한 빠르게(녹화, 시험용)
 - `--solver l0|l1|l2`: l0는 간단한 모델, l1은 Warp 열 시뮬레이션(Warp가 있는 환경에서만, `docs/11` 6.2장),
-  l2는 l1에 OpenFOAM으로 배운 보정을 더하고 랙 입구 온도에 90% 구간과 신뢰 등급을 붙인다(scikit-learn도 필요, `solver_l2.py`)
+  l2는 l1에 OpenFOAM으로 배운 보정을 더하고 랙 입구 온도에 95% 구간과 신뢰 등급을 붙인다(scikit-learn도 필요, `solver_l2.py`)
 - `--fault dropout:H01-RK05-TEMP-IN:30s@45s`: 45초부터 30초 동안 그 센서 값을 보내지 않는다(여러 번 쓸 수 있음)
 - `--out`을 생략하면 표준 출력으로 한 줄씩 내보낸다. `--mqtt host:port`를 주면 MQTT로도 보낸다(샘플만).
 """

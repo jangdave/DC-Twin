@@ -1,4 +1,4 @@
-"""L2 모델: L1(Warp 열 시뮬레이션)의 랙 입구 온도에 OpenFOAM 기준 답으로 배운 보정을 더하고, 90% 구간과 신뢰 등급을 붙인다.
+"""L2 모델: L1(Warp 열 시뮬레이션)의 랙 입구 온도에 OpenFOAM 기준 답으로 배운 보정을 더하고, 95% 구간과 신뢰 등급을 붙인다.
 
 보정 모델은 `sim/thermal/dct_thermal/predictor.py`의 `ResidualPredictor`다(근거와 한계: `experiments/results/E5_surrogate_residual_model.md`).
 `model.pkl`이 있으면 읽고, 없으면 저장소의 OpenFOAM 학습 결과로 몇 초 안에 학습한다. scikit-learn과 Warp가 있는 환경에서 쓴다:
@@ -12,7 +12,7 @@
 - 보정 모델은 **정상 상태**(고장을 건 뒤 충분히 지난 값)로 배웠다. 시나리오가 바뀐 직후의 천천히 변하는 구간에서는 L1 값이 아직 정상 상태가 아니므로,
   그 값을 그대로 입력으로 쓴다. 보정량도 그에 맞춰 조금씩 변한다. 이 구간의 정확도는 따로 검증하지 않았다.
 - 보정량(L2 - L1)은 시간 상수 `tau_s`(설정)의 1차 지연으로 바꾼다. 안 그러면 조건이 바뀐 순간 보정량이 한 번에 뛰어(실제로 고장 시점에 최고 입구 온도가 1초 만에 약 5도 올랐다) 온도가 순간이동한다.
-- `estimates`에 센서 키별 `lower`, `upper`(90% 구간), `confidence`(ok, caution, low)를 둔다. 조건이 학습 범위 밖이면 L1 값을 그대로 쓰고 confidence를 `fallback`으로 한다.
+- `estimates`에 센서 키별 `lower`, `upper`(95% 구간), `confidence`(ok, caution, low)를 둔다. 조건이 학습 범위 밖이면 L1 값을 그대로 쓰고 confidence를 `fallback`으로 한다.
 - 시각화 목적이며 공학적 정확성을 주장하지 않는다. 보정은 OpenFOAM 10 cm 격자 결과를 흉내 낼 뿐이다.
 """
 from __future__ import annotations

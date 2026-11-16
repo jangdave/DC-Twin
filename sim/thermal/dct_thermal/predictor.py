@@ -1,7 +1,7 @@
 """잔차 모델 + 불확실성 + 범위 밖 안전장치. 센서 생성기(L2)가 부르는 입구다.
 
 입력: 샘플 조건(팬 레벨, 줄별 전력, 제거한 랙), 우리 솔버의 랙 입구 온도, 우리 솔버가 낸 유량 정보(`aisle_leak_m3s`, `supply_m3s`).
-출력: 랙마다 보정한 온도, 불확실성(앙상블 퍼짐 sigma), 90% 구간, 신뢰 등급, 샘플 단위 새로움과 되돌림 여부.
+출력: 랙마다 보정한 온도, 불확실성(앙상블 퍼짐 sigma), 95% 구간, 신뢰 등급, 샘플 단위 새로움과 되돌림 여부.
 
 설계 근거(`experiments/results/E5_surrogate_residual_model.md` 8장):
  - 앙상블 퍼짐(트리 사이 표준편차)은 실제 오차와 잘 맞는다(순위 상관 0.88). 그래서 **구간과 신뢰 등급**에 쓴다.
@@ -24,8 +24,9 @@ from . import residual_model as rm
 # 상위 25%가 0.44 이상, 상위 5%가 1.15 이상이다.
 SIGMA_CAUTION = 0.45
 SIGMA_LOW = 1.15
-INTERVAL_K = 3.0       # 90% 구간 = 보정값 +- INTERVAL_K x 퍼짐 (바닥 0.3도와 함께 쓰면 패턴을 통째로 뺀 검증에서 실제 포함 비율 약 0.95, 3 시그마만으로는 0.91. 계수를 검증 자료로 정했다)
+INTERVAL_K = 3.0       # 95% 구간 = 보정값 +- INTERVAL_K x 퍼짐 (바닥 0.3도와 함께 쓰면 패턴을 통째로 뺀 검증에서 실제 포함 비율 0.95~0.98(E5, E9), 3 시그마만으로는 0.91. 계수를 검증 자료로 정했다. 이름은 2026-11-16 90%에서 바꿈. 변수 이름 lower90/upper90은 호환을 위해 그대로 둔다)
 INTERVAL_FLOOR = 0.3   # 퍼짐이 아주 작아도 구간 반폭은 이보다 작지 않게 한다(도)
+HARD_COMBO_OFF = 2     # 랙을 빼고 공조기를 이만큼 이상 끈 조합은 등급을 늘 low로 둔다(hard_combo)
 NOVELTY_FAR = 1.23     # 샘플 새로움 거리(조건 서술 벡터)가 이보다 멀면 "먼 조건"(상위 20%)
 
 
@@ -91,6 +92,13 @@ class ResidualPredictor:
         return ""
 
     # ------------------------------------------------------------------ 예측
+    @staticmethod
+    def hard_combo(sample: dict) -> bool:
+        """랙 제거와 공조기 두 대 이상 정지가 함께 있는 조합(docs/34 6.2, E8, E9). 입력을 보강해도 보정 뒤 오차가 크고
+        (보류 E: HAC 1.09도, CAC 1.25도) 학습 샘플과 다르게 움직여 나무들의 퍼짐이 그 오차를 다 잡지 못한다. 그래서 등급을 늘 low로 둔다."""
+        off = sum(1 for v in sample.get("fan", {}).values() if v == 0.0)
+        return bool(sample.get("remove")) and off >= HARD_COMBO_OFF
+
     def predict(self, sample: dict, ours: dict[str, float], ours_info: dict, enforce_range: bool = True) -> Prediction:
         """enforce_range=False는 검증용이다(범위 밖이어도 보정하되 reason에 사유를 남긴다). 실제 사용에서는 True로 둔다."""
         assert self.model is not None, "fit 또는 load를 먼저 한다"
@@ -108,6 +116,9 @@ class ResidualPredictor:
         corr, sig = per_tree.mean(0), per_tree.std(0)
         half = np.maximum(INTERVAL_K * sig, INTERVAL_FLOOR)
         level = np.where(sig >= SIGMA_LOW, "low", np.where(sig >= SIGMA_CAUTION, "caution", "ok"))
+        if self.hard_combo(sample):
+            level[:] = "low"
+            reason = reason or "랙 제거 + 공조기 두 대 이상 정지: 보정 뒤에도 오차가 커서 신뢰 낮음으로 표시"
         nov = float(np.min(np.linalg.norm(self.train_desc - describe(sample), axis=1)))
         val = o + corr
         return Prediction(
