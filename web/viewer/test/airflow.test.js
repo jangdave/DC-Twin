@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Airflow } from '../src/airflow.js';
+import { Airflow, SEG } from '../src/airflow.js';
 
 // 작은 가짜 속도장: 4x4x4 칸, 장 2개(정상, 1번 CRAC 멈춤). 정상은 +x 방향 1 m/s, 멈춘 장은 -x 방향 1 m/s.
 function fake(source) {
@@ -129,5 +129,21 @@ describe('Airflow', () => {
     a.leak = 0;
     for (let p = 0; p < a.count; p++) a._spawn(p);
     expect(a.mode.every((m) => m === 0)).toBe(true);
+  });
+  it('꼬리는 지나온 위치를 이은 꺾은선이다(마디 SEG개, 머리 쪽이 밝음)', () => {
+    const a = fake();
+    a.leak = 0;
+    for (let i = 0; i < a.count; i++) a._spawn(i);
+    expect(a.geo.attributes.position.count).toBe(a.count * SEG * 2);
+    for (let k = 0; k < 20; k++) a.step(0.05, k * 0.05); // 1초: 지나온 위치가 쌓인다
+    const pos = a.geo.attributes.position.array, col = a.geo.attributes.color.array;
+    // 첫 입자: 마디가 이어져 있다(앞 마디의 끝 = 다음 마디의 시작), 머리는 지금 위치
+    const q = 0;
+    expect(pos[q]).toBeCloseTo(a.pos[0], 6);
+    for (let h = 0; h < SEG - 1; h++) for (let d = 0; d < 3; d++) expect(pos[q + h * 6 + 3 + d]).toBe(pos[q + (h + 1) * 6 + d]);
+    // 밝기는 머리에서 꼬리 끝으로 줄고 끝은 0
+    const lum = (i) => col[i] + col[i + 1] + col[i + 2];
+    expect(lum(q)).toBeGreaterThanOrEqual(lum(q + 3));
+    expect(lum(q + (SEG - 1) * 6 + 3)).toBe(0);
   });
 });

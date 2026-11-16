@@ -7,6 +7,10 @@ import { sampleColor } from './colors.js';
 const CM = 0.01;
 const COLD = [0.2, 0.6, 1.0];
 const TAIL = 0.4; // 꼬리 길이(초). 흐름 방향이 보이도록 입자를 짧은 선으로 그린다
+// 꼬리는 지나온 위치를 이은 꺾은선(마디 SEG개)이다. 예전에는 "지금 위치 - 속도 x TAIL" 직선 하나라서 흐름이 꺾이는 곳(바닥 아래 -> 타일)에서
+// 막대 전체가 머리를 축으로 돌아 보였다(2026-11-16 사용자 지적: "직선이 휘어지는 느낌"). 지나온 길을 그리면 꺾이는 곳이 곡선으로 보인다.
+export const SEG = 3;
+const HIST_DT = TAIL / SEG; // 지나온 위치를 기억하는 간격(초)
 const MAX_VISUAL_SPEED = 2.2; // m/s. 급기구 가까이의 큰 값은 화면에서 잘라 낸다
 // 시각화 가정(실측 아님): 냉기 통로 급기의 일부는 랙 틈, 랙 위, 통로 끝으로 새어 랙을 거치지 않고 위로 오른다.
 // 퍼텐셜 흐름은 질량이 모두 랙을 지나므로 그대로 두면 새는 공기가 하나도 없어 비현실적이다. 새는 입자는 속도장 대신 천천히 떠오른다.
@@ -90,8 +94,10 @@ export class Airflow {
     this.mode = new Uint8Array(count); // 0: 속도장을 따름, 1: 새는 공기(위로 떠오름)
     this.geo = new THREE.BufferGeometry();
     this.vel = new Float32Array(count * 3);
-    this.geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 6), 3));
-    this.geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 6), 3));
+    this.hist = new Float32Array(count * SEG * 3); // 지나온 위치(가까운 것부터), 장면 좌표
+    this.histAt = new Float32Array(count); // 마지막으로 기억한 뒤 지난 시간(초)
+    this.geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * SEG * 6), 3));
+    this.geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * SEG * 6), 3));
     this.points = new THREE.LineSegments(
       this.geo,
       new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
@@ -213,6 +219,8 @@ export class Airflow {
       this.pos[o + 2] = 0.15 + this.rng() * 0.3;
     }
     this.vel[o] = this.vel[o + 1] = this.vel[o + 2] = 0;
+    for (let h = 0; h < SEG; h++) this.hist.set(this.pos.subarray(o, o + 3), (p * SEG + h) * 3);
+    this.histAt[p] = 0;
     this.age[p] = 0;
     this.heat[p] = -1;
     this.mode[p] = this.rng() < this.leak ? 1 : 0;
@@ -244,6 +252,16 @@ export class Airflow {
     for (let p = 0; p < this.active; p++) {
       const o = p * 3;
       this.age[p] += dt;
+      this.histAt[p] += dt;
+      if (this.histAt[p] >= HIST_DT) {
+        // 지나온 위치를 한 칸씩 밀고 지금 위치를 가장 가까운 자리에 넣는다
+        const b = p * SEG * 3;
+        this.hist.copyWithin(b + 3, b, b + (SEG - 1) * 3);
+        this.hist[b] = this.pos[o];
+        this.hist[b + 1] = this.pos[o + 1];
+        this.hist[b + 2] = this.pos[o + 2];
+        this.histAt[p] = 0;
+      }
       if (this.mode[p] === 1) {
         // 새는 공기: 속도장을 쓰지 않고 위로 0.5~0.9 m/s로 떠오르며 옆으로 조금 흔들린다
         const vz = 0.5 + 0.4 * this.rng();
@@ -281,14 +299,21 @@ export class Airflow {
     const color = this.geo.attributes.color.array;
     for (let p = 0; p < this.active; p++) {
       const o = p * 3;
-      const q = p * 6;
-      // 장면(x, y, z) -> three(x, z, -y). 머리는 지금 위치, 꼬리는 속도 반대쪽
-      position[q] = this.pos[o];
-      position[q + 1] = this.pos[o + 2];
-      position[q + 2] = -this.pos[o + 1];
-      position[q + 3] = this.pos[o] - this.vel[o] * TAIL;
-      position[q + 4] = this.pos[o + 2] - this.vel[o + 2] * TAIL;
-      position[q + 5] = -(this.pos[o + 1] - this.vel[o + 1] * TAIL);
+      const q = p * SEG * 6;
+      // 장면(x, y, z) -> three(x, z, -y). 머리는 지금 위치, 마디는 지나온 위치(가까운 것부터)
+      const hb = p * SEG * 3;
+      let ax = this.pos[o], ay = this.pos[o + 1], az = this.pos[o + 2];
+      for (let h = 0; h < SEG; h++) {
+        const bx = this.hist[hb + h * 3], by = this.hist[hb + h * 3 + 1], bz = this.hist[hb + h * 3 + 2];
+        const w = q + h * 6;
+        position[w] = ax;
+        position[w + 1] = az;
+        position[w + 2] = -ay;
+        position[w + 3] = bx;
+        position[w + 4] = bz;
+        position[w + 5] = -by;
+        ax = bx; ay = by; az = bz;
+      }
       let c;
       if (this.heat[p] >= 0) c = this.rackColor[this.heat[p]];
       else {
@@ -310,10 +335,17 @@ export class Airflow {
         c = [c[0] + (LEAK_WARM[0] - c[0]) * t, c[1] + (LEAK_WARM[1] - c[1]) * t, c[2] + (LEAK_WARM[2] - c[2]) * t];
       }
       const fade = Math.min(1, this.age[p] / 0.6, (this.life[p] - this.age[p]) / 1.5);
-      color[q] = c[0] * fade;
-      color[q + 1] = c[1] * fade;
-      color[q + 2] = c[2] * fade;
-      color[q + 3] = color[q + 4] = color[q + 5] = 0; // 꼬리 끝은 투명하게(가산 혼합이라 검정 = 안 보임)
+      // 마디마다 머리 쪽이 밝고 꼬리 끝으로 갈수록 어두워진다(가산 혼합이라 검정 = 안 보임)
+      for (let h = 0; h < SEG; h++) {
+        const w = q + h * 6;
+        const f0 = fade * (1 - h / SEG), f1 = fade * (1 - (h + 1) / SEG);
+        color[w] = c[0] * f0;
+        color[w + 1] = c[1] * f0;
+        color[w + 2] = c[2] * f0;
+        color[w + 3] = c[0] * f1;
+        color[w + 4] = c[1] * f1;
+        color[w + 5] = c[2] * f1;
+      }
     }
     this.geo.attributes.position.needsUpdate = true;
     this.geo.attributes.color.needsUpdate = true;
@@ -321,7 +353,7 @@ export class Airflow {
 
   setActive(n) {
     this.active = Math.min(this.count, n);
-    this.geo.setDrawRange(0, this.active * 2);
+    this.geo.setDrawRange(0, this.active * SEG * 2);
   }
 
   dispose() {
