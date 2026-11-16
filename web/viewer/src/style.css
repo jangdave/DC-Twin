@@ -105,7 +105,8 @@ input[type="radio"], input[type="checkbox"], input[type="range"] { accent-color:
 .aisle-label.hot { background: var(--warning-subtle); color: var(--tag-warning-text); }
 #tooltip {
   position: absolute; pointer-events: none; padding: var(--p-1) var(--p-2); border-radius: var(--radius-medium); font-size: var(--text-xs);
-  background: var(--gray-95); color: var(--text-inverse); transform: translate(-50%, -120%); white-space: nowrap;
+  background: var(--gray-10); color: var(--text-primary); border: 1px solid var(--border-disabled); box-shadow: var(--shadow-md); transform: translate(-50%, -120%); white-space: nowrap;
+  /* 어두운 테마는 회색 눈금을 뒤집으므로(theme.css) gray-95 + text-inverse는 흰 바탕에 흰 글자가 됐다(2026-11-16 사용자 지적). 카드와 같은 면 색 + 기본 글자 색을 쓴다 */
 }
 
 /* 외관에서 건물에 마우스를 올리거나(휴대폰은 한 번 누르면) 뜨는 이름과 상태 카드 */
