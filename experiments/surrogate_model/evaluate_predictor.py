@@ -1,7 +1,7 @@
 """불확실성과 안전장치 검증: 같은 고장 패턴(거울상 포함)을 통째로 빼고 학습한 예측기로 구간 포함 비율, 신뢰 등급별 오차, 새로움, 되돌림 규칙을 확인한다.
 
 사용 (이 폴더에서):
-    uv run --python 3.13 python evaluate_predictor.py [--only-converged] [--report 결과.md]
+    uv run --python 3.13 python evaluate_predictor.py [--only-converged] [--report 결과.md] [--data-dir 결과 폴더] [--extra 명세.json 결과 폴더]
 """
 from __future__ import annotations
 
@@ -20,12 +20,19 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only-converged", action="store_true")
     ap.add_argument("--report", type=Path, default=None)
+    ap.add_argument("--data-dir", type=Path, default=rm.DATA, help="OpenFOAM 결과 폴더(CAC는 surrogate_cac)")
+    ap.add_argument("--extra", nargs=2, action="append", default=[], metavar=("SAMPLES_JSON", "DATA_DIR"), help="추가 학습 샘플(train_predictor.py와 같다)")
     args = ap.parse_args()
 
     samples_json = rm.BASE / "surrogate" / "samples.json"
     specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
-    ours_info = json.loads((rm.DATA / "ours_progress.json").read_text(encoding="utf-8"))
-    data = rm.load_dataset(rm.DATA, samples_json, args.only_converged)
+    ours_info = json.loads((args.data_dir / "ours_progress.json").read_text(encoding="utf-8"))
+    data = rm.load_dataset(args.data_dir, samples_json, args.only_converged)
+    for sj, dd in args.extra:
+        sj, dd = Path(sj), Path(dd)
+        specs.update({s["id"]: s for s in json.loads(sj.read_text(encoding="utf-8"))["samples"]})
+        ours_info.update(json.loads((dd / "ours_progress.json").read_text(encoding="utf-8")))
+        data += rm.load_dataset(dd, sj, args.only_converged)
     train = [d for d in data if not d["holdout"]]
     hold = [d for d in data if d["holdout"]]
 

@@ -268,3 +268,24 @@ def test_cac_scene_uses_cac_model(manifest, monkeypatch):
     assert L2Solver(manifest, cfg, base=cac_base).cac
     assert L2Solver(manifest, cfg, base=FakeBase(manifest, cfg)).cac is False  # 장면 정보가 없으면 HAC
     assert asked == [False, True, False]
+
+
+def test_old_model_with_different_feature_count_is_refused(tmp_path, monkeypatch):
+    """입력 수가 다른 옛 model.pkl(2026-11-16 위치 특징 추가 전)은 예측 중에 깨지기 전에 옛 모델로 거부한다(E9)."""
+    import json
+    import pickle
+
+    import pytest
+
+    pytest.importorskip("sklearn")
+    from dct_sensors import solver_l2 as l2
+
+    monkeypatch.setattr(l2, "SURROGATE_DIR", tmp_path)
+    monkeypatch.delenv("DCT_ALLOW_STALE_MODEL", raising=False)
+    (tmp_path / "model.pkl").write_bytes(pickle.dumps({}))
+    samples = l2.REPO / "experiments" / "openfoam_baseline" / "surrogate" / "samples.json"
+    meta = {"trained_at": "t", "n_samples": 68, "samples_json_sha256": l2._sha256(samples), "data_dir": "surrogate_rf",
+            "code": {"git_commit": "x"}, "power_range_kw": [6, 14], "n_features": 17, "extra": []}
+    (tmp_path / "model.meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    with pytest.raises(l2.StaleModelError):
+        l2.load_default_predictor()

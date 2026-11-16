@@ -76,17 +76,24 @@ def load_default_predictor(cac: bool = False):
             prov.update({"history": None, "stale": None})  # 학습 이력이 없다: 어떤 데이터로 만들었는지 알 수 없다
         else:
             # 학습 데이터 폴더가 다르면(예: 이중 바닥 전 데이터 surrogate로 만든 모델) 지금 장면과 맞지 않는다
-            stale = meta.get("samples_json_sha256") != _sha256(samples_json) or meta.get("data_dir", "surrogate") != data_dir.name
+            # 입력(특징) 수가 다르면(2026-11-16 위치 특징 추가 전 모델) 예측할 수 없다. CAC는 추가 학습 샘플(rm.EXTRA_CAC)도 맞아야 한다
+            want_extra = [sj.name for sj, _ in rm.EXTRA_CAC] if cac else []
+            stale = (meta.get("samples_json_sha256") != _sha256(samples_json) or meta.get("data_dir", "surrogate") != data_dir.name
+                     or meta.get("n_features") != len(rm.FEATURE_NAMES) or [e["samples_json"] for e in meta.get("extra", [])] != want_extra
+                     or any(e["samples_json_sha256"] != _sha256(sj) for e, (sj, _) in zip(meta.get("extra", []), rm.EXTRA_CAC if cac else [])))
             prov.update({"trained_at": meta["trained_at"], "n_samples": meta["n_samples"], "samples_json_sha256": meta["samples_json_sha256"], "git_commit": meta["code"]["git_commit"], "power_range_kw": meta["power_range_kw"], "stale": stale})
             if stale and os.environ.get("DCT_ALLOW_STALE_MODEL") != "1":
                 raise StaleModelError("model.pkl이 지금 학습 데이터(samples.json)와 맞지 않는다(학습 이력의 해시가 다르다). 다시 학습한다: "
                                       "cd experiments/surrogate_model && uv run --python 3.13 python train_predictor.py"
-                                      + (" --data-dir ../openfoam_baseline/results/surrogate_cac --out model_cac.pkl" if cac else "") + "  (일부러 옛 모델을 쓰려면 DCT_ALLOW_STALE_MODEL=1)")
+                                      + (" --cac --out model_cac.pkl" if cac else "") + "  (일부러 옛 모델을 쓰려면 DCT_ALLOW_STALE_MODEL=1)")
         pred.provenance = prov
         return pred
 
     specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
     data = [d for d in rm.load_dataset(data_dir, samples_json, False) if not d["holdout"]]
+    for sj, dd in (rm.EXTRA_CAC if cac else []):
+        specs.update({s["id"]: s for s in json.loads(sj.read_text(encoding="utf-8"))["samples"]})
+        data += [d for d in rm.load_dataset(dd, sj, False) if not d["holdout"]]
     pred = pr.ResidualPredictor().fit(data, specs)
     pred.provenance = {"source": "fit_on_the_fly", "model_sha256": None, "samples_json_sha256": _sha256(samples_json), "n_samples": len(data), "stale": False,
                        "data_dir": data_dir.name, "containment": "cold" if cac else "hot"}

@@ -66,6 +66,28 @@ def test_features_skip_removed_racks_and_match_names(geo):
     assert X[k, rm.FEATURE_NAMES.index("near_removed")] >= 1
 
 
+def test_place_features(geo):
+    """빈자리와 공조기 위치 특징(E9): 같은 줄 칸 수, 빈자리 뒤 열기 통로 가동, 꺼진 공조기 거리."""
+    info = {"aisle_leak_m3s": [0.0, 19.2, 0.0, 0.0], "supply_m3s": 38.4}
+    ours = {n: 20.0 for n in geo.names}
+    F = rm.FEATURE_NAMES.index
+    X, _, names = rm.sample_features(geo, sample(fan_off=(2, 6), remove=["Rack_05", "Rack_06"]), ours, info)
+    assert X[names.index("Rack_04"), F("slots_to_removed")] == 1 and X[names.index("Rack_01"), F("slots_to_removed")] == 4
+    assert X[names.index("Rack_15"), F("slots_to_removed")] == 10  # 다른 줄
+    assert np.allclose(X[:, F("any_removed")], 1.0)
+    # Rack_05·06의 열기 통로(0)는 CRAC_01·05가 맡고 둘 다 켜져 있다
+    assert np.allclose(X[:, F("removed_aisle_fan")], 1.0)
+    assert (X[:, F("dist_to_off_crac_m")] < rm.FAR_M).all() and (X[:, F("dist_to_on_crac_m")] < rm.FAR_M).all()
+    # 아무것도 끄지 않고 빼지 않으면 먼 값으로 채운다
+    X0, _, _ = rm.sample_features(geo, sample(), ours, info)
+    assert np.allclose(X0[:, F("dist_to_off_crac_m")], rm.FAR_M) and np.allclose(X0[:, F("dist_to_removed_m")], rm.FAR_M)
+    assert np.allclose(X0[:, F("slots_to_removed")], 10) and np.allclose(X0[:, F("any_removed")], 0.0)
+    assert np.allclose(X0[:, F("removed_aisle_fan")], 1.0) and np.allclose(X0[:, F("hot_aisle_off_x_removed")], 0.0)
+    # CRAC_01이 꺼지면 그 공조기에 가까운 랙일수록 거리가 짧다
+    X1, _, n1 = rm.sample_features(geo, sample(fan_off=(1,)), ours, info)
+    assert X1[n1.index("Rack_01"), F("dist_to_off_crac_m")] < X1[n1.index("Rack_60"), F("dist_to_off_crac_m")]
+
+
 def test_leave_group_out_never_trains_on_the_held_group():
     rng = np.random.default_rng(0)
     data = []

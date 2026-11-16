@@ -1,11 +1,13 @@
 {
  "version": 1,
- "trained_at": "2026-11-12T21:59:27+00:00",
- "model_sha256": "a9c90b50b1d8998ea156dcfb3e0d02acbf67dfb4f0e6de12cbeb2e681aa39e0d",
+ "trained_at": "2026-11-16T02:16:07+00:00",
+ "model_sha256": "862a3ec5b089f2cb60b883bdfab693ab8ed933ef1682a05ab7b1472e1af9e2ad",
  "samples_json_sha256": "56c756b1cf5585b79ac92b490635bcbb330628fdda173c9d13193a48cbc22983",
  "data_dir": "surrogate_rf",
+ "extra": [],
+ "n_features": 25,
  "code": {
-  "git_commit": "2c8ea589cf6865004856d9b1b2d55e93ddc13a2c",
+  "git_commit": "cb789b48d056603ce36ce3786c4a93fe8e374910",
   "dirty": false,
   "python": "3.13.9",
   "scikit_learn": "1.9.1",
