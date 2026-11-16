@@ -480,6 +480,11 @@ class Server:
                 p = self.jobs.result_path(j["id"])
                 rec = await loop.run_in_executor(None, lambda: json.loads(p.read_text(encoding="utf-8")))
                 await ws.send(json.dumps({"type": "job_result", "id": j["id"], "rec": rec}, ensure_ascii=False, separators=(",", ":")))
+                # 정확한 계산이면 그 작업의 공기 흐름(웹 형식, precise.write_web_flow)도 보낸다. 없으면 웹은 미리 계산한 흐름을 쓴다
+                fp = p.parent / "web_flow.json"  # precise.WEB_FLOW
+                if fp.exists():
+                    flow = await loop.run_in_executor(None, lambda: json.loads(fp.read_text(encoding="utf-8")))
+                    await ws.send(json.dumps({"type": "job_flow", "id": j["id"], "flow": flow}, ensure_ascii=False, separators=(",", ":")))
                 return
         except KeyError:
             raise ValueError("그런 작업이 없다") from None

@@ -199,6 +199,7 @@ export class HallScene {
 
   async setContainment(type, baseUrl) {
     if (type === this.containment || (type === 'cold' && !this.hasCac)) return;
+    this.setJobFlow(null); // 작업 흐름은 그 작업의 격벽 방식 흐름이다. 방식을 바꾸면 미리 계산한 흐름으로 돌아간다
     const prev = this.containment ?? 'hot';
     try {
       await this._setContainment(type, baseUrl);
@@ -353,6 +354,40 @@ export class HallScene {
     this.airflow.points.visible = this.showAirflow ?? false; // 서버실 기본 보기에서는 끈다(시뮬레이션 메뉴에서 켠다)
     this.hall.add(this.airflow.points);
     return this.airflow.count;
+  }
+
+  /**
+   * 서버 작업이 보낸 흐름(flowFromJob 결과)으로 공기 흐름을 바꾼다(docs/31 7장). null이면 미리 계산한 흐름으로 돌아간다.
+   * 돌려주는 값: 지금 작업 흐름을 쓰는지.
+   */
+  setJobFlow(flow) {
+    if (!this.airflow) return false;
+    if (!flow) {
+      if (!this._jobFlow) return false;
+      this._swapAirflow(this._jobFlow.base);
+      this._jobFlow = null;
+      return false;
+    }
+    const base = this._jobFlow?.base ?? this.airflow;
+    const a = new Airflow(flow, this.data, this.store, this.rackKeys, this.cracKeys, { count: this.q.particles });
+    this._swapAirflow(a);
+    this._jobFlow = { base, flow };
+    return true;
+  }
+
+  get usingJobFlow() {
+    return !!this._jobFlow;
+  }
+
+  _swapAirflow(next) {
+    const vis = this.airflow.points.visible;
+    this.hall.remove(this.airflow.points);
+    this.airflow = next;
+    next.points.visible = vis;
+    next.setActive(this.q.particles);
+    this._flowVersion = -1; // 다음 그리기에서 팬 상태를 다시 넣는다
+    this.hall.add(next.points);
+    this._dirty = true;
   }
 
   // 온도 색칠(랙 앞면과 윗면의 값 색, 신뢰 막대)을 켜고 끈다. 끄면 장비 원래 모습만 보인다. 알람 테두리는 항상 보인다.

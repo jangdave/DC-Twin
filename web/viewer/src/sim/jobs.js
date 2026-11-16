@@ -56,12 +56,12 @@ export function summarize(c) {
 
 // 작업 전용 연결. 실시간 값 연결(LiveClient)과 따로 둔다: 메뉴를 바꿔 실시간 연결이 닫혀도 작업 진행은 계속 받아야 한다.
 export class JobClient {
-  // url: ws://..., token: 접근 토큰(선택), onJob(job), onResult(id, rec), onError(message), onState(state)
-  constructor(url, { token = null, WebSocketImpl = globalThis.WebSocket, onJob = () => {}, onResult = () => {}, onError = () => {}, onState = () => {} } = {}) {
+  // url: ws://..., token: 접근 토큰(선택), onJob(job), onResult(id, rec), onFlow(id, flow: 정확한 계산의 공기 흐름), onError(message), onState(state)
+  constructor(url, { token = null, WebSocketImpl = globalThis.WebSocket, onJob = () => {}, onResult = () => {}, onFlow = () => {}, onError = () => {}, onState = () => {} } = {}) {
     this.url = url;
     this.token = token;
     this.WS = WebSocketImpl;
-    this.on = { onJob, onResult, onError, onState };
+    this.on = { onJob, onResult, onFlow, onError, onState };
     this.state = 'idle';
     this.jobs = new Map(); // id -> 마지막 상태
     this._pending = []; // 연결 전에 보낸 요청
@@ -92,6 +92,7 @@ export class JobClient {
         this.jobs.set(m.job.id, m.job);
         this.on.onJob(m.job);
       } else if (m.type === 'job_result' && m.rec) this.on.onResult(m.id, m.rec);
+      else if (m.type === 'job_flow' && m.flow) this.on.onFlow(m.id, m.flow);
       else if (m.type === 'error') this.on.onError(String(m.message ?? '서버 오류'));
     };
     ws.onclose = () => {

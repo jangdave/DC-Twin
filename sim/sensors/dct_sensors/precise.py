@@ -266,6 +266,26 @@ def steady_runs_needed(manifest: Manifest, cache: Path, seed: int = 1, scene: Pa
     return count
 
 
+WEB_FLOW = "web_flow.json"  # 작업 폴더 안의 웹 공기 흐름(web_flow.py 형식). 서버가 결과를 보낼 때 함께 보낸다
+
+
+def write_web_flow(path: Path, flows: list[dict], scene: Path | None) -> None:
+    """작업의 OpenFOAM 흐름(팬 상태마다 하나)을 웹 공기 흐름 형식으로 저장한다(docs/31 7장)."""
+    from dct_thermal import hall60_sim as hs
+
+    from . import web_flow
+    hs.DX = 0.10
+    hall = hs.read_hall(scene or SCENE)
+    lay = hs.Layout(hall)
+    present = lay.fluid | (lay.rack_id >= 0)
+    fields = []
+    for f in sorted(flows, key=lambda f: f["from_s"]):
+        z = np.load(f["npz"])
+        fields.append({"U": z["U"], "fan": f["fan"], "from_s": f["from_s"], "iterations": f["meta"].get("iterations"), "converged": f["meta"].get("converged")})
+    out = web_flow.encode(fields, present, hs.DX, z0_m=-lay.z_off_cm / 100.0, plenum=hall.get("plenum"))
+    path.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
 def make_stages(manifest: Manifest, *, runner: OpenFOAMRunner | None = None, seed: int = 1, solver_factory=None, scene: Path = SCENE) -> dict:
     """jobs.JobManager에 넣을 단계 함수들. solver_factory(cond, flows, cfg)를 주면 계산 모델을 바꿀 수 있다(시험용)."""
     sensor_ids = [s.sensor_id for s in manifest.sensors]
@@ -299,6 +319,10 @@ def make_stages(manifest: Manifest, *, runner: OpenFOAMRunner | None = None, see
                 ctx.note(f"OpenFOAM이 수렴 판정을 통과하지 못했다(팬 상태 {i + 1}, 반복 {meta.get('iterations')}). 값은 마지막 반복의 흐름이다")
         ctx.data["flows"] = flows
         (ctx.folder / "flows.json").write_text(json.dumps([{k: v for k, v in f.items() if k != "npz"} for f in flows.values()], ensure_ascii=False, indent=1), encoding="utf-8")
+        try:
+            write_web_flow(ctx.folder / WEB_FLOW, list(flows.values()), scene)
+        except Exception as e:  # noqa: BLE001  웹 흐름은 보기용이라 없어도 계산 결과는 그대로 쓴다
+            ctx.note(f"웹에 보낼 공기 흐름을 만들지 못했다({type(e).__name__}: {e}). 결과 재생은 미리 계산한 흐름으로 보인다")
 
     def transient(ctx):
         cond = ctx.data["cond"]

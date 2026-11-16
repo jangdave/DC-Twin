@@ -51,7 +51,7 @@ docker run --rm -p 127.0.0.1:8765:8765 -e DCT_TOKEN=<16자 이상 토큰> dct-si
 ```
 
 - `server/kit_server.py`가 Kit 안에서 `dct_sensors.serve`를 별도 스레드로 돌린다. 실시간 센서 값(기본 L2)과 **시뮬레이션 작업**(`--jobs`)을 함께 준다.
-- 시뮬레이션 작업은 WebSocket 메시지로 주고받는다: `{"type":"job","action":"submit","conditions":{...}}` → 진행 알림 `{"type":"job","job":{state, stage, progress, etaS, ...}}`(모든 접속에 보냄) → `{"type":"job","action":"result","id":"..."}` → `{"type":"job_result","rec":{...}}`(웹 녹화 형식). `status`, `cancel`, `list`도 있다. 조건과 단계는 `docs/31` 3장, 4.1장.
+- 시뮬레이션 작업은 WebSocket 메시지로 주고받는다: `{"type":"job","action":"submit","conditions":{...}}` → 진행 알림 `{"type":"job","job":{state, stage, progress, etaS, ...}}`(모든 접속에 보냄) → `{"type":"job","action":"result","id":"..."}` → `{"type":"job_result","rec":{...}}`(웹 녹화 형식). 정확한 계산(OpenFOAM)이면 바로 뒤에 그 작업의 공기 흐름 `{"type":"job_flow","id":"...","flow":{...}}`도 온다(20 cm, int8, 팬 상태마다 한 장, `sim/sensors/dct_sensors/web_flow.py`, 약 0.4 MB/장). `status`, `cancel`, `list`도 있다. 조건과 단계는 `docs/31` 3장, 4.1장.
 - `precise: true`(기본)면 팬 상태마다 WSL의 OpenFOAM으로 공기 흐름을 풀고(약 6~7분씩, 같은 조건이면 저장해 둔 흐름을 다시 씀) 우리 온도 계산으로 시간 변화를 낸다. `false`면 보정 모델(L2)로 바로 낸다(1분 이내).
 - Kit에 없는 파이썬 패키지(scipy, scikit-learn, joblib, threadpoolctl, cloudpickle, narwhals)는 저장소 밖 `D:/omniverse-kit/pydeps`에 Kit 파이썬(3.12)용으로 받는다: `uv pip install --target D:/omniverse-kit/pydeps --python-version 3.12 --python-platform windows --no-deps <이름>`.
 - Kit에는 websockets 12.0(옛 API)이 들어 있어 그것을 쓴다. 서버 코드는 옛 API와 새 API(13 이상)를 모두 받는다.
