@@ -107,7 +107,7 @@ uv run --python 3.13 python build_manifest.py ../../usd/scenes/hall01.usda ../..
 | `value` | 숫자 | 측정값 |
 | `unit` | 문자열 | 단위. 매니페스트의 단위와 같아야 한다. |
 | `quality` | 문자열 | `good`(정상), `stale`(오래됨), `bad`(고장 의심) |
-| `lower`, `upper` | 숫자(선택) | 보정 모델(L2)이 붙이는 "90% 구간"(실제 포함 비율은 검증에서 약 0.95, 계수를 검증 자료로 정했으므로 낙관적일 수 있다, [E5](../experiments/results/E5_surrogate_residual_model.md) 8장). 랙 입구 온도(`temp_in`)에만 있다. 둘 다 있고 `lower <= upper`일 때만 받는다. 구간은 잡음을 더하기 전 모델 값 기준이다. |
+| `lower`, `upper` | 숫자(선택) | 보정 모델(L2)이 붙이는 "95% 구간"(같은 고장 패턴을 통째로 빼고 학습한 검증에서 실제 포함 비율 0.95~0.98, [E5](../experiments/results/E5_surrogate_residual_model.md) 8장, [E9](../experiments/results/E9_residual_features.md) 3장. 처음 이름은 "90% 구간"이었고 실제 비율에 맞춰 2026-11-16 바꿨다. 계수를 같은 검증 자료로 정했으므로 낙관적일 수 있고, 등급 `caution`인 랙은 약 0.89로 낮다). 랙 입구 온도(`temp_in`)에만 있다. 둘 다 있고 `lower <= upper`일 때만 받는다. 구간은 잡음을 더하기 전 모델 값 기준이다. |
 | `confidence` | 문자열(선택) | 보정 모델의 신뢰 등급: `ok`, `caution`, `low`, `fallback`(학습 범위 밖이라 보정하지 않음). 값의 알람, 품질 판정에는 쓰지 않는다. |
 
 - MQTT 서비스 품질(QoS)은 0, 보존(retain)은 켠다. 새로 접속한 쪽이 마지막 값을 바로 받을 수 있다.
@@ -207,7 +207,7 @@ node src/index.js --manifest ../sim/out/sensor_manifest.json --replay ../sim/out
 |---|---|---|
 | L0 | 간단한 모델: 냉각이 줄면 입구 온도의 목표값이 오르고, 온도는 목표값을 향해 서서히 변한다(1차 지연, 시간 상수 기본 60초). 출구 온도는 입구 온도에 전력과 냉각량에 비례한 값을 더해 만든다. | **기준선이자 대체 수단** |
 | L1 | NVIDIA Warp로 정해 둔 공기 흐름 위에서 열이 이동하고 퍼지는 계산을 하고, 센서 앵커 위치에서 온도를 읽는다. | **목표** |
-| L2 | L1에 OpenFOAM 기준 답으로 배운 보정을 더하고 90% 구간과 신뢰 등급을 붙인다(아래 구현 참고). 공기 흐름을 직접 더 정밀하게 계산하는 것은 이 단계가 아니다. | **구현** |
+| L2 | L1에 OpenFOAM 기준 답으로 배운 보정을 더하고 95% 구간과 신뢰 등급을 붙인다(아래 구현 참고). 공기 흐름을 직접 더 정밀하게 계산하는 것은 이 단계가 아니다. | **구현** |
 
 - 어느 단계로 만든 값이든 **같은 메시지 형식**(4장)으로 나가므로 게이트웨이와 Unreal은 차이를 모른다. 생성기에 `--solver l0|l1`로 고른다.
 - 전력, 팬 속도처럼 열이 아닌 센서 값은 시나리오가 직접 만든다.
@@ -246,7 +246,7 @@ uv run --python 3.13 python -m dct_sensors --manifest ../out/sensor_manifest.jso
 - **알람 규칙**(4.4장): 올라갈 때 2번 연속이어야 하고 연속하는 동안 가장 낮은 단계로 올린다. 내려갈 때는 기준에서 0.5 더 내려와야 한다. 범위 밖이면 품질 `bad`이고 알람 판정을 하지 않으며, **`bad`나 `stale` 샘플이 끼면 연속이 끊긴 것으로 본다**(그 사이에 값이 없었으므로 "연속 2번"이 아니다). 시험 자료 `sim/sensors/tests/alarm_vectors.json`을 **게이트웨이(Node)도 같이 쓴다.**
 - **L0**: 담당 열기 통로의 CRAC 팬 비율 f(0~1)로 입구 온도 목표가 `급기 + 기본 + 36 x (1-f) x 전력비`만큼 오르고, 시간 상수 60초로 따라간다. 줄 끝 랙은 1.15배 뜨겁다. 모든 계수는 `Config`에 있고 근거 없이 정한 값이다.
 - **L1**: `sim/thermal/dct_thermal/hall60_sim.py`의 결과를 센서 앵커 위치에서 읽는다(Warp 환경에서 실행, `solver_l1.py` 머리말 참고). 시작할 때 120초 예열한다. CRAC 팬이 바뀔 때만 공기 흐름을 다시 푼다.
-- **L2**: L1의 랙 입구 온도에 OpenFOAM 기준 답으로 배운 보정을 더하고 90% 구간과 신뢰 등급을 붙인다(`solver_l2.py`, `--solver l2`, scikit-learn 필요). 근거와 한계는 `experiments/results/E5_surrogate_residual_model.md` 9장이다. 게이트웨이는 `lower`, `upper`, `confidence`를 `sample`과 `snapshot`에 그대로 싣는다.
+- **L2**: L1의 랙 입구 온도에 OpenFOAM 기준 답으로 배운 보정을 더하고 95% 구간과 신뢰 등급을 붙인다(`solver_l2.py`, `--solver l2`, scikit-learn 필요). 근거와 한계는 `experiments/results/E5_surrogate_residual_model.md` 9장이다. 게이트웨이는 `lower`, `upper`, `confidence`를 `sample`과 `snapshot`에 그대로 싣는다.
 - **L0와 L1의 차이**: L0에서는 `CRAC_02`가 멈추면 그 통로의 랙 입구 온도가 크게 올라 주의 → 위험 알람이 난다(약 40초 뒤 주의, 약 80초 뒤 위험). L1에서는 같은 통로의 다른 CRAC가 남아서 영향이 작다(랙 입구 최대 약 +1도, 알람은 팬 속도와 공급 온도만). 같은 통로의 CRAC 2대를 모두 멈추면 L1에서도 올라간다(E0 2.18장). 어느 쪽이 맞다고 주장하지 않는다.
 - **성능**: 센서 204개, 300초 분량 기준 L0 약 0.5초(약 8만 줄), L1 약 9초(예열 포함, RTX 5090). 실시간(시간 배율 1)은 1초에 센서 204개를 내보내면 되므로 부담이 없다.
 

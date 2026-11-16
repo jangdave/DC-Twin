@@ -6,7 +6,7 @@
 | 모듈 | 내용 | 쓰는 곳 |
 |---|---|---|
 | `dct_thermal/hall60_sim.py` | 홀 열 계산(Warp): 장면 USD 읽기, 공기 흐름(퍼텐셜), 온도 이류·확산, 센서 앵커 값 | 센서 생성기 L1/L2(`sim/sensors`), 정확한 계산(`precise.py`), Kit 서버, 실험 스크립트 |
-| `dct_thermal/predictor.py` | 보정 모델(잔차 모델) `ResidualPredictor`: 학습, 예측, 90 % 구간, 신뢰 등급 | L2 |
+| `dct_thermal/predictor.py` | 보정 모델(잔차 모델) `ResidualPredictor`: 학습, 예측, 95 % 구간, 신뢰 등급 | L2 |
 | `dct_thermal/residual_model.py` | 보정 모델의 특징 만들기, 학습 데이터 읽기, 교차 검증 | `predictor.py`, 학습·평가 스크립트 |
 
 ## 쓰는 법

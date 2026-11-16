@@ -107,3 +107,20 @@ def test_holdout_without_own_result_fails_outside_old_folder(tmp_path):
     spec.write_text(json.dumps({"samples": [{"id": "holdout_A_normal", "holdout": True, "existing_of": "rack_inlet_normal.csv"}]}), encoding="utf-8")
     with pytest.raises(FileNotFoundError):
         rm.load_dataset(tmp_path, spec)
+
+
+def test_remove_with_two_cracs_off_is_always_low(env):
+    """랙 제거 + 공조기 두 대 이상 정지는 퍼짐과 상관없이 low(docs/34 6.2). 한 대만 끄거나 랙을 빼지 않으면 그대로."""
+    d0 = env["d0"]
+    s = copy.deepcopy(env["specs"][d0["id"]])
+    s["fan"].update(CRAC_02=0.0, CRAC_06=0.0)
+    s["remove"] = ["Rack_05"]
+    ours = {n: v for n, v in env["ours0"].items() if n != "Rack_05"}
+    r = env["p"].predict(s, ours, env["info"][d0["id"]], enforce_range=False)
+    assert not r.fallback and set(r.level.values()) == {"low"} and "신뢰 낮음" in r.reason
+    assert pr.ResidualPredictor.hard_combo(s)
+    s["fan"]["CRAC_06"] = 1.0
+    assert not pr.ResidualPredictor.hard_combo(s)  # 한 대만 끔
+    s["fan"]["CRAC_06"] = 0.0
+    s["remove"] = []
+    assert not pr.ResidualPredictor.hard_combo(s)  # 랙을 빼지 않음

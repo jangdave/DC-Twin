@@ -1,6 +1,6 @@
 # 웹 보기 화면 (DC-Twin Viewer)
 
-Unreal 클라이언트와 별도로 만든, 브라우저에서 보기만 하는 가벼운 3D 화면이다. 랙 입구 온도, 알람, 보정 모델(AI 대리 모델)의 90% 구간과 신뢰 등급을 보여 준다. 기능명세는 [docs/18](../../docs/18_web_viewer_spec.md), 결정 이유는 [ADR-011](../../docs/decisions/ADR-011-webgl-viewer.md)이다.
+Unreal 클라이언트와 별도로 만든, 브라우저에서 보기만 하는 가벼운 3D 화면이다. 랙 입구 온도, 알람, 보정 모델(AI 대리 모델)의 95% 구간과 신뢰 등급을 보여 준다. 기능명세는 [docs/18](../../docs/18_web_viewer_spec.md), 결정 이유는 [ADR-011](../../docs/decisions/ADR-011-webgl-viewer.md)이다.
 
 시뮬레이션 값은 시각화 목적이며 공학적 정확성을 주장하지 않는다. 가상 시설이다.
 

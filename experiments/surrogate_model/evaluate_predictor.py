@@ -57,7 +57,7 @@ def main() -> None:
     L = []
     L.append(f"## 불확실성 검증 (같은 고장 패턴을 통째로 빼고 학습, 샘플 {len(train)}개{', 수렴한 것만' if args.only_converged else ''}, 랙 {len(eo)}개)\n")
     L.append(f"- 랙 단위 RMSE: 우리 솔버 {np.sqrt((eo ** 2).mean()):.2f}도, 보정 {np.sqrt((ec ** 2).mean()):.2f}도")
-    L.append(f"- 90% 구간(보정값 ± max({pr.INTERVAL_K:g} x 퍼짐, {pr.INTERVAL_FLOOR:g}도))에 OpenFOAM 값이 들어간 비율: **{inside.mean():.2f}**\n")
+    L.append(f"- 95% 구간(보정값 ± max({pr.INTERVAL_K:g} x 퍼짐, {pr.INTERVAL_FLOOR:g}도))에 OpenFOAM 값이 들어간 비율: **{inside.mean():.2f}**\n")
     L.append("| 신뢰 등급 | 기준(퍼짐) | 랙 수 | 우리 RMSE | 보정 RMSE | 구간 포함 비율 | 보정이 우리 솔버보다 나빠진 비율 |")
     L.append("|---|---|---|---|---|---|---|")
     for name, rule in (("ok", f"< {pr.SIGMA_CAUTION}"), ("caution", f"{pr.SIGMA_CAUTION}~{pr.SIGMA_LOW}"), ("low", f">= {pr.SIGMA_LOW}")):

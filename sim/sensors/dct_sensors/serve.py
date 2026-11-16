@@ -7,7 +7,7 @@
     uv run --python 3.13 --extra serve python -m dct_sensors.serve --manifest ../out/sensor_manifest.json --solver l0
 
 - `--solver l0|l1|l2`: 모델을 고른다. l1은 Warp, l2는 Warp와 scikit-learn이 필요하다(`experiments/omniverse_probe` 환경에서 실행).
-  l2이면 랙 입구 온도 샘플에 `lower`, `upper`(90% 구간), `confidence`가 붙어 웹의 신뢰 막대가 나온다.
+  l2이면 랙 입구 온도 샘플에 `lower`, `upper`(95% 구간), `confidence`가 붙어 웹의 신뢰 막대가 나온다.
 - 안전: 기본은 127.0.0.1에만 열고(`--allow-remote` 없이는 다른 주소로 열지 않는다), 웹 페이지의 출처(Origin)를 확인하고,
   접속 수와 조작 횟수와 메시지 크기를 제한한다. 조작은 허용한 종류와 장비 이름, 값 범위만 받는다.
 - 시각화 목적이며 공학적 정확성을 주장하지 않는다.
