@@ -32,6 +32,9 @@ const until = (page, fn, arg, ms = 5000) => page.waitForFunction(fn, { timeout: 
 // 메뉴를 누른 뒤: 출처 전환(열기)이 끝나고 화면 조각이 한 번 갱신될 때까지
 const settled = async (page) => { await until(page, () => window.__viewer?.sourcesSettled?.()); await sleep(300); };
 const stageIs = (page, st) => until(page, (x) => window.__viewer?.state.stage === x, st);
+// 화면 조각이 저장소 값과 맞고(갱신이 끝남) 카메라 이동이 멈출 때까지. 앞에 보이는 탭에서만 쓴다(뒤 탭은 프레임이 돌지 않아 갱신이 멈춘다)
+const idle = (page) => until(page, () => window.__viewer?.rendered?.(), undefined, 3000);
+const selIs = (page, x) => until(page, (v) => window.__viewer?.state.selected === v, x);
 const SENSORS_JSON = await readFile(path.join(DIST, 'data/sensors.json'), 'utf8');
 const results = [];
 const ok = (name, cond, extra = '') => {
@@ -60,7 +63,7 @@ await page.setViewport({ width: 1440, height: 860 });
 await page.goto(`${base}?scenario=fan_fault&t=100&stage=hall`, { waitUntil: 'networkidle0' });
 await page.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
 await page.evaluate(() => (window.__viewer.state.player.playing = false));
-await sleep(300);
+await idle(page);
 
 // 1) 랙을 눌러 선택(FR-30)
 const pos = await page.evaluate(() => {
@@ -71,7 +74,7 @@ const pos = await page.evaluate(() => {
   return { x: r.left + p.x, y: r.top + p.y + 14 };
 });
 await page.mouse.click(pos.x, pos.y);
-await sleep(200);
+await until(page, () => !!window.__viewer.state.selected);
 const sel = await page.evaluate(() => window.__viewer.state.selected);
 ok('FR-30 랙을 누르면 선택', typeof sel === 'string' && sel.startsWith('rack'), `(${sel})`);
 
@@ -80,7 +83,7 @@ ok('FR-30 랙을 누르면 선택', typeof sel === 'string' && sel.startsWith('r
   const snap = () => page.evaluate(() => { const s = window.__viewer.scene; return { pos: s.camera.position.toArray(), tgt: s.controls.target.toArray(), pan: s.controls.enablePan, sel: window.__viewer.state.selected }; });
   const dist = (a, b) => Math.hypot(...a.map((v, i) => v - b[i]));
   await page.evaluate(() => { window.__viewer.scene.controls.enableDamping = false; });
-  await sleep(1000); // 앞의 랙 선택으로 시작한 카메라 이동이 끝나기를 기다림
+  await until(page, () => !window.__viewer.scene.cameraMoving); // 앞의 랙 선택으로 시작한 카메라 이동이 끝나기를 기다림
   const c0 = await snap();
   await page.mouse.move(700, 450);
   await page.mouse.down({ button: 'right' });
@@ -125,17 +128,17 @@ ok('FR-30 랙을 누르면 선택', typeof sel === 'string' && sel.startsWith('r
 }
 ok('FR-31 상세 패널에 장비 이름', (await page.$eval('#detail-body .eq-name', (e) => e.textContent)).toLowerCase() === sel);
 await page.mouse.click(pos.x, pos.y);
-await sleep(200);
+await selIs(page, null);
 ok('같은 곳을 다시 누르면 해제', (await page.evaluate(() => window.__viewer.state.selected)) === null);
 
 // 2) 키보드 이동(FR-34)
 await page.focus('#canvas');
 await page.evaluate(() => window.__viewer.selectEquipment('rack_05', true));
 await page.keyboard.press('ArrowRight');
-await sleep(100);
+await selIs(page, 'rack_06');
 ok('FR-34 오른쪽 화살표: 같은 줄 다음 랙', (await page.evaluate(() => window.__viewer.state.selected)) === 'rack_06');
 await page.keyboard.press('ArrowDown');
-await sleep(100);
+await selIs(page, 'rack_16');
 ok('FR-34 아래 화살표: 다음 줄 같은 칸', (await page.evaluate(() => window.__viewer.state.selected)) === 'rack_16');
 
 // 3) 재생 조작(FR-50, 52)
@@ -143,13 +146,13 @@ await page.$eval('#canvas', (c) => c.blur());
 await page.evaluate(() => document.body.focus());
 const t0 = await page.evaluate(() => window.__viewer.state.player.time);
 await page.keyboard.press('ArrowRight');
-await sleep(150);
+await until(page, (a) => Math.abs(window.__viewer.state.player.time - a) > 1, t0);
 const t1 = await page.evaluate(() => window.__viewer.state.player.time);
 ok('FR-52 오른쪽 화살표로 5초 이동', Math.abs(t1 - t0 - 5) < 0.5, `(${t0.toFixed(1)} -> ${t1.toFixed(1)})`);
 await page.keyboard.down('Shift');
 await page.keyboard.press('ArrowLeft');
 await page.keyboard.up('Shift');
-await sleep(150);
+await until(page, (a) => Math.abs(window.__viewer.state.player.time - a) > 1, t1);
 const t2 = await page.evaluate(() => window.__viewer.state.player.time);
 ok('FR-52 Shift+왼쪽 화살표로 30초 뒤로', Math.abs(t1 - t2 - 30) < 0.5, `(${t1.toFixed(1)} -> ${t2.toFixed(1)})`);
 await page.keyboard.press('Space');
@@ -165,16 +168,16 @@ ok('FR-50 재생 버튼으로 일시정지', !(await page.evaluate(() => window.
 // 4) 시간 막대로 이동했을 때 알람 목록(FR-11, 12, 40)
 await page.evaluate(() => document.getElementById('tab-alarms').click());
 await page.evaluate(() => window.__viewer.state.player.seek(200));
-await sleep(200);
+await idle(page);
 const alarms200 = await page.$$eval('#alarm-list li', (l) => l.length);
 await page.evaluate(() => window.__viewer.state.player.seek(10));
-await sleep(500); // 화면 갱신은 250ms 간격 제한이 있어 되감기 직후 200ms로는 모자랄 때가 있다
+await idle(page); // 화면 갱신은 250ms 간격 제한이 있어 갱신이 끝날 때까지 기다린다
 const alarms10 = await page.$$eval('#alarm-list li', (l) => l.length);
 ok('FR-12 알람 목록이 재생 시각에 따라 달라짐', alarms200 === 2 && alarms10 === 0, `(200초 ${alarms200}건, 10초 ${alarms10}건)`);
 await page.evaluate(() => window.__viewer.state.player.seek(200));
 await page.waitForSelector('#alarm-list li', { timeout: 5000 });
 await page.click('#alarm-list li');
-await sleep(900);
+await selIs(page, 'crac_01');
 ok('FR-40 알람 항목을 누르면 장비 선택', (await page.evaluate(() => window.__viewer.state.selected)) === 'crac_01');
 
 // 5) 시나리오와 보기 값 전환(FR-21, 53)
@@ -184,7 +187,7 @@ const sc = await page.evaluate(() => ({ id: window.__viewer.state.scenarioId, t:
 ok('FR-53 시나리오 전환: 시각 0, 선택 유지', sc.id === 'power_spike' && sc.t < 1 && sc.sel === 'crac_01', JSON.stringify(sc));
 await page.click('#heat-btn'); // 서버실 기본 보기에서는 색칠이 꺼져 있어 먼저 켠다
 await page.click('input[name="view"][value="power"]');
-await sleep(200);
+await until(page, () => document.getElementById('legend-title').textContent === '전력');
 ok('FR-21 보기 값 전환: 범례가 바뀜', (await page.$eval('#legend-title', (e) => e.textContent)) === '전력' && (await page.$eval('#legend-max', (e) => e.textContent)).startsWith('15'));
 
 // 6) 도움말과 안내 문구(FR-70~73)
@@ -340,10 +343,10 @@ ok('UX 상단은 한 줄(64px 이하), 범례와 상태 표시는 3D 화면 안,
 const badgeN = await pu.$eval('#tab-alarm-count', (e) => ({ hidden: e.hidden, n: e.textContent }));
 ok('UX 알람 탭에 알람 개수 표시', !badgeN.hidden && Number(badgeN.n) >= 1, JSON.stringify(badgeN));
 await pu.evaluate(() => window.__viewer.selectEquipment('rack_21', false));
-await sleep(300);
+await until(pu, () => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab === 'detail');
 ok('UX 장비를 고르면 "장비" 탭이 열리고 고른 것을 풀면 요약으로 돌아감', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'detail');
 await pu.evaluate(() => window.__viewer.selectEquipment(null, false));
-await sleep(200);
+await until(pu, () => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab === 'summary');
 ok('UX 선택을 풀면 요약으로 돌아감', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'summary');
 await pu.focus('#tab-summary');
 await pu.keyboard.press('ArrowRight');
@@ -353,7 +356,7 @@ await settled(pu);
 const ux2 = await pu.evaluate(() => ({ control: !document.getElementById('tab-control').hidden, active: document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab }));
 ok('UX 직접 시뮬레이션이면 "조작" 탭이 나타나 열림', ux2.control && ux2.active === 'control', JSON.stringify(ux2));
 await pu.evaluate(() => window.__viewer.selectEquipment('rack_21', false));
-await sleep(300);
+await until(pu, () => window.__viewer.state.selected === 'rack_21');
 ok('UX 조작 중에 장비를 골라도 조작 탭에 머무름', (await pu.evaluate(() => document.querySelector('#side-tabs [aria-selected="true"]').dataset.tab)) === 'control');
 await pu.evaluate(() => document.querySelector('#rail [data-mode="rec"]').click());
 await settled(pu);
@@ -480,12 +483,12 @@ ok('FLOW CRAC_02가 멈추면 속도장에 반영됨(팬 비율 0)', fan[1] < 0.
 const card = await p4.evaluate(() => ({ title: document.getElementById('sc-title').textContent, desc: document.getElementById('sc-desc').textContent.length, max: document.getElementById('sc-max').textContent, ev: [...document.querySelectorAll('#sc-events li')].map((l) => l.textContent) }));
 ok('CARD 시나리오 설명과 가장 높은 입구 온도, 일어나는 일이 보임', card.title.length > 1 && card.desc > 5 && /Rack_\d+ [\d.]+ °C/.test(card.max) && card.ev.length >= 1 && card.ev[0].includes('CRAC_02'), JSON.stringify(card));
 await p4.evaluate(() => document.querySelector('#sc-events li').click());
-await sleep(300);
+await until(p4, () => window.__viewer.state.player.time >= 59);
 ok('CARD 일어나는 일을 누르면 그 시각으로 이동', (await p4.evaluate(() => window.__viewer.state.player.time)) >= 59);
 await p4.evaluate(() => window.__viewer.state.player.seek(250));
-await sleep(1500);
+await sleep(1500); // p4는 뒤 탭이라 프레임 갱신을 기다릴 수 없다
 await p4.evaluate(() => document.getElementById('sc-max').click());
-await sleep(300);
+await until(p4, () => window.__viewer.state.selected !== null);
 ok('CARD 가장 높은 입구 온도 랙을 누르면 선택됨', (await p4.evaluate(() => window.__viewer.state.selected)) !== null);
 await p3.screenshot({ path: path.join(OUT, 'stage_exterior.png') });
 
@@ -502,7 +505,7 @@ ok('SIM 첫 값이 바로 보임(센서 204개, 입구 온도 18~20도)', await 
   const t = v.store.metric('rack_01', 'temp_in');
   return v.store.latest.size === 204 && t && t.value > 17.5 && t.value < 20.5 && !t.confidence;
 }));
-await sleep(2600);
+await until(p5, () => window.__viewer.state.sim.time >= 2, undefined, 15000);
 ok('SIM 실제 시간에 맞춰 진행(2초 이상)', (await p5.evaluate(() => window.__viewer.state.sim.time)) >= 2);
 await p5.evaluate(() => {
   const input = document.querySelector('#sim-fans input[aria-label="CRAC_02 팬 속도"]');
@@ -517,13 +520,13 @@ const after = await p5.evaluate(() => {
   return { max: Math.max(...[...Array(60).keys()].map((i) => v.store.metric(`rack_${String(i + 1).padStart(2, '0')}`, 'temp_in').value)), alarms: v.store.alarmLog.length, fan: v.state.sim.engine.fan.crac_02 };
 });
 ok('SIM CRAC_02를 끄면 가장 높은 입구 온도가 3도 이상 오름', after.fan === 0 && after.max > before + 3, JSON.stringify({ before, ...after }));
-await sleep(700); // 화면 조각은 0.25초 간격으로 갱신된다
+await until(p5, () => document.querySelectorAll('#sim-log li').length >= 1); // 화면 조각은 0.25초 간격으로 갱신된다
 ok('SIM 알람이 생기고 조작 기록에 남음', after.alarms > 0 && (await p5.$$eval('#sim-log li', (l) => l.length)) >= 1);
-await sleep(600);
+await until(p5, () => document.querySelectorAll('#alarm-list li').length > 0);
 await p5.evaluate(() => document.getElementById('tab-alarms').click());
 ok('SIM 알람 목록이 화면에 나옴', (await p5.$$eval('#alarm-list li', (l) => l.length)) > 0);
 await p5.evaluate(() => window.__viewer.selectEquipment('rack_05', true));
-await sleep(200);
+await until(p5, () => !document.getElementById('sim-selected').hidden);
 ok('SIM 랙을 선택하면 "선택한 랙만" 슬라이더가 나타남', await vis5('#sim-selected'));
 await p5.select('#scenario-select', 'power_spike');
 await until(p5, () => window.__viewer.state.simScenario === 'power_spike' && window.__viewer.state.sim.engine.fan.crac_02 === 1);
@@ -543,7 +546,7 @@ await pb.setViewport({ width: 390, height: 844 });
 await pb.setRequestInterception(true);
 pb.on('request', (r) => (r.url().includes('data/sensors.json') ? r.abort() : r.continue()));
 await pb.goto(base, { waitUntil: 'networkidle0' });
-await sleep(500);
+await until(pb, () => document.getElementById('boot').classList.contains('failed'));
 const bootFail = await pb.evaluate(() => ({ hidden: document.getElementById('boot').hidden, failed: document.getElementById('boot').classList.contains('failed'), act: !document.getElementById('boot-actions').hidden, text: document.getElementById('boot-text').textContent }));
 ok('BOOT 자료를 못 받으면 로딩 화면에 이유와 "다시 시도"가 보임', !bootFail.hidden && bootFail.failed && bootFail.act && bootFail.text.includes('다시'), JSON.stringify(bootFail));
 await pb.screenshot({ path: path.join(OUT, 'boot_fail.png') });
@@ -568,7 +571,7 @@ await pc.close();
   await rp.goto(base, { waitUntil: 'networkidle0' });
   const ext = await rp.evaluate(() => ({ rail: !document.getElementById('rail').hidden, topRec: !!document.querySelector('#top [data-mode="rec"]') }));
   await rp.evaluate(() => document.getElementById('enter-btn').click());
-  await sleep(500);
+  await until(rp, () => !document.getElementById('rail').hidden);
   const r1 = await rp.evaluate(() => ({ rail: !document.getElementById('rail').hidden, mon: document.querySelector('#rail [data-mode="rec"]').getAttribute('aria-pressed') }));
   await rp.evaluate(() => document.querySelector('#rail [data-mode="sim"]').click());
   await settled(rp);
@@ -685,7 +688,7 @@ await pc.close();
   const z = await cp.evaluate(() => document.querySelectorAll('.cctv-tile').length);
   ok('CCTV 칸을 누르면 크게(1칸) 보임', z === 1);
   await cp.keyboard.press('Escape');
-  await sleep(200);
+  await until(cp, () => document.getElementById('cctv').hidden);
   const c3 = await cp.evaluate(() => ({ hidden: document.getElementById('cctv').hidden, stage: window.__viewer.state.stage, scene: window.__viewer.scene.cctv }));
   ok('CCTV Esc로 닫으면 서버실 화면에 남고 그리기도 원래대로', c3.hidden && c3.stage === 'hall' && !c3.scene, JSON.stringify(c3));
   await cp.close();
@@ -775,7 +778,7 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   await settled(mp); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   ok('MENU 간이 계산만 눌림', JSON.stringify(await rail()) === '["간이 계산"]');
   await click('#cctv-btn');
-  await sleep(500);
+  await until(mp, () => !document.getElementById('cctv').hidden);
   const r1 = await rail();
   ok('MENU 간이 계산 중 CCTV를 열면 CCTV만 눌림(동시에 눌리지 않음)', JSON.stringify(r1) === '["CCTV"]', JSON.stringify(r1));
   await click('#rail [data-mode="sim"]');
@@ -783,15 +786,15 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   const r2 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, mode: window.__viewer.state.mode }));
   ok('MENU CCTV 중 간이 계산을 누르면 CCTV가 닫히고 간이 계산만 눌림', r2.cctv && r2.mode === 'sim' && JSON.stringify(await rail()) === '["간이 계산"]', JSON.stringify(r2));
   await click('#cctv-btn');
-  await sleep(300);
+  await until(mp, () => !document.getElementById('cctv').hidden);
   await click('#rail [data-mode="rec"]');
   await settled(mp); // 전환이 끝날 때까지(고정 대기는 바쁠 때 흔들림, docs/30 M8)
   const r3 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, mode: window.__viewer.state.mode }));
   ok('MENU CCTV 중 모니터링을 누르면 CCTV가 닫히고 모니터링만 눌림', r3.cctv && r3.mode === 'rec' && JSON.stringify(await rail()) === '["모니터링"]', JSON.stringify(r3));
   await click('#cctv-btn');
-  await sleep(300);
+  await until(mp, () => !document.getElementById('cctv').hidden);
   await click('#back-btn');
-  await sleep(600);
+  await until(mp, () => window.__ws().stage === 'exterior' && document.getElementById('cctv').hidden);
   const r4 = await mp.evaluate(() => ({ cctv: document.getElementById('cctv').hidden, stage: window.__ws().stage, overlay: window.__ws().overlay, rail: document.getElementById('rail').hidden }));
   ok('MENU 외관으로 나가면 CCTV가 닫히고 메뉴가 숨음', r4.cctv && r4.stage === 'exterior' && r4.overlay === null && r4.rail, JSON.stringify(r4));
   await mp.close();
@@ -804,7 +807,7 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   await cp.goto(base + '?scenario=power_spike&t=200', { waitUntil: 'networkidle0' });
   await cp.waitForFunction(() => window.__viewer?.state.player, { timeout: 15000 });
   await cp.evaluate(() => (window.__viewer.state.player.playing = false));
-  await sleep(400);
+  await idle(cp);
   const num = (t) => Number(String(t).replace(/[^0-9.]/g, ''));
   const x = await cp.evaluate(() => {
     const s = window.__viewer.store;
@@ -812,7 +815,7 @@ if (existsSync(path.join(DIST, 'data/rec/cac/fan_fault.json'))) {
   });
   ok('값 외관 카드의 건물 전체 전력 = 설비 전력(IT + 냉각 + 손실)', Math.abs(num(x.ext) - x.fac) < 0.06, JSON.stringify(x));
   await cp.$eval('#enter-btn', (e) => e.click());
-  await sleep(500);
+  await until(cp, () => window.__viewer.state.stage === 'hall'); await idle(cp);
   const y = await cp.evaluate(() => ({ badge: document.getElementById('tab-alarm-count').textContent, head: document.getElementById('alarm-count').textContent, active: window.__viewer.store.activeAlarms(), log: window.__viewer.store.alarmLog.length }));
   ok('값 알람 탭 배지는 지금 이상인 센서 수이고 기록 줄 수와 구분해 보여 줌', Number(y.badge) === y.active && y.active !== y.log && y.head.includes(`지금 ${y.active}건`) && y.head.includes(`기록 ${y.log}건`), JSON.stringify(y));
   await cp.$eval('#rail [data-mode="sim"]', (e) => e.click());

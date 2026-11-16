@@ -12,11 +12,12 @@ import { SimEngine, layoutFrom } from './sim/engine.js';
 import { SimPanel } from './sim/panel.js';
 import { LibSource, LiveSource, RecSource, SimSource } from './sources.js';
 import { SourceManager } from './source_manager.js';
-import { ServerModel, canvasArrow, keyAction, monitorSeed as seedFrom, rackGrid } from './hall_logic.js';
+import { ServerModel, cacNote, keyAction, monitorSeed as seedFrom } from './hall_logic.js';
+import { bindCanvasInput } from './canvas_input.js';
 import { DataLink, apiBaseFromWs } from './server_data.js';
 import { JobClient, summarize as summarizeJob } from './sim/jobs.js';
 import { JobUI } from './sim/jobs_ui.js';
-import { UI, prettyName, METRIC_LABEL } from './ui.js';
+import { UI, prettyName } from './ui.js';
 import { checkLiveUrl, isLocalUrl, parseParams } from './url.js';
 import { Boot, eventFraction } from './boot.js';
 import { derive, initial as wsInitial, reduce as wsReduce } from './workspace.js';
@@ -206,7 +207,7 @@ async function main() {
   staticLib.index = libSource.index;
   staticLib.groups = libSource.groups;
   let simSource = null; // 패널이 만들어진 뒤에 만든다
-  let buildingArmed = false; // 터치: 건물을 한 번 눌러 정보를 보여 준 상태
+  let canvasInput = null; // 캔버스 입력(아래 '장면 조작'에서 묶는다)
 
   const ui = new UI(store, {
     onSelect: (eq, focus) => selectEquipment(eq, focus),
@@ -353,15 +354,11 @@ async function main() {
     const viewCold = scene.containment === 'cold';
     // 서버 실시간 값은 서버가 알려 준 격벽 방식(/api/meta의 containment, server/run_local.ps1 -Cac)을 따른다
     const serverCold = src?.kind === 'live' && serverMeta?.containment === 'cold';
-    const recCold = viewCold && src && (src.kind === 'rec' || src.kind === 'lib') && cacValues(src.fileOf(src.scenarioId));
-    const cac = recCold || serverCold;
-    note.hidden = !viewCold && !cac; // HAC 보기에서도 서버 값이 CAC면 알린다
-    note.textContent = cac ? (viewCold ? '값도 CAC 계산' : '값은 CAC 계산(서버)') : '값은 HAC 기준';
-    note.title = serverCold
-      ? '서버가 냉기 통로 격리(CAC) 장면과 CAC 보정 모델로 계산 중이다(docs/34 6장)'
-      : cac
-        ? 'CAC 장면으로 계산한 녹화(Warp 열 계산 + CAC 결과로 배운 보정 모델, docs/34 6장). 랙을 뺀 조합은 보정 뒤에도 오차가 크다'
-        : 'CAC 보기에서 이 메뉴는 격벽, 조명, 공기 흐름만 바뀐다. 온도 색과 센서 값은 HAC로 계산한 값이다';
+    const recCold = !!(viewCold && src && (src.kind === 'rec' || src.kind === 'lib') && cacValues(src.fileOf(src.scenarioId)));
+    const n = cacNote({ viewCold, recCold, serverCold });
+    note.hidden = n.hidden;
+    note.textContent = n.text;
+    note.title = n.title;
   }
   function presentMode(d) {
     ui.setMode(d.badge.mode, d.badge.text);
@@ -442,7 +439,7 @@ async function main() {
   function applyStage(instant = false) {
     if (flow.stage === 'hall') ensureShell();
     scene.setStage(flow.stage, instant);
-    buildingArmed = false;
+    canvasInput?.disarm();
     ui.setBuildingState();
     dispatch({ type: 'stage', stage: flow.stage });
     state.stage = flow.stage;
@@ -614,70 +611,20 @@ async function main() {
   }
 
   // ---- 장면 조작: 선택, 말풍선, 키보드 ----
+  // 캔버스 누르기, 말풍선, 화살표 키는 src/canvas_input.js가 맡는다(docs/30 L4)
   const canvas = $('canvas');
-  // 모바일에서 탭 전환이나 그래픽 재설정으로 컨텍스트를 잃으면 검게 멈춘다. three.js가 복구를 시도하므로 우리는 안내만 한다.
-  canvas.addEventListener('webglcontextlost', (e) => {
-    e.preventDefault();
-    $('gl-lost').hidden = false;
-  });
-  canvas.addEventListener('webglcontextrestored', () => ($('gl-lost').hidden = true));
-  const rect = () => canvas.getBoundingClientRect();
-  let downAt = null;
-  canvas.addEventListener('pointerdown', (e) => (downAt = { x: e.clientX, y: e.clientY }));
-  canvas.addEventListener('pointerup', (e) => {
-    if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) return; // 끌기는 선택이 아니다
-    const r = rect();
-    if (flow.stage === 'exterior') {
-      const hit = scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
-      if (e.pointerType === 'mouse') {
-        if (hit) queue.push({ name: 'view.goto', value: 'hall' });
-        return;
-      }
-      // 터치: 첫 번째 탭은 정보(외곽선과 카드), 카드의 단추나 건물을 한 번 더 누르면 홀로 들어간다
-      if (!hit) { buildingArmed = false; scene.setBuildingHover(false); ui.setBuildingState(); return; }
-      if (buildingArmed) { buildingArmed = false; scene.setBuildingHover(false); ui.setBuildingState(); queue.push({ name: 'view.goto', value: 'hall' }); return; }
-      buildingArmed = true;
-      scene.setBuildingHover(true);
-      ui.setBuildingState({ pinned: true });
-      return;
-    }
-    const eq = scene.pick((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
-    if (eq) selectEquipment(eq);
-    else if (state.selected) selectEquipment(state.selected); // 빈 곳: 해제
-  });
-  canvas.addEventListener('pointermove', (e) => {
-    if (e.buttons) return ui.hideTooltip();
-    const r = rect();
-    if (flow.stage === 'exterior') {
-      if (e.pointerType !== 'mouse') return;
-      const hit = scene.pickBuilding((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
-      canvas.classList.toggle('over-building', hit);
-      scene.setBuildingHover(hit);
-      ui.setBuildingState({ hot: hit });
-      return;
-    }
-    const eq = scene.pick((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
-    scene.hover(eq);
-    if (!eq) return ui.hideTooltip();
-    const m = eq.startsWith('rack') ? store.metric(eq, VIEWS[state.view].metric) : store.metric(eq, 'fan_speed');
-    const unit = eq.startsWith('rack') ? VIEWS[state.view].unit : '%';
-    const label = eq.startsWith('rack') ? VIEWS[state.view].label : METRIC_LABEL.fan_speed;
-    ui.showTooltip(`${prettyName(eq)}  ${label} ${m && Number.isFinite(m.value) ? m.value.toFixed(1) : '–'} ${unit}`, e.clientX - r.left, e.clientY - r.top);
-  });
-  canvas.addEventListener('pointerleave', (e) => {
-    scene.hover(null);
-    ui.hideTooltip();
-    if (e.pointerType === 'mouse') (scene.setBuildingHover(false), ui.setBuildingState());
-  });
-
-  // 방향키로 랙 이동(FR-34): 줄은 위아래, 같은 줄은 좌우
-  const nextRack = rackGrid(sceneData.racks);
-  const moveSelection = (dRow, dCol) => selectEquipment(nextRack(state.selected, dRow, dCol), true);
-  canvas.addEventListener('keydown', (e) => {
-    const d = canvasArrow(e.key, flow.stage);
-    if (!d) return;
-    e.preventDefault();
-    moveSelection(d[0], d[1]);
+  canvasInput = bindCanvasInput({
+    canvas,
+    scene,
+    ui,
+    store,
+    flow,
+    racks: sceneData.racks,
+    glLost: $('gl-lost'),
+    getView: () => state.view,
+    getSelected: () => state.selected,
+    select: (eq, focus) => selectEquipment(eq, focus),
+    enterHall: () => queue.push({ name: 'view.goto', value: 'hall' }),
   });
   // 키보드 규칙은 src/hall_logic.js keyAction(단위 시험)이 정하고 여기서는 실행만 한다
   window.addEventListener('keydown', (e) => {
@@ -771,7 +718,7 @@ async function main() {
 
   // 점검과 자동 캡처용 훅(읽기 전용 상태 노출)
   // 화면 이동 명령(dispatch)은 늘 연다(docs/20 8.1). 상태와 장면을 만지는 점검 훅은 자동 시험 브라우저나 ?debug=1에서만(docs/30 L3)
-  window.__viewer = hooks ? { jobs: () => ({ client: jobClient, ui: jobUI }), getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, sourcesSettled: () => sources.settled, panel, flow, queue, dispatch: (c) => queue.push(c) } : Object.freeze({ dispatch: (c) => queue.push(c) });
+  window.__viewer = hooks ? { jobs: () => ({ client: jobClient, ui: jobUI }), getModelsState: () => modelsState, state, store, scene, selectEquipment, setView, loadScenario, startSim, startLibrary, libScenario: () => libSource.scenarioId, sourcesSettled: () => sources.settled, rendered: () => store.version === lastRefresh.version && !scene.cameraMoving, panel, flow, queue, dispatch: (c) => queue.push(c) } : Object.freeze({ dispatch: (c) => queue.push(c) });
 }
 
 main().catch((e) => {

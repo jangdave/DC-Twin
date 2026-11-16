@@ -1193,6 +1193,11 @@ export class HallScene {
     this._moveCamera(p.pos, p.target, instant, dur);
   }
 
+  /** 카메라가 이동 중인지(점검 훅이 이동이 끝날 때까지 기다리는 데 쓴다) */
+  get cameraMoving() {
+    return !!this._anim;
+  }
+
   _moveCamera(pos, target, instant, dur = 0.6) {
     if (instant || this.reducedMotion) {
       this.camera.position.copy(pos);
