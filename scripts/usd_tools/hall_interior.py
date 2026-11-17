@@ -15,6 +15,7 @@ from pxr import Gf, Sdf, UsdGeom, UsdShade, Vt
 # --- 텍스처 실제 크기(cm) -----------------------------------------------------------
 FLOOR_TILE = 480.0       # T_HallFloor: 한 장에 타일 8 x 8장(타일 60 cm)
 FLOOR_ORIGIN = (10.0, 40.0)  # 타일 이음선이 (x0 = 250, 첫 줄 y = 100)의 랙 모서리와 맞도록 정한 시작점
+DOOR_H = 210.0  # 열기 통로 끝 미닫이 문 높이(cm). 그 위 ~ 칸막이 천장은 고정 판(천장 회수 장면, docs/35)
 LIGHT_GAP = 3.0  # 열기 통로 조명과 격벽 지붕 사이 틈(cm)
 WALL_TILE = (400.0, 200.0)   # T_HallWall: 4096 x 2048 픽셀
 CEIL_TILE = 360.0        # T_HallCeiling: 한 장에 타일 6 x 6장(60 cm)
@@ -455,7 +456,14 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
             fr.box((lo[0], lo[1], hi[2] - 6.0), (hi[0], hi[1], hi[2]), "frame")
             fr.box((lo[0], lo[1], lo[2] + 6.0), (hi[0], lo[1] + bar, hi[2] - 6.0), "frame")
             fr.box((lo[0], hi[1] - bar, lo[2] + 6.0), (hi[0], hi[1], hi[2] - 6.0), "frame")
-            fr.box((lo[0], (lo[1] + hi[1]) / 2 - bar / 2, lo[2] + 6.0), (hi[0], (lo[1] + hi[1]) / 2 + bar / 2, hi[2] - 6.0), "frame")  # 미닫이 두 짝 사이
+            ym = (lo[1] + hi[1]) / 2
+            tall = hi[2] - lo[2] > DOOR_H + 30.0  # 천장까지 닿는 문: 아래는 미닫이 두 짝, 위는 고정 판
+            zd = lo[2] + DOOR_H if tall else hi[2] - 6.0
+            fr.box((lo[0], ym - bar / 2, lo[2] + 6.0), (hi[0], ym + bar / 2, zd), "frame")  # 미닫이 두 짝 사이
+            if tall:
+                fr.box((lo[0], lo[1] + bar, zd), (hi[0], hi[1] - bar, zd + 6.0), "frame")  # 문틀 윗막대(고정 판과의 경계)
+                for yh in (ym - bar / 2 - 6.0, ym + bar / 2 + 4.0):  # 손잡이(문 두 짝이 만나는 곳 양옆, 높이 0.95 ~ 1.25 m)
+                    fr.box((lo[0], yh, lo[2] + 95.0), (hi[0], yh + 2.0, lo[2] + 125.0), "frame")
             mid = (lo[0] + hi[0]) / 2
             glass_lo = (mid - 0.5, lo[1] + bar, lo[2] + 6.0)
             glass_hi = (mid + 0.5, hi[1] - bar, hi[2] - 6.0)

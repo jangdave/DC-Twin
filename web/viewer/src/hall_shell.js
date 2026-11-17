@@ -74,3 +74,22 @@ export function prepareShell(root) {
   });
   return parts;
 }
+
+// 격벽 판을 화면용 조각으로 나눈다(docs/35). 계산은 판 하나를 막힌 상자로 쓰지만, 화면에서는 실제 격리 문처럼 보이게 한다.
+// - 천장까지 닿는 열기 통로 끝 문(이름에 _Door_, 높이 > doorH + 30): 미닫이 두 짝(바닥 ~ doorH), 고정 판(doorH ~ 위), 손잡이 2개
+// - 그 밖의 판은 그대로 한 조각
+// 반환: [{ kind: 'glass' | 'transom' | 'handle', min, max }] (cm, 장면 좌표)
+export function containmentParts(p, doorH = 210) {
+  const [x0, y0, z0] = p.min, [x1, y1, z1] = p.max;
+  if (!p.name.includes('_Door_') || z1 - z0 <= doorH + 30) return [{ kind: 'glass', min: p.min, max: p.max }];
+  const ym = (y0 + y1) / 2, zd = z0 + doorH, gap = 1;
+  const thinX = x1 - x0 <= y1 - y0; // 문 두께 방향이 x(열기 통로가 x로 뻗음)
+  if (!thinX) return [{ kind: 'glass', min: p.min, max: p.max }];
+  return [
+    { kind: 'glass', min: [x0, y0, z0], max: [x1, ym - gap, zd] },
+    { kind: 'glass', min: [x0, ym + gap, z0], max: [x1, y1, zd] },
+    { kind: 'transom', min: [x0, y0, zd], max: [x1, y1, z1] },
+    { kind: 'handle', min: [x0 - 1.5, ym - 8, z0 + 95], max: [x1 + 1.5, ym - 6, z0 + 125] },
+    { kind: 'handle', min: [x0 - 1.5, ym + 6, z0 + 95], max: [x1 + 1.5, ym + 8, z0 + 125] },
+  ];
+}

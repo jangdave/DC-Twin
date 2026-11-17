@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
 import { Airflow, loadFlow } from './airflow.js';
 import { CITY, buildCity } from './city.js';
-import { prepareShell, shellVisibility } from './hall_shell.js';
+import { containmentParts, prepareShell, shellVisibility } from './hall_shell.js';
 import { CCTV_LIMITS } from './cctv.js';
 import { VIEWS } from './views.js';
 import { SETTINGS, pixelRatioFor } from './quality.js';
@@ -174,16 +174,23 @@ export class HallScene {
       g.add(mesh);
       return mesh;
     };
-    // 천장 회수 장면(docs/35): 칸막이 천장 판(Ceiling_*)은 위에서 내려다보면 홀을 가리므로 그리지 않고(천장 회수 그릴은 서버실 껍데기에 있다),
-    // 공조기 연장 덕트(Collar_*)는 불투명한 금속 상자로 그린다
-    const kind = (p) => (p.name.startsWith('Ceiling_') ? 'none' : p.name.startsWith('Collar_') ? 'hood' : p.name.endsWith('_Roof') ? 'roof' : 'side');
+    // 천장 회수 장면(docs/35): 칸막이 천장 판(Ceiling_*)은 아주 옅은 반투명으로 그려 격벽 위가 천장으로 막혀 있음을 보이되
+    // 위에서 내려다볼 때 홀을 가리지 않게 한다(천장 회수 그릴은 서버실 껍데기에 있다). 공조기 연장 덕트(Collar_*)는 불투명한 상자,
+    // 열기 통로 끝 문은 미닫이 두 짝 + 고정 판 + 손잡이로 나눠 그린다(containmentParts)
+    const kind = (p) => (p.name.startsWith('Ceiling_') ? 'ceiling' : p.name.startsWith('Collar_') ? 'hood' : p.name.endsWith('_Roof') ? 'roof' : 'side');
     const roofs = panelsData.filter((p) => kind(p) === 'roof');
-    const sides = panelsData.filter((p) => kind(p) === 'side');
+    const ceilings = panelsData.filter((p) => kind(p) === 'ceiling');
     const hoods = panelsData.filter((p) => kind(p) === 'hood');
+    const parts = panelsData.filter((p) => kind(p) === 'side').flatMap((p) => containmentParts(p));
+    const sides = parts.filter((q) => q.kind === 'glass');
+    const transoms = parts.filter((q) => q.kind === 'transom');
+    const handles = parts.filter((q) => q.kind === 'handle');
     boxMesh(sides, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
-    boxMesh(roofs, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
+    boxMesh(roofs.concat(transoms), new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
+    if (ceilings.length) boxMesh(ceilings, new THREE.MeshStandardMaterial({ color: 0xc8ccd2, transparent: true, opacity: 0.08, depthWrite: false, side: THREE.DoubleSide }));
     if (hoods.length) boxMesh(hoods, new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.3, roughness: 0.6 })).renderOrder = 0;
-    const framed = panelsData.filter((p) => kind(p) === 'roof' || kind(p) === 'side');
+    if (handles.length) boxMesh(handles, new THREE.MeshStandardMaterial({ color: 0x2b2f36, metalness: 0.6, roughness: 0.4 })).renderOrder = 0;
+    const framed = roofs.concat(sides, transoms);
     if (framed.length) {
       const edgeGeos = framed.map((p) => new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)).applyMatrix4(this._boxMatrix(p)));
       const edges = new THREE.LineSegments(mergeGeometries(edgeGeos, false), new THREE.LineBasicMaterial({ color: 0x8fc0f0, transparent: true, opacity: 0.85 }));
@@ -191,6 +198,15 @@ export class HallScene {
       edges.renderOrder = 3;
       edges.name = 'containmentEdges';
       g.add(edges);
+    }
+    if (ceilings.length) {
+      // 칸막이 천장은 바깥 테두리만 옅게(판을 나눈 경계선은 그리지 않는다)
+      const [W, L] = this.data.size;
+      const z = Math.min(...ceilings.map((p) => p.min[2]));
+      const rim = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)).applyMatrix4(this._boxMatrix({ min: [0, 0, z], max: [W, L, z + 0.1] }));
+      const line = new THREE.LineSegments(rim, new THREE.LineBasicMaterial({ color: 0xc8ccd2, transparent: true, opacity: 0.35 }));
+      line.name = 'ceilingRim';
+      g.add(line);
     }
     this.hall.add(g);
     this._contGroup = g;
