@@ -352,8 +352,9 @@ def crac_returns(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             for i in idx:
                 q[i] = min(lay.q_cap * float(fan[i]), share)
         leak[a] = max(0.0, lay.aisle_exhaust[a] - q[[i for i in range(lay.n_cracs) if lay.crac_aisle[i] == a]].sum())
-    if getattr(lay, "ceiling", False):
-        # 공통 회수 공간: 켜진 공조기가 홀 전체 배기를 똑같이 나눠 맡고(용량까지), 남는 것은 한 길(leak[0])로 샌다
+    if getattr(lay, "ceiling", False) or getattr(lay, "cac", False):
+        # 공통 회수 공간(천장 회수 HAC의 천장 위, CAC의 방 전체, docs/35): 켜진 공조기가 홀 전체 배기를 똑같이 나눠 맡고(용량까지),
+        # 남는 것은 한 길(leak[0])로 샌다. CAC는 아래에서 새는 양을 0으로 둔다(남는 배기는 방에 퍼진다)
         total = float(lay.aisle_exhaust.sum())
         on = [i for i in range(lay.n_cracs) if fan[i] > 0]
         q[:] = 0.0

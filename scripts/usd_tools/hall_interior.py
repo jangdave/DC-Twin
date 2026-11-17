@@ -330,11 +330,13 @@ def build_shell_extras(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
             mb.box((xh, hy0, 95.0), (xh + 4.0, hy1, 125.0), "grommet")
         put(f"Wall_{wall}_Door", mb)
 
-    # 스프링클러: 격리한 통로(HAC는 열기 통로, CAC는 냉기 통로) 안 천장 아래 배관(지름 대신 6 cm 각관)과 헤드 240 cm 간격
+    # 스프링클러: 열기 통로 격리(HAC)면 열기 통로 안 천장 아래 배관(6 cm 각관)과 헤드 240 cm 간격.
+    # 냉기 통로 격리(CAC)는 지붕이 랙 높이(2 m)라 통로 안 배관이 사람 머리 높이에 걸린다. CAC 지붕은 열에 떨어지는 판으로 보고
+    # 방 천장 헤드(아래 Fire_Ceiling_Devices)만 둔다(2026-11-17 사용자 지적 "CAC 이상한 부분")
     ceil = ceiling_mode(cfg)
     rz = cfg["containment"]["roof_z"]
     top = ceiling_z(cfg) if ceil else rz
-    aisles = lay.cold_aisles if containment_type(cfg) == "cold" else lay.hot_aisles
+    aisles = [] if containment_type(cfg) == "cold" else lay.hot_aisles
     pipe = MeshB()
     for (ya, yb) in aisles:
         yc = (ya + yb) / 2
@@ -343,7 +345,8 @@ def build_shell_extras(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
         while x < lay.rack_x1 - 60.0:
             pipe.box((x - 2.0, yc - 2.0, top - 33.0), (x + 2.0, yc + 2.0, top - 25.0), "fire_pipe")
             x += 240.0
-    put("Fire_Sprinkler_Aisle", pipe)
+    if aisles:
+        put("Fire_Sprinkler_Aisle", pipe)
     # 방 천장(칸막이 천장이 있으면 그 아랫면): 헤드와 연기 감지기(냉기 통로와 줄 끝 통로 위)
     room_top = ceiling_z(cfg) if ceil else lay.height
     det = MeshB()
