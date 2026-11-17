@@ -63,6 +63,11 @@ export class Airflow {
     // 이중 바닥(docs/33): 격자가 바닥 아래 공간까지 내려가면 격자 z=0이 장면 z = z0(음수, m)다
     this.z0 = flow.meta.z0_m ?? 0;
     this.plenum = flow.meta.plenum ?? null;
+    // 칸막이 천장(docs/35): 입자가 회수 그릴이 아닌 천장 판을 아래에서 위로 지나려 하면 흐려지며 사라진다.
+    // 웹 흐름 격자(20 cm)에서 5 cm 판이 흐려져 찬 공기 입자 약 0.5 %가 판을 뚫고 올라갔다(2026-11-17)
+    const ceil = (data.panels ?? []).filter((p) => p.name.startsWith('Ceiling_'));
+    this.ceilZ = ceil.length ? Math.min(...ceil.map((p) => p.min[2])) * CM : null;
+    this.ceilBoxes = ceil.map((p) => [p.min[0] * CM, p.max[0] * CM, p.min[1] * CM, p.max[1] * CM]);
     this.scale = flow.meta.vmax_ms / 127;
     this.data = data;
     this.store = store;
@@ -247,6 +252,13 @@ export class Airflow {
     }
   }
 
+  _throughCeiling(zPrev, o) {
+    const cz = this.ceilZ;
+    if (cz == null || zPrev >= cz || this.pos[o + 2] < cz) return false;
+    const x = this.pos[o], y = this.pos[o + 1];
+    return this.ceilBoxes.some(([x0, x1, y0, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
+  }
+
   _refreshColors() {
     const view = this.store;
     this.rackKeys.forEach((k, i) => {
@@ -299,6 +311,7 @@ export class Airflow {
         else if (this.pos[o + 2] > LEAK_CEILING) this._retire(p);
         continue;
       }
+      const zPrev = this.pos[o + 2];
       const sp = this.sample(this.pos[o], this.pos[o + 1], this.pos[o + 2], u);
       const k = sp > MAX_VISUAL_SPEED ? MAX_VISUAL_SPEED / sp : 1;
       this.vel[o] = u[0] * k;
@@ -313,7 +326,7 @@ export class Airflow {
         this._spawn(p);
         continue;
       }
-      if (out || sp < 0.03) {
+      if (out || sp < 0.03 || this._throughCeiling(zPrev, o)) {
         this._retire(p);
         continue;
       }
