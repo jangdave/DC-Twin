@@ -41,7 +41,8 @@ DX = 0.10            # 격자 간격 (m)
 K_DIFF = 0.02        # 확산 계수 (m^2/s, 난류 혼합을 흉내 낸 값)
 SIGMA_COLD_TOP = 0.1  # 냉기 통로 윗면(랙 높이 바로 위 한 겹)의 통과 쉬움(0~1). 1이면 퍼텐셜 흐름 그대로, 작을수록 윗면으로 들어오는 공기가 줄고 양끝으로 더 들어온다
 RHO_CP = 1.2         # 공기의 밀도 x 비열 (kJ/(m^3 K))
-V_RACK = 0.8         # 랙 안 공기 속도 (m/s)
+V_RACK = 0.6         # 랙 안 공기 속도 (m/s). 랙 면 1.2 m2라 10 kW 랙에 0.72 m3/s(약 152 CFM/kW, 앞뒤 온도 차 약 11.5도).
+                     # 2026-11-17까지 0.8(약 203 CFM/kW, 8.6도)은 일반 서버(약 155 CFM/kW)보다 컸다(docs/35)
 T_SUPPLY = 18.0      # 급기 온도 (degC)
 T_INIT = 24.0        # 초기 공기 온도 (degC)
 VENT_LAYERS = 3      # 급기구 위 공기를 내보내는 층 수(30cm). 너무 얇으면 속도가 지나치게 커진다
@@ -49,6 +50,7 @@ RETURN_Z_CM = (10.0, 190.0)
 # 천공 타일의 통과 쉬움(퍼텐셜 흐름의 sigma). 열린 비율(25 %)을 그대로 쓰면 타일 저항이 너무 약해 타일마다 바람이 2배 차이 났다.
 # 실제 타일은 압력 손실이 커서(K≈30) 바닥 아래 압력이 고르다. OpenFOAM 이중 바닥 3개 사례의 타일별 바람에 맞춘 보정값(docs/33 5장).
 TILE_SIGMA = 0.002
+TILE_OPEN_REF = 0.25  # TILE_SIGMA를 맞춘 타일 열린 비율. 다른 비율이면 (열린 비율 / 0.25)^2배(구멍 속도 제곱에 비례하는 압력 손실, docs/35)
 # 냉기 통로 격리(CAC, docs/34): 지붕은 막힌 판이 아니라 틈이 있는 판으로 본다. 공급이 랙 흡입보다 모자라면 여기로 방 공기(뜨거운 공기)가 들어온다.
 # 통과 쉬움 값은 OpenFOAM CAC 결과 12개와 비교해 골랐다(docs/34 6.2: 0.0005~0.05를 비교, 랙을 뺀 자리의 지나친 온도가 가장 크게 줄고
 # 최고 온도를 낮춰 보지 않는 값. 0.02부터는 최고 온도를 OpenFOAM보다 낮게 낸다)
@@ -150,6 +152,19 @@ def rng(lo_cm: float, hi_cm: float, n: int) -> tuple[int, int]:
     i0 = int(np.floor(lo_cm / 100.0 / DX + 1e-6))
     i1 = max(i0 + 1, int(np.ceil(hi_cm / 100.0 / DX - 1e-6)))
     return max(0, i0), min(n, i1)
+
+
+def cold_aisle_centers(vents: list[dict], gap_cm: float = 150.0) -> list[float]:
+    """급기구 y 가운데로 냉기 통로 가운데 위치를 구한다. 통로마다 급기구가 여러 줄(랙 앞면마다 한 줄, docs/35)이어도
+    gap_cm보다 가까운 줄은 한 통로로 묶어 그 평균을 쓴다(예전에는 줄마다 통로 하나로 셌다)."""
+    ys = sorted(round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in vents)
+    groups: list[list[float]] = []
+    for y in ys:
+        if groups and y - groups[-1][-1] < gap_cm:
+            groups[-1].append(y)
+        else:
+            groups.append([y])
+    return [round(sum(g) / len(g) / 10.0) * 10.0 for g in groups]
 
 
 class Layout:
@@ -275,17 +290,20 @@ class Layout:
         # 냉기 통로 윗면 한 겹(랙 위): 통과 쉬움 sigma를 줄여 윗면으로 들어오는 공기를 줄인다(SIGMA_COLD_TOP). 퍼텐셜 흐름은 윗면과 양끝을 구분하지 못해서 윗면으로 너무 많이 들어온다.
         self.sigma = np.ones(self.shape)
         if SIGMA_COLD_TOP != 1.0 and hall["vents"] and hall["racks"] and not self.cac:
-            cy = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
+            cy = cold_aisle_centers(hall["vents"])
             xa, xb = min(r["min"][0] for r in hall["racks"]), max(r["max"][0] for r in hall["racks"])
             ztop = max(r["max"][2] for r in hall["racks"])
             kz = int(np.floor(ztop / 100.0 / DX + 1e-6))
+            fronts = [(r["max"][1] if r["front"][1] > 0 else r["min"][1]) for r in hall["racks"] if r["front"][0] == 1]
             for y in cy:
-                xs, xe = rng(xa, xb, nx); ys, ye = rng(y - 60.0, y + 60.0, ny)
+                # 통로 폭 전체(마주 보는 랙 앞면 사이). 예전에는 가운데 ±60 cm로 정해 두어 통로를 180 cm로 넓힌 뒤 양쪽 30 cm가 빠졌다
+                hw = min((abs(f - y) for f in fronts), default=60.0)
+                xs, xe = rng(xa, xb, nx); ys, ye = rng(y - hw, y + hw, ny)
                 if kz < nz:
                     self.sigma[xs:xe, ys:ye, kz] = SIGMA_COLD_TOP
         if self.plenum:
             # 천공 타일은 바람이 지나기 어렵다(통과 쉬움 TILE_SIGMA). 퍼텐셜 흐름에서는 이 저항으로 타일마다 나오는 양이 정해진다.
-            self.sigma[self.tile] = TILE_SIGMA
+            self.sigma[self.tile] = TILE_SIGMA * (float(self.plenum.get("open_ratio", TILE_OPEN_REF)) / TILE_OPEN_REF) ** 2
             if self.plenum.get("pedestal_pitch_cm"):
                 # 받침 기둥: 바닥 아래 공간 전체에 고르게 퍼진 작은 저항(가린 단면 비율만큼 통과 쉬움을 낮춘다)
                 block = self.plenum["pedestal_width_cm"] / self.plenum["pedestal_pitch_cm"]
@@ -303,7 +321,7 @@ class Layout:
             back_y = r["min"][1] if sign > 0 else r["max"][1]
             self.aisle_exhaust[near(back_y)] += q
         # 냉기 통로: 급기구가 놓인 y 위치(통로 가운데)로 나누고, 랙은 앞면이 닿는 통로, 급기구는 가장 가까운 통로에 배정한다.
-        cold_centers = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
+        cold_centers = cold_aisle_centers(hall["vents"])
         self.n_cold = len(cold_centers)
         near_cold = lambda y: int(np.argmin([abs(y - c) for c in cold_centers]))
         self.vent_cold = [near_cold((v["min"][1] + v["max"][1]) / 2) for v in hall["vents"]]

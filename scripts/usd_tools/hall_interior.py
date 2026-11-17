@@ -248,8 +248,10 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
     # 바닥 표시: 두께 0.6 cm 판(윗면 z=0.6, 바닥 윗면과 0.5 cm보다 떨어져 깜빡이지 않는다)
     th = 0.6
     line = MeshB()
-    for (ya, yb) in lay.cold_aisles:  # 냉기 통로 양쪽 노란 선(폭 5 cm, 랙 앞면에서 2 cm 안쪽)
-        for y0 in (ya + 2.0, yb - 7.0):
+    vt = cfg["vent"]
+    off = float(vt["depth"]) if vt.get("layout") == "per_rack" else 0.0  # 랙 앞 급기 그레이트(docs/35)가 있으면 그 안쪽 가장자리에
+    for (ya, yb) in lay.cold_aisles:  # 냉기 통로 양쪽 노란 선(폭 5 cm, 랙 앞면 또는 그레이트에서 2 cm 안쪽)
+        for y0 in (ya + off + 2.0, yb - off - 7.0):
             line.box((lay.rack_x0, y0, 0), (lay.rack_x1, y0 + 5.0, th), "line", planar(100.0), skip=("-z",))
     put("Floor_Markings_Line", line)
     haz = MeshB()
@@ -612,25 +614,35 @@ def build_power(stage, power: str, lay, cfg: dict, mats: dict) -> int:
     return tri
 
 
-def build_vents(stage, vents: str, lay, cfg: dict, mats: dict) -> int:
-    """바닥 급기구: 천공 타일 한 장(50 x 100 x 1 cm). 윗면이 텍스처 한 장(UV 0~1)이다."""
+def vent_boxes(lay, cfg: dict) -> list[tuple[tuple, tuple]]:
+    """바닥 급기구 자리 [(아래, 위)]. 설정 vent.layout:
+    "per_rack": 랙마다 한 장, 랙 앞면에 붙여 냉기 통로마다 두 줄(2026-11-17, docs/35. 실제 시설처럼 랙 하나에 타일 하나)
+    "center"(없으면 이것): 냉기 통로 가운데 한 줄, 랙 두 대(마주 보는 쌍)에 한 장(예전 배치)."""
     vt, rk = cfg["vent"], cfg["rack"]
     n_per = cfg["rows"]["racks_per_row"]
+    per_rack = vt.get("layout", "center") == "per_rack"
+    out = []
+    for (ya, yb) in lay.cold_aisles:
+        ys = [ya + vt["depth"] / 2, yb - vt["depth"] / 2] if per_rack else [(ya + yb) / 2]
+        for yc in ys:
+            for i in range(n_per):
+                xc = lay.rack_x0 + rk["width"] * (i + 0.5)
+                out.append(((xc - vt["width"] / 2, yc - vt["depth"] / 2, 0.0), (xc + vt["width"] / 2, yc + vt["depth"] / 2, float(vt["thickness"]))))
+    return out
+
+
+def build_vents(stage, vents: str, lay, cfg: dict, mats: dict) -> int:
+    """바닥 급기구: 천공 타일(또는 그레이트) 한 장. 윗면이 텍스처 한 장(UV 0~1)이다. 자리는 vent_boxes."""
     n = 0
     tris = 0
-    for (ya, yb) in lay.cold_aisles:
-        yc = (ya + yb) / 2
-        for i in range(n_per):
-            n += 1
-            xc = lay.rack_x0 + rk["width"] * (i + 0.5)
-            lo = (xc - vt["width"] / 2, yc - vt["depth"] / 2, 0.0)
-            hi = (xc + vt["width"] / 2, yc + vt["depth"] / 2, float(vt["thickness"]))
+    for lo, hi in vent_boxes(lay, cfg):
+        n += 1
 
-            def uv(ax, positive, p, lo=lo, hi=hi):
-                return ((p[0] - lo[0]) / (hi[0] - lo[0]), (p[1] - lo[1]) / (hi[1] - lo[1]))
+        def uv(ax, positive, p, lo=lo, hi=hi):
+            return ((p[0] - lo[0]) / (hi[0] - lo[0]), (p[1] - lo[1]) / (hi[1] - lo[1]))
 
-            mb = MeshB()
-            mb.box(lo, hi, "vent", uvfs={"+z": uv}, skip=("-z",))
-            author_mesh(stage, f"{vents}/Vent_{n:02d}", mb, mats, "vent")
-            tris += mb.triangles()
+        mb = MeshB()
+        mb.box(lo, hi, "vent", uvfs={"+z": uv}, skip=("-z",))
+        author_mesh(stage, f"{vents}/Vent_{n:02d}", mb, mats, "vent")
+        tris += mb.triangles()
     return tris

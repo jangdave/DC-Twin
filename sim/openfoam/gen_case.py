@@ -476,7 +476,7 @@ runTimeModifiable false;
     meta = {
         "scenario": a.scenario or fail, "fail": fail, "scene": str(scene), "racks": len(hall["racks"]), "vent_supply_m3s_per_cold_aisle": [round(x, 3) for x in vent_q], "dx": dx, "cells_total": int(np.prod(lay.shape)), "cells_fluid": int(lay.fluid.sum()),
         "crac_return_m3s": {n: round(float(x), 3) for n, x in zip(names, q)}, "supply_m3s": round(supply, 3),
-        "open_roofs": sorted(open_names), "power_kw": a.power, "total_power_kw": float(sum(rack_kw)), "fan": {n: float(v) for n, v in zip(names, fan)}, "sample": spec["id"] if spec else None, "buoyancy": not a.no_buoyancy, "conservative_relaxation": a.conservative, "scheme": a.scheme,
+        "open_roofs": sorted(open_names), "power_kw": a.power, "total_power_kw": float(sum(rack_kw)), "fan": {n: float(v) for n, v in zip(names, fan)}, "sample": spec["id"] if spec else None, "buoyancy": not a.no_buoyancy, "conservative_relaxation": a.conservative, "scheme": a.scheme, "v_rack_ms": h.V_RACK,
         "darcy_d_flow_1_m2": D_FLOW, "darcy_d_cross_1_m2": D_CROSS,
         "plenum": plenum, "z_off_cm": z_off, "crac_supply_m3s": dict(crac_sup) if plenum else None,
     }

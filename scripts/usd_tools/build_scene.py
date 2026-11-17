@@ -251,16 +251,10 @@ def _build_flat(stage: Usd.Stage, hall_path: str, cfg: dict, lay: Layout) -> Non
         UsdGeom.Xform.Define(stage, power)
         for name, lo, hi_ in hi.rpp_boxes(lay, cfg):
             add_box(stage, f"{power}/{name}", lo, hi_, (0.52, 0.54, 0.57), "rpp")
-    vt = cfg["vent"]
     vents = f"{hall_path}/Vents"
     UsdGeom.Xform.Define(stage, vents)
-    vn = 0
-    for (ya, yb) in lay.cold_aisles:
-        yc = (ya + yb) / 2
-        for i in range(cfg["rows"]["racks_per_row"]):
-            vn += 1
-            xc = lay.rack_x0 + rk["width"] * (i + 0.5)
-            add_box(stage, f"{vents}/Vent_{vn:02d}", (xc - vt["width"] / 2, yc - vt["depth"] / 2, 0), (xc + vt["width"] / 2, yc + vt["depth"] / 2, vt["thickness"]), col["vent"], "vent")
+    for vn, (lo, hi_) in enumerate(hi.vent_boxes(lay, cfg), start=1):
+        add_box(stage, f"{vents}/Vent_{vn:02d}", lo, hi_, col["vent"], "vent")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -113,11 +113,11 @@ describe('저장소에 올라간 정적 자료(public/data)', () => {
       expect(gzipSync(text).length).toBeLessThan(1024 * 1024);
     }
   });
-  it('장면: 랙 60기, CRAC 8기, 통풍구 30개', async () => {
+  it('장면: 랙 60기, CRAC 8기, 급기 그레이트 60장(랙마다 한 장, docs/35)', async () => {
     const scene = JSON.parse(await readFile(path.join(PUBLIC, 'scene.json'), 'utf8'));
     expect(scene.racks).toHaveLength(60);
     expect(scene.cracs).toHaveLength(8);
-    expect(scene.vents).toHaveLength(30);
+    expect(scene.vents).toHaveLength(60);
   });
   it('팬 이상 녹화의 마지막 시각 등급이 ok 46, caution 10, low 4다', async () => {
     // 보정 모델을 다시 학습할 때마다 바뀐다: 처음 ok 48, low 12 -> 2026-11-04 낮은 부하 샘플 추가 ok 48, caution 8, low 4

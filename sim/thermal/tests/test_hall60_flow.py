@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "sim" / "thermal"))
 from dct_thermal import hall60_sim as hs  # noqa: E402
 
 SCENE = ROOT / "usd" / "scenes" / "hall01.usda"
+TOTAL = 60 * hs.V_RACK * 1.2  # 랙 60기 x 통과 속도 x 랙 면 1.2 m2(m3/s). V_RACK 0.6이면 43.2(docs/35)
 pytestmark = pytest.mark.skipif(not SCENE.exists(), reason="hall01.usda 없음")
 
 
@@ -37,31 +38,32 @@ def fans(lay, off=()):
 def test_sources_are_balanced(lay, off):
     s, bal = hs.source_field(lay, fans(lay, off))
     assert abs(s.sum()) / np.abs(s).sum() < 1e-9
-    assert bal["rack_m3s"] == pytest.approx(57.6, abs=0.1)
+    assert bal["rack_m3s"] == pytest.approx(TOTAL, abs=0.1)
 
 
 def test_all_cracs_off_stops_supply_and_leaks_everything(lay):
     s, bal = hs.source_field(lay, fans(lay, range(8)))
     assert bal["supply_m3s"] == 0.0
-    assert sum(bal["aisle_leak_m3s"]) == pytest.approx(57.6, abs=0.1)
+    assert sum(bal["aisle_leak_m3s"]) == pytest.approx(TOTAL, abs=0.1)
 
 
 def test_ceiling_plenum_shares_returns(lay):
-    """천장 회수 방식(docs/35): 켜진 공조기가 홀 전체 배기(57.6 m3/s)를 똑같이 나눠 맡는다. 용량(9.6)을 넘을 때만 샌다."""
+    """천장 회수 방식(docs/35): 켜진 공조기가 홀 전체 배기(TOTAL)를 똑같이 나눠 맡는다. 용량(가장 바쁜 통로 배기의 절반 = TOTAL/6)을 넘을 때만 샌다."""
     assert lay.ceiling
     _, bal = hs.source_field(lay, fans(lay))
-    assert bal["crac_return_m3s"] == pytest.approx([7.2] * 8, abs=0.01)
-    _, bal = hs.source_field(lay, fans(lay, (1,)))  # 1대 정지: 7대가 8.23씩, 새지 않는다
+    cap = TOTAL / 6
+    assert bal["crac_return_m3s"] == pytest.approx([TOTAL / 8] * 8, abs=0.01)
+    _, bal = hs.source_field(lay, fans(lay, (1,)))  # 1대 정지: 7대가 나눠 받고 새지 않는다
     assert sum(bal["aisle_leak_m3s"]) == pytest.approx(0.0, abs=1e-6)
-    assert max(bal["crac_return_m3s"]) == pytest.approx(57.6 / 7, abs=0.01)
-    _, bal = hs.source_field(lay, fans(lay, (1, 5)))  # 2대 정지: 6대가 용량 9.6까지, 아직 새지 않는다
+    assert max(bal["crac_return_m3s"]) == pytest.approx(TOTAL / 7, abs=0.01)
+    _, bal = hs.source_field(lay, fans(lay, (1, 5)))  # 2대 정지: 6대가 용량까지, 아직 새지 않는다
     assert sum(bal["aisle_leak_m3s"]) == pytest.approx(0.0, abs=1e-6)
-    _, bal = hs.source_field(lay, fans(lay, (0, 1, 2)))  # 3대 정지: 5대 x 9.6 = 48, 9.6이 샌다
-    assert sum(bal["aisle_leak_m3s"]) == pytest.approx(9.6, abs=0.05)
+    _, bal = hs.source_field(lay, fans(lay, (0, 1, 2)))  # 3대 정지: 5대 x 용량, 용량 한 대분이 샌다
+    assert sum(bal["aisle_leak_m3s"]) == pytest.approx(cap, abs=0.05)
     f = fans(lay, (1,))
-    f[0] = 0.5  # 팬을 줄인 공조기는 용량(4.8)까지만, 남는 양은 다른 공조기가 나눈다
+    f[0] = 0.5  # 팬을 줄인 공조기는 용량의 절반까지만, 남는 양은 다른 공조기가 나눈다
     q, leak = hs.crac_returns(lay, f)
-    assert q[0] == pytest.approx(4.8, abs=0.01) and q.sum() == pytest.approx(57.6, abs=0.01) and leak.sum() == pytest.approx(0.0, abs=1e-6)
+    assert q[0] == pytest.approx(cap / 2, abs=0.01) and q.sum() == pytest.approx(TOTAL, abs=0.01) and leak.sum() == pytest.approx(0.0, abs=1e-6)
 
 
 def test_missing_leak_slots_stop_instead_of_dropping_flow(lay):
@@ -103,7 +105,7 @@ def test_flow_converges_and_is_reasonable(lay, hall):
 
 def test_hot_air_rises_through_ceiling_grilles(lay, hall):
     """천장 회수 방식(docs/35): 열기 통로의 뜨거운 공기는 천장 회수 그릴(열기 통로 위, 줄 길이만큼)로 올라간다.
-    그릴 면을 위로 지나는 유량이 랙 전체 유량(57.6 m3/s)의 95 % 이상이다(정상, 공조기 8대 가동)."""
+    그릴 면을 위로 지나는 유량이 랙 전체 유량(TOTAL)의 95 % 이상이다(정상, 공조기 8대 가동)."""
     ceil = [p for p in hall["panels"] if p["name"].startswith("Ceiling_")]
     if not ceil:
         pytest.skip("천장 회수 방식이 아닌 장면")
@@ -119,4 +121,4 @@ def test_hot_air_rises_through_ceiling_grilles(lay, hall):
         ys, ye = hs.rng(p["min"][1], p["max"][1], ny)
         w = u[xs:xe, ys:ye, zc, 2]
         up += float(w[lay.fluid[xs:xe, ys:ye, zc]].sum()) * hs.DX ** 2
-    assert up > 0.95 * 57.6, up
+    assert up > 0.95 * TOTAL, up

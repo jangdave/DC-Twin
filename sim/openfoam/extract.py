@@ -110,7 +110,7 @@ summary = {
     "rack_inlet_front_layer_mean_C": {"min": round(float(t_front.min()), 2), "mean": round(float(t_front.mean()), 2), "max": round(float(t_front.max()), 2),
                                       "end_racks_mean": round(float(t_front[end].mean()), 2), "middle_racks_mean": round(float(t_front[mid].mean()), 2)},
     "hottest_inlet_racks": [ids[i] for i in np.argsort(-t_anchor)[:5]],
-    "rack_through_speed_ms": {"target": 0.8, "mean": round(float(v_rack.mean()), 3), "min": round(float(v_rack.min()), 3), "max": round(float(v_rack.max()), 3)},
+    "rack_through_speed_ms": {"target": meta.get("v_rack_ms", 0.8), "mean": round(float(v_rack.mean()), 3), "min": round(float(v_rack.min()), 3), "max": round(float(v_rack.max()), 3)},
     "rack_exhaust_front_to_back_rise_C_mean": round(float((t_back - t_front).mean()), 2),
     "energy_balance_kW": {"rack_heat_in": meta.get("total_power_kw", meta["power_kw"] * len(ids)), "carried_out_by_crac_returns": round(out_kw, 1)},
     "T_all_cells_C": {"min": round(float(np.nanmin(Tg)), 2), "max": round(float(np.nanmax(Tg)), 2)},
