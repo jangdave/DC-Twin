@@ -3,8 +3,8 @@
  "source": "openfoam",
  "note": "시각화 목적. OpenFOAM(k-epsilon, 부력, 다공질 랙, 10 cm, 정상 상태, 랙 10 kW 균일)의 흐름을 20 cm로 줄였다. 실측이 아니다.",
  "shape": [
-  55,
-  68,
+  64,
+  81,
   24
  ],
  "cell_m": 0.2,
@@ -22,7 +22,7 @@
  "fields": [
   {
    "name": "all",
-   "max_ms": 12.4,
+   "max_ms": 12.59,
    "openfoam": {
     "iterations": 3000,
     "converged": false

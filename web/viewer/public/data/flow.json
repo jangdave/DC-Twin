@@ -3,8 +3,8 @@
  "source": "openfoam",
  "note": "시각화 목적. OpenFOAM(k-epsilon, 부력, 다공질 랙, 10 cm, 정상 상태, 랙 10 kW 균일)의 흐름을 20 cm로 줄였다. 실측이 아니다.",
  "shape": [
-  55,
-  68,
+  64,
+  81,
   24
  ],
  "cell_m": 0.2,
@@ -22,7 +22,7 @@
  "fields": [
   {
    "name": "all",
-   "max_ms": 12.41,
+   "max_ms": 12.59,
    "openfoam": {
     "iterations": 3000,
     "converged": false
@@ -30,7 +30,7 @@
   },
   {
    "name": "off01",
-   "max_ms": 18.7,
+   "max_ms": 16.52,
    "openfoam": {
     "iterations": 3000,
     "converged": false
@@ -38,23 +38,23 @@
   },
   {
    "name": "off02",
-   "max_ms": 12.82,
+   "max_ms": 14.83,
    "openfoam": {
-    "iterations": 934,
-    "converged": true
+    "iterations": 3000,
+    "converged": false
    }
   },
   {
    "name": "off03",
-   "max_ms": 12.82,
+   "max_ms": 14.83,
    "openfoam": {
-    "iterations": 933,
-    "converged": true
+    "iterations": 3000,
+    "converged": false
    }
   },
   {
    "name": "off04",
-   "max_ms": 18.7,
+   "max_ms": 16.52,
    "openfoam": {
     "iterations": 3000,
     "converged": false
@@ -62,7 +62,7 @@
   },
   {
    "name": "off05",
-   "max_ms": 18.7,
+   "max_ms": 16.52,
    "openfoam": {
     "iterations": 3000,
     "converged": false
@@ -70,23 +70,23 @@
   },
   {
    "name": "off06",
-   "max_ms": 12.82,
+   "max_ms": 14.86,
    "openfoam": {
-    "iterations": 933,
-    "converged": true
+    "iterations": 3000,
+    "converged": false
    }
   },
   {
    "name": "off07",
-   "max_ms": 12.82,
+   "max_ms": 14.85,
    "openfoam": {
-    "iterations": 937,
-    "converged": true
+    "iterations": 3000,
+    "converged": false
    }
   },
   {
    "name": "off08",
-   "max_ms": 18.7,
+   "max_ms": 16.52,
    "openfoam": {
     "iterations": 3000,
     "converged": false
