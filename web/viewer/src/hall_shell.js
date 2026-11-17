@@ -54,6 +54,23 @@ export function makeTileTexture(THREE_, { size = 256, n = 4, base = '#4a4f58', g
   return t;
 }
 
+// 흡입 그릴 무늬(연장 덕트 윗면, docs/35): 밝은 알루미늄 테두리 안에 어두운 칸 n x n개. 코드로 그려 파일 용량이 늘지 않는다
+export function makeGrilleTexture(THREE_, { size = 128, n = 4, frame = '#9aa1aa', hole = '#121417', bar = 3 } = {}) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  g.fillStyle = frame;
+  g.fillRect(0, 0, size, size);
+  const step = size / n;
+  g.fillStyle = hole;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) g.fillRect(i * step + bar / 2, j * step + bar / 2, step - bar, step - bar);
+  const t = new THREE_.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE_.RepeatWrapping;
+  t.colorSpace = THREE_.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 // 받은 glb를 장면에 맞게 손본다: 바닥과 천장은 타일 무늬, 이름 목록을 돌려준다.
 export function prepareShell(root) {
   const parts = new Map();

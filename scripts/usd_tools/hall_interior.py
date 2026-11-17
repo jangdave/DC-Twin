@@ -496,12 +496,16 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
     tri = {"Frame": 0, "Glass": 0}
     bar = 4.0
 
-    def solid(path, lo, hi, mat):
-        """유리 없는 상자 하나(칸막이 천장 판, 공조기 연장 덕트)."""
+    def solid(path, lo, hi, mat, top=None):
+        """유리 없는 상자 하나(칸막이 천장 판, 공조기 연장 덕트). top: 윗면만 다른 재질(연장 덕트 윗면의 흡입 그릴)."""
         x = UsdGeom.Xform.Define(stage, path)
         x.GetPrim().CreateAttribute("dct:assetType", Sdf.ValueTypeNames.Token, custom=True).Set("containment")
         mb = MeshB()
-        mb.box(lo, hi, mat, planar(100.0))
+        if top:
+            faces = {k: mat for k in ("+x", "-x", "+y", "-y", "-z")} | {"+z": top}
+            mb.box(lo, hi, faces, planar(100.0), uvfs={"+z": planar(60.0)})
+        else:
+            mb.box(lo, hi, mat, planar(100.0))
         author_mesh(stage, f"{path}/Frame", mb, mats)
         tri["Frame"] += mb.triangles()
 
@@ -565,7 +569,8 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
     for name, lo, hi, axis, pitch in hot_aisle_boxes(lay, cfg):
         panel(f"{cont}/{name}", lo, hi, axis, pitch)
     for name, lo, hi in ceiling_boxes(lay, cfg):
-        solid(f"{cont}/{name}", lo, hi, "ceiling" if name.startswith("Ceiling") else "frame")
+        # 연장 덕트 윗면(칸막이 천장 위 회수 공간에서 빨아들이는 입구)은 흡입 그릴(T_EggCrate)
+        solid(f"{cont}/{name}", lo, hi, "ceiling" if name.startswith("Ceiling") else "frame", top=None if name.startswith("Ceiling") else "grille")
     return tri
 
 

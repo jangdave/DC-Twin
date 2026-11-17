@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { SKY_PRESETS, makeHills, makeSky, mergeByMaterial, sunVector } from './env.js';
 import { Airflow, loadFlow } from './airflow.js';
 import { CITY, buildCity } from './city.js';
-import { containmentParts, prepareShell, shellVisibility } from './hall_shell.js';
+import { containmentParts, makeGrilleTexture, prepareShell, shellVisibility } from './hall_shell.js';
 import { CCTV_LIMITS } from './cctv.js';
 import { VIEWS } from './views.js';
 import { SETTINGS, pixelRatioFor } from './quality.js';
@@ -196,7 +196,16 @@ export class HallScene {
     boxMesh(roofs.concat(transoms), new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
     // 칸막이 천장: 벽이 하나 더 있다는 것을 알아볼 수 있을 만큼(2026-11-17 사용자 요청, 0.08 -> 0.22), 홀 안이 비쳐 보이는 정도
     if (ceilings.length) boxMesh(ceilings, new THREE.MeshStandardMaterial({ color: 0xb4bac3, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
-    if (hoods.length) boxMesh(hoods, new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.3, roughness: 0.6 })).renderOrder = 0;
+    if (hoods.length) {
+      boxMesh(hoods, new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.3, roughness: 0.6 })).renderOrder = 0;
+      // 윗면 흡입 그릴: 덕트 윗면보다 0.5 cm 위의 얇은 판(칸 약 5 cm). 위에서 내려다볼 때 공조기가 천장 위에서 빨아들이는 곳이 보인다
+      const [p0] = hoods;
+      const sx = (p0.max[0] - p0.min[0]) / 100, sy = (p0.max[1] - p0.min[1]) / 100;
+      const tex = makeGrilleTexture(THREE);
+      tex.repeat.set(sx / 0.2, sy / 0.2);
+      const tops = hoods.map((p) => ({ min: [p.min[0] + 3, p.min[1] + 3, p.max[2]], max: [p.max[0] - 3, p.max[1] - 3, p.max[2] + 0.5] }));
+      boxMesh(tops, new THREE.MeshStandardMaterial({ map: tex, metalness: 0.5, roughness: 0.5 })).renderOrder = 0;
+    }
     if (handles.length) boxMesh(handles, new THREE.MeshStandardMaterial({ color: 0x2b2f36, metalness: 0.6, roughness: 0.4 })).renderOrder = 0;
     const framed = roofs.concat(sides, transoms);
     if (framed.length) {
