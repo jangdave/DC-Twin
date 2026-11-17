@@ -40,7 +40,7 @@
 
 ## 3. 바꾼 곳
 
-- 공조기 모델: `blender/scripts/make_crah_downflow.py` → `blender/crah.blend` → `usd/assets/crah.usda`, 웹 `models/crah.glb`. prim 이름과 `dct:assetType`은 옛 모델과 같다(`CRAC`, `crac`). 앞면은 문 3짝과 표시창, 윗면은 흡입 그릴. 옛 `crac.usda`, `crac.glb`는 옛 장면 설정을 위해 남긴다.
+- 공조기 모델: `blender/scripts/make_crah_downflow.py` → `blender/crah.blend` → `usd/assets/crah.usda`, 웹 `models/crah.glb`. prim 이름과 `dct:assetType`은 옛 모델과 같다(`CRAC`, `crac`). 앞면은 문 3짝과 표시창, 윗면은 흡입 그릴. 옛 `crac.usda`는 옛 장면 설정을 위해 남기고, 쓰지 않는 웹 `crac.glb`는 용량 때문에 지웠다.
 - 설정: `hall01.config.json`(통로 폭, `crac` 새 치수와 `return_face: "top"`, `containment.hot_end = "ceiling"`, `containment.ceiling.z = 320`), `hall01_cac.config.json`(통로 폭, 공조기)
 - 장면 생성(`hall_interior.py`): `hot_aisle_boxes`(랙 위 ~ 천장 옆판, 줄 끝 문), `ceiling_boxes`(칸막이 천장 판 `Ceiling_*`, 냉기 통로 위는 `Ceiling_Cold_k`, 공조기 연장 덕트 `Collar_*`), `crac_ys`(공조기 위치), `crac_return`(회수 면과 높이). 서버실 껍데기에 천장 회수 그릴(`Ceiling_ReturnGrille`)을 그리고 조명을 칸막이 천장에 붙인다. 공조기에 `dct:returnFace = "top"`, `dct:returnZ`(회수 칸 높이)를 적는다. 설정에 `hot_end`가 없으면 옛 구조(`full`)를 만든다.
 - 열 계산(`hall60_sim`): `return_face == "top"`이면 `return_z_cm`부터 위로 올라가 처음 열린 층에서 회수한다(천장 판 5 cm가 칸 10 cm보다 얇아 판 윗면이 막힌 칸 안에 들어간다). 천장 판이 있으면(`ceiling`) 켜진 공조기가 홀 전체 배기를 똑같이 나눠 받고(용량 9.6 m³/s까지, 팬을 줄인 공조기 몫은 나머지가 나눔) 넘치는 양은 냉기 통로 위 천장 판을 거쳐 방으로 샌다.
@@ -96,3 +96,25 @@
 6. 시험 정리: `test_cold_aisle_top.py`가 이중 바닥 높이(80 cm)를 빼고 랙 윗면 칸을 골라 냉기 통로 중간 높이(1.2 m)를 재고 있었다(이중 바닥 도입 때부터). 고친 뒤 차단막(SIGMA_COLD_TOP)은 위에서 들어오는 공기를 0.25에서 0.11 m³/s로 줄인다. 천장 회수 장면은 냉기 통로 위가 막혀 윗면 유입 자체가 양끝 유입(13 m³/s)의 2 %라, 양끝이 늘어나는지는 보지 않는다. `test_leak_heat.py`는 장면 종류에 따라 새는 경우(옛 장면 같은 통로 2대, 천장 회수 3대 정지)를 고른다.
 7. 웹: 칸막이 천장 판을 그리지 않아 조명이 허공에 떠 보이고 열기 통로 윗면이 뚫려 보였다(2026-11-17 사용자 화면). 천장 회수 그릴을 늘 반투명으로 보이고, 카메라가 칸막이 천장보다 위면 조명을 숨긴다.
 8. 공기 흐름 입자 깜빡임(2026-11-17 사용자 지적 "반짝이는 느낌"): 입자 4,000개 중 초당 약 310개가 흐름 밖으로 나가거나 멈출 때 밝은 채로 지워졌다. 이제 그 자리에 멈춰 0.4초 동안 흐려진 뒤 다시 태어난다(`airflow.js` `_retire`, `FADE_OUT`). 밝은 채 지워지는 입자 0개.
+
+### 2026-11-17 실제 시설에 있는 부속 설비(사용자 요청 "이것들 다 나오면 좋을거 같아")
+
+| 설비 | 넣은 곳 | 계산 |
+|---|---|---|
+| 줄 끝 분전반(RPP) | `Power/RPP_01~06`(`dct:assetType = rpp`, 센서 없음), 줄마다 서쪽 끝 60 x 100 x 200 cm(설정 `power.rpp`). 줄 끝 통로는 그 자리에서 180 cm | 막힌 상자(Warp `obstacles`, OpenFOAM 고체). 열은 내지 않는다고 본다 |
+| 격리 통로 안 스프링클러 | 서버실 껍데기 `Fire_Sprinkler_Aisle`(빨간 배관, 헤드 240 cm 간격) | 화면만 |
+| 방 천장 연기 감지기와 헤드 | `Fire_Ceiling_Devices`(카메라가 칸막이 천장 위면 웹에서 숨김) | 화면만 |
+| 케이블 구멍 브러시 막음 | `Floor_Grommets`(랙마다 뒤쪽 바닥 25 x 10 cm) | 계산은 원래 막힌 것으로 본다(`raised_floor`에 `cutouts` 없음) |
+| 랙 빈칸 막음판 | 랙 모델 `Blank/`(14~18U, 25~29U, 32~42U, 1U 판) | 계산은 원래 랙 안으로 새지 않는다고 본다. 웹은 랙 앞문을 불투명하게 그려 보이지 않는다 |
+| 홀 출입문 | `Wall_South_Door`(장비 반입용 양문 180 x 240 cm), `Wall_North_Door`(비상 출입문 100 x 220 cm). 웹은 붙은 벽과 함께 숨긴다 | 화면만(닫힌 문) |
+
+- 분전반 센서(전력, 부하율)를 붙이면 센서가 204개에서 늘어 센서 목록, 생성기, 녹화가 함께 바뀐다. 필요해지면 따로 한다.
+- 텍스처: 랙 모델을 다시 만들려고 CC0 텍스처를 받고(`fetch_cc0_textures.py --sources cc0_sources_hall.json`) 홀 텍스처를 만들었다(둘 다 Git 제외 폴더).
+- 웹 용량: 쓰지 않게 된 `crac.glb`를 지웠다. 공조기 정지 8장이 들어간 흐름 파일을 넣은 뒤 다시 잰다.
+
+### 2026-11-17 설비 텍스처와 미리보기(사용자 요청 "설비들 텍스처 바뀐 구조에 맞게 고화질로")
+
+- 새 4K 텍스처(`make_hall_textures.py`): `T_RppPanel`(분전반 앞판: 차단기 2열 x 18단, 잠금 손잡이, 통풍 살, UV 0~1 한 번), `T_EggCrate`(천장 회수 그릴: 알루미늄 격자 칸 1.5 cm, 열린 면적 78 %). 분전반 몸통과 홀 출입문은 `T_CracPaint`(도장 철판). `T_CracPaint`는 큰 얼룩(저주파 노이즈)을 0.02에서 0.006으로 줄였다(공조기 큰 면이 얼룩져 보였다).
+- 미리보기(`render_hall_previews.py`, 2560 x 1440, EEVEE 64 샘플): 카메라와 면광원 위치를 형상 사본(`layout.json`)과 장면의 조명 패널에서 정하게 바꿨다(예전에는 옛 홀 좌표를 숫자로 적었다). 새 그림: walkway, hot_aisle_door, ceiling_grille, rpp, crac_collar, hall_door. 옛 `hall_crac_top`(작은 공조기 윗면 팬)은 지웠다. Blender USD 가져오기는 메시 하나짜리 묶음을 합쳐 칸막이 천장 판 이름이 `Frame.###`가 되므로, 절단도에서는 높이로 찾아 숨긴다.
+- 렌더 전에 `blender/textures/hall`을 `usd/assets/textures/hall`(Git 제외, 장면 재질이 참조)로 복사해야 한다.
+- 흐름 저장 키(`precise.scene_tag`): 예전에는 바닥 아래 구성만 보아 격벽, 공조기, 분전반을 바꿔도 키가 같았다(이번에는 케이블 트레이 위치가 함께 바뀌어 우연히 달랐다). 서버실 껍데기와 재질을 뺀 위치, 참조, `dct:` 속성, 경계 상자로 지문을 만든다. 재질만 바꾸면 키가 그대로다(시험 `test_scene_tag_changes_with_geometry_not_materials`).

@@ -139,7 +139,7 @@ mergePatchPairs ();
     # 냉기 통로 격리(CAC, docs/34): 냉기 통로 지붕은 틈이 있는 판(다공질 저항), 끝 문은 막힘
     cac = any(p["name"].startswith("ColdAisle_") for p in hall["panels"])
     cac_roofs = [p for p in hall_g["panels"] if cac and p["name"].startswith("ColdAisle_") and p["name"].endswith("_Roof")]
-    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names and p not in cac_roofs]
+    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names and p not in cac_roofs] + list(hall_g.get("obstacles", []))  # 분전반(docs/35)
     # 바닥 아래 장애물(docs/33 6장): 케이블 트레이와 배관은 막힌 칸, 케이블 구멍은 바닥판에서 저항 없이 열린 칸
     under = hall_g.get("underfloor", []) if plenum else []
     solids += [u for u in under if u["kind"] != "cutout"]

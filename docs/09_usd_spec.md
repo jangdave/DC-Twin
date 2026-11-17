@@ -44,8 +44,8 @@
 |---|---|
 | 이름 형식 | 영문 대소문자와 `_`, 번호는 **두 자리 이상**(`Rack_01`) |
 | 번호 범위 | 장비 번호는 **홀 안에서 겹치지 않는다.** `Row02`의 첫 랙은 `Rack_01`이 아니라 `Rack_11`이다. |
-| 장비 종류 | rack, server, crac, pdu |
-| 경로 | rack: `/DC/Hall##/Row##/Rack_##`, server: 랙 아래 `Server_U##`, crac: `/DC/Hall##/Cooling/CRAC_##`, pdu: `/DC/Hall##/Power/PDU_##` |
+| 장비 종류 | rack, server, crac, pdu, rpp(줄 끝 분전반, 센서 없음, docs/35) |
+| 경로 | rack: `/DC/Hall##/Row##/Rack_##`, server: 랙 아래 `Server_U##`, crac: `/DC/Hall##/Cooling/CRAC_##`, pdu: `/DC/Hall##/Power/PDU_##`, rpp: `/DC/Hall##/Power/RPP_##` |
 
 ## 4. 센서 앵커
 

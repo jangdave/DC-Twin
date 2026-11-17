@@ -11,6 +11,7 @@
     "_note": "줄 2개가 냉기 통로를 사이에 두고 마주 본다. 바깥쪽 두 통로 폭 포함, 열기 통로는 줄 사이와 양 바깥쪽에 모두 4개"
   },
   "crac": { "asset": "../assets/crah.usda", "width": 240, "depth": 90, "height": 220, "per_side": 4, "return_face": "top", "_note": "하향 송풍 공조기(폭 240, 깊이 90). 윗면으로 회수한다(2026-11-17, docs/35)" },
+  "power": { "rpp": { "width": 60, "height": 200, "_note": "줄 끝 분전반(RPP). 줄마다 서쪽 끝에 하나, 센서 없음(2026-11-17, docs/35)" } },
   "containment": { "type": "cold", "panel_thickness": 5, "roof_z": 200 },
   "raised_floor": {
     "enabled": true, "plenum_depth": 60, "tile_open_ratio": 0.25,

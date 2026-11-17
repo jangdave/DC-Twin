@@ -9,6 +9,7 @@
     Frame/(Base, Top, Post_01~04, Panel_L/R, Rail_Front_L/R, Rail_Rear_L/R)  틀
     Door/(Front, Front_Handle, Rear_L, Rear_R, Rear_Handle)                  앞문, 뒷문(두 쪽)
     CableBar/(V_Left, V_Right, H_07, H_19, H_24, H_31)                      세로 케이블 정리 바, 앞면 가로 정리 바
+    Blank/(U14_18, U25_29, U32_42)                                          빈 U 막음판(1U 판을 이어 붙임). 앞면 빈칸으로 뜨거운 공기가 되돌아오지 않게 막는다(docs/35)
     Caster/(FL, FR, RL, RR)                                                 아래 바퀴
     Server_U##  (assetType=server, 이름은 시작 U) / Server_U##_Face (앞면)     블록아웃과 같은 이름과 위치
     Anchors/Sensor_*                                                         센서 앵커(블록아웃과 같은 자리)
@@ -28,6 +29,7 @@ from hall_parts import MB2, Parts2  # noqa: E402
 U = 4.445
 RACK_W, RACK_D, RACK_H = 60.0, 100.0, 200.0
 FIRST_U_Z = 9.0  # 첫 U의 바닥 높이(블록아웃과 같다)
+TOTAL_U = 42
 SERVERS = [(1, 1), (2, 1), (3, 2), (5, 2), (8, 1), (9, 1), (10, 4), (20, 2), (22, 2), (30, 1)]  # (시작 U, 높이 U): 블록아웃과 같다
 BAR_US = (7, 19, 24, 31)  # 서버가 없는 U에 가로 케이블 정리 바
 SERVER_W, FACE_W = 44.5, 48.26
@@ -54,6 +56,7 @@ def make_materials():
         "M_ServerFront": hp.tex_material("M_ServerFront", "T_ServerFront", 0.3, False, emissive="T_ServerFront_Emissive", emis_strength=3.0),
         "M_ServerHandle": hp.flat_material("M_ServerHandle", (0.22, 0.23, 0.25), 0.6, 0.4),
         "M_CableBar": hp.flat_material("M_CableBar", (0.03, 0.03, 0.035), 0.1, 0.7),
+        "M_Blank": hp.flat_material("M_Blank", (0.035, 0.037, 0.042), 0.3, 0.55),
         "M_Caster": hp.flat_material("M_Caster", (0.45, 0.46, 0.48), 0.9, 0.4),
         "M_CasterWheel": hp.flat_material("M_CasterWheel", (0.02, 0.02, 0.02), 0.0, 0.8),
     }
@@ -134,6 +137,29 @@ def cable_bars(objs):
             b.cbox((x, -44.25, zb + h / 2), (post_w, 1.5, h - 1.8), "M_CableBar", ts=TS_METAL)
 
 
+def empty_ranges() -> list[tuple[int, int]]:
+    """서버도 가로 정리 바도 없는 U 구간 [(시작, 끝)]."""
+    used = {u for s, h in SERVERS for u in range(s, s + h)} | set(BAR_US)
+    out, start = [], None
+    for u in range(1, TOTAL_U + 1):
+        if u not in used and start is None:
+            start = u
+        if (u in used or u == TOTAL_U) and start is not None:
+            end = u if u not in used else u - 1
+            out.append((start, end))
+            start = None
+    return out
+
+
+def blanks(objs):
+    B = Parts2("Blank", objs)
+    for a, b in empty_ranges():
+        mb = B(f"U{a:02d}_{b:02d}")
+        for u in range(a, b + 1):  # 1U 판마다 0.4 cm 틈(판이 여러 장인 것이 보이게)
+            zb = FIRST_U_Z + (u - 1) * U
+            mb.cbox((0, SERVER_Y0 - FACE_T / 2, zb + (U - 0.4) / 2), (FACE_W, FACE_T, U - 0.4), "M_Blank", ch=0.15, ts=TS_METAL)
+
+
 def casters(objs):
     G = Parts2("Caster", objs)
     for name, (sx, sy) in (("FL", (-1, -1)), ("FR", (1, -1)), ("RL", (-1, 1)), ("RR", (1, 1))):
@@ -175,6 +201,7 @@ def build() -> None:
     frame(objs)
     doors(objs)
     cable_bars(objs)
+    blanks(objs)
     casters(objs)
     hp.place(objs, mats, rack)
     sv = servers(objs, mats, rack)

@@ -24,7 +24,7 @@ from dct_ids import sensor_id_from_path
 METERS_PER_UNIT = 0.01  # 단위 cm
 UP_AXIS = "Z"
 ROOT_NAME = "DC"
-ASSET_TYPES = {"rack", "server", "crac", "pdu", "sensor", "shell", "containment", "vent", "building", "outdoor"}
+ASSET_TYPES = {"rack", "server", "crac", "pdu", "rpp", "sensor", "shell", "containment", "vent", "building", "outdoor"}
 SENSOR_REQUIRED_TYPES = {"rack", "crac", "pdu"}  # 장면(scene)에서 센서 앵커가 하나 이상 있어야 하는 종류
 EQUIPMENT_CODES = {"Rack": "RK", "CRAC": "CR", "PDU": "PD"}  # 센서 ID의 장비 코드 (09 규격 5장)
 ZONES = {"cold_aisle", "hot_aisle"}
@@ -36,6 +36,7 @@ PATH_RULES = {
     "server": re.compile(r"^/DC/Hall\d{2}/Row\d{2}/Rack_\d{2,}/Server_U\d{2,}$"),
     "crac": re.compile(r"^/DC/Hall\d{2}/Cooling/CRAC_\d{2,}$"),
     "pdu": re.compile(r"^/DC/Hall\d{2}/Power/PDU_\d{2,}$"),
+    "rpp": re.compile(r"^/DC/Hall\d{2}/Power/RPP_\d{2,}$"),  # 줄 끝 분전반(센서 없음, docs/35)
     "sensor": re.compile(r"^/DC/Hall\d{2}/(Row\d{2}/Rack_\d{2,}|Cooling/CRAC_\d{2,}|Power/PDU_\d{2,})/Anchors/Sensor_[A-Z0-9_]+$"),
     "shell": re.compile(r"^/DC/Hall\d{2}/Shell/[A-Za-z0-9_]+$"),
     "containment": re.compile(r"^/DC/Hall\d{2}/Containment/[A-Za-z0-9_]+$"),

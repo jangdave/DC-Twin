@@ -2237,6 +2237,98 @@
    ]
   }
  ],
+ "obstacles": [
+  {
+   "kind": "rpp",
+   "name": "RPP_01",
+   "path": "/DC/Hall01/Power/RPP_01",
+   "min": [
+    270.0,
+    120.0,
+    0.0
+   ],
+   "max": [
+    330.0,
+    220.0,
+    200.0
+   ]
+  },
+  {
+   "kind": "rpp",
+   "name": "RPP_02",
+   "path": "/DC/Hall01/Power/RPP_02",
+   "min": [
+    270.0,
+    400.0,
+    0.0
+   ],
+   "max": [
+    330.0,
+    500.0,
+    200.0
+   ]
+  },
+  {
+   "kind": "rpp",
+   "name": "RPP_03",
+   "path": "/DC/Hall01/Power/RPP_03",
+   "min": [
+    270.0,
+    620.0,
+    0.0
+   ],
+   "max": [
+    330.0,
+    720.0,
+    200.0
+   ]
+  },
+  {
+   "kind": "rpp",
+   "name": "RPP_04",
+   "path": "/DC/Hall01/Power/RPP_04",
+   "min": [
+    270.0,
+    900.0,
+    0.0
+   ],
+   "max": [
+    330.0,
+    1000.0,
+    200.0
+   ]
+  },
+  {
+   "kind": "rpp",
+   "name": "RPP_05",
+   "path": "/DC/Hall01/Power/RPP_05",
+   "min": [
+    270.0,
+    1120.0,
+    0.0
+   ],
+   "max": [
+    330.0,
+    1220.0,
+    200.0
+   ]
+  },
+  {
+   "kind": "rpp",
+   "name": "RPP_06",
+   "path": "/DC/Hall01/Power/RPP_06",
+   "min": [
+    270.0,
+    1400.0,
+    0.0
+   ],
+   "max": [
+    330.0,
+    1500.0,
+    200.0
+   ]
+  }
+ ],
  "anchors": [
   {
    "path": "/DC/Hall01/Row01/Rack_01/Anchors/Sensor_TEMP_IN",

@@ -186,7 +186,14 @@ def define_materials(stage, looks: str, tex_dir: str) -> dict:
         "light_panel": M("M_LightPanel", color=(0.95, 0.95, 0.92), roughness=0.4, emissive=(4.0, 3.9, 3.6)),
         "light_frame": M("M_LightFrame", color=(0.75, 0.76, 0.78), roughness=0.4, metallic=0.6),
         "frame": M("M_ContainFrame", color=(0.55, 0.60, 0.66), roughness=0.35, metallic=0.85),
-        "grille": M("M_CeilingGrille", color=(0.20, 0.21, 0.23), roughness=0.5, metallic=0.6),
+        "door": M("M_HallDoor", roughness=0.45, metallic=0.3, tex_dir=tex_dir, prefix="T_CracPaint"),  # 도장 철판(docs/35)
+        "fire_pipe": M("M_FirePipe", color=(0.70, 0.08, 0.06), roughness=0.45, metallic=0.3),
+        "detector": M("M_Detector", color=(0.90, 0.90, 0.88), roughness=0.6),
+        "grommet": M("M_Grommet", color=(0.04, 0.04, 0.045), roughness=0.9),
+        "rpp_body": M("M_RppBody", roughness=0.45, metallic=0.3, tex_dir=tex_dir, prefix="T_CracPaint"),
+        "rpp_front": M("M_RppFront", roughness=0.5, metallic=0.3, tex_dir=tex_dir, prefix="T_RppPanel"),  # 차단기 창, 손잡이, 통풍 살(UV 0~1 한 번)
+        "rpp_display": M("M_RppDisplay", color=(0.10, 0.80, 0.60), roughness=0.3, emissive=(0.05, 0.45, 0.34)),
+        "grille": M("M_CeilingGrille", roughness=0.4, metallic=0.6, tex_dir=tex_dir, prefix="T_EggCrate"),  # 알루미늄 격자, 60 cm 한 장
         "glass": M("M_ContainGlass", color=(0.35, 0.60, 0.85), roughness=0.08, opacity=0.22),
     }
 
@@ -252,6 +259,8 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
             haz.box((x0, yc - cw / 2 + 5.0, 0), (x0 + 12.0, yc + cw / 2 - 5.0, th), "hazard", planar(HAZARD_TILE), skip=("-z",))
     put("Floor_Markings_Hazard", haz)
 
+    tri.update(build_shell_extras(stage, shell, lay, cfg, mats))
+
     # 조명: 발광 재질 패널(광원 prim 없음. 실제 빛은 Unreal이 따로 둔다). 냉기 통로 위(천장 아래)와 열기 통로 위(격벽 지붕 아래)
     lights = f"{shell}/Lights"
     UsdGeom.Xform.Define(stage, lights).GetPrim().CreateAttribute("dct:assetType", Sdf.ValueTypeNames.Token, custom=True).Set("shell")
@@ -266,7 +275,7 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
         rz, H = Z + LIGHT_GAP, Z
         gr = MeshB()
         for (ya, yb) in lay.hot_aisles:
-            gr.box((lay.rack_x0, ya, Z + 2.0), (lay.rack_x1, yb, Z + 2.6), "grille", planar(100.0))  # 뒤판
+            gr.box((lay.rack_x0, ya, Z + 2.0), (lay.rack_x1, yb, Z + 2.6), "grille", planar(60.0))  # 격자판(T_EggCrate, 60 cm 한 장)
             k = 0
             while lay.rack_x0 + 15.0 * (k + 1) < lay.rack_x1:
                 xg = lay.rack_x0 + 15.0 * (k + 1)
@@ -291,6 +300,70 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
             dif.box((xc - 57.0, yc - w / 2 + 3.0, ztop - 4.0), (xc + 57.0, yc + w / 2 - 3.0, ztop - 3.0), "light_panel", planar(100.0))
             author_mesh(stage, f"{p}/Diffuser", dif, mats)
             tri["Lights"] += fr.triangles() + dif.triangles()
+    return tri
+
+
+def build_shell_extras(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
+    """화면용 홀 부속 설비(계산에는 넣지 않는다, docs/35): 홀 출입문, 격리 통로 안 스프링클러 배관과 헤드, 방 천장의 헤드와 연기 감지기,
+    랙 뒤 바닥 케이블 구멍의 브러시 막음."""
+    W, L = lay.width, lay.length
+    tri: dict[str, int] = {}
+
+    def put(name, mb):
+        author_mesh(stage, f"{shell}/{name}", mb, mats, "shell")
+        tri[name] = mb.triangles()
+
+    # 홀 출입문(벽 안쪽 면에 2 cm 두께로 붙인다): 남쪽 벽 장비 반입용 양문(폭 180, 높이 240), 북쪽 벽 비상 출입문(폭 100, 높이 220)
+    cd = cfg["crac"]["depth"]
+    for wall, yw, sgn, x0, w, h, leaves in (("South", 0.0, 1, cd + 40.0, 180.0, 240.0, 2), ("North", L, -1, W - cd - 40.0 - 100.0, 100.0, 220.0, 1)):
+        mb = MeshB()
+        y0, y1 = (yw, yw + 2.0) if sgn > 0 else (yw - 2.0, yw)
+        mb.box((x0 - 6.0, y0, 0), (x0, y1, h + 6.0), "door")  # 문틀
+        mb.box((x0 + w, y0, 0), (x0 + w + 6.0, y1, h + 6.0), "door")
+        mb.box((x0, y0, h), (x0 + w, y1, h + 6.0), "door")
+        lw = w / leaves
+        for k in range(leaves):
+            xa = x0 + k * lw
+            mb.box((xa + 0.5, y0, 0.5), (xa + lw - 0.5, y1, h - 0.5), "door")  # 문짝(틈 1 cm)
+            xh = xa + lw - 12.0 if (leaves == 1 or k == 0) else xa + 8.0  # 손잡이(문짝이 만나는 쪽)
+            hy0, hy1 = (y1, y1 + 4.0) if sgn > 0 else (y0 - 4.0, y0)
+            mb.box((xh, hy0, 95.0), (xh + 4.0, hy1, 125.0), "grommet")
+        put(f"Wall_{wall}_Door", mb)
+
+    # 스프링클러: 격리한 통로(HAC는 열기 통로, CAC는 냉기 통로) 안 천장 아래 배관(지름 대신 6 cm 각관)과 헤드 240 cm 간격
+    ceil = ceiling_mode(cfg)
+    rz = cfg["containment"]["roof_z"]
+    top = ceiling_z(cfg) if ceil else rz
+    aisles = lay.cold_aisles if containment_type(cfg) == "cold" else lay.hot_aisles
+    pipe = MeshB()
+    for (ya, yb) in aisles:
+        yc = (ya + yb) / 2
+        pipe.box((lay.rack_x0, yc - 3.0, top - 25.0), (lay.rack_x1, yc + 3.0, top - 19.0), "fire_pipe")
+        x = lay.rack_x0 + 120.0
+        while x < lay.rack_x1 - 60.0:
+            pipe.box((x - 2.0, yc - 2.0, top - 33.0), (x + 2.0, yc + 2.0, top - 25.0), "fire_pipe")
+            x += 240.0
+    put("Fire_Sprinkler_Aisle", pipe)
+    # 방 천장(칸막이 천장이 있으면 그 아랫면): 헤드와 연기 감지기(냉기 통로와 줄 끝 통로 위)
+    room_top = ceiling_z(cfg) if ceil else lay.height
+    det = MeshB()
+    spots = [((ya + yb) / 2, lay.rack_x0 + 60.0 + 240.0 * k) for (ya, yb) in lay.cold_aisles for k in range(3)]
+    spots += [(lay.length * (k + 0.5) / 4, x) for k in range(4) for x in (cd + 120.0, W - cd - 120.0)]
+    for yc, xc in spots:
+        det.box((xc - 6.0, yc - 6.0, room_top - 4.0), (xc + 6.0, yc + 6.0, room_top), "detector")  # 연기 감지기
+        det.box((xc + 60.0 - 2.0, yc - 2.0, room_top - 8.0), (xc + 60.0 + 2.0, yc + 2.0, room_top), "detector")  # 헤드(흰색 매립형)
+    put("Fire_Ceiling_Devices", det)
+
+    # 케이블 구멍 브러시 막음: 랙마다 뒤쪽(열기 통로 쪽) 바닥에 25 x 10 cm(계산은 원래 막힌 것으로 본다)
+    gr = MeshB()
+    rk = cfg["rack"]
+    for i, y0 in enumerate(lay.row_y0):
+        front_plus = lay.row_front_plus_y[i]
+        yb = y0 - 12.0 if front_plus else y0 + rk["depth"] + 2.0  # 뒷면 바로 밖
+        for n in range(cfg["rows"]["racks_per_row"]):
+            xc = lay.rack_x0 + rk["width"] * (n + 0.5)
+            gr.box((xc - 12.5, yb, 0.0), (xc + 12.5, yb + 10.0, 0.8), "grommet")
+    put("Floor_Grommets", gr)
     return tri
 
 
@@ -493,6 +566,41 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
         panel(f"{cont}/{name}", lo, hi, axis, pitch)
     for name, lo, hi in ceiling_boxes(lay, cfg):
         solid(f"{cont}/{name}", lo, hi, "ceiling" if name.startswith("Ceiling") else "frame")
+    return tri
+
+
+def rpp_boxes(lay, cfg: dict) -> list[tuple[str, tuple, tuple]]:
+    """줄 끝 분전반(RPP, Remote Power Panel) [(이름, 아래, 위)]. 줄마다 서쪽 끝에 랙과 같은 깊이로 하나(docs/35).
+    설정 power.rpp가 없으면 없다. 계산(hall60_sim, gen_case)은 막힌 상자로 읽는다(열은 내지 않는다고 본다)."""
+    rp = cfg.get("power", {}).get("rpp")
+    if not rp:
+        return []
+    d = cfg["rack"]["depth"]
+    w, h = float(rp.get("width", 60)), float(rp.get("height", 200))
+    return [(f"RPP_{i + 1:02d}", (lay.rack_x0 - w, y0, 0.0), (lay.rack_x0, y0 + d, h)) for i, y0 in enumerate(lay.row_y0)]
+
+
+def build_power(stage, power: str, lay, cfg: dict, mats: dict) -> int:
+    """분전반 캐비닛: 몸통, 앞판(줄 끝 통로 쪽, -x), 차단기 칸 줄, 표시창. prim은 dct:assetType = rpp(센서 없음)."""
+    tri = 0
+    for name, lo, hi in rpp_boxes(lay, cfg):
+        p = f"{power}/{name}"
+        UsdGeom.Xform.Define(stage, p).GetPrim().CreateAttribute("dct:assetType", Sdf.ValueTypeNames.Token, custom=True).Set("rpp")
+        body = MeshB()
+        body.box((lo[0] + 1.5, lo[1], lo[2]), hi, "rpp_body", planar(100.0))
+        front = MeshB()
+        x0 = lo[0]
+        fy0, fy1, fz0, fz1 = lo[1] + 3.0, hi[1] - 3.0, 10.0, hi[2] - 4.0
+
+        def face_uv(ax, positive, p, fy0=fy0, fy1=fy1, fz0=fz0, fz1=fz1):  # 앞판(-x 면)에 T_RppPanel 한 장. 앞에서 보아 오른쪽이 u+
+            return ((fy1 - p[1]) / (fy1 - fy0), (p[2] - fz0) / (fz1 - fz0))
+
+        front.box((x0, fy0, fz0), (x0 + 1.5, fy1, fz1), "rpp_front", planar(100.0), uvfs={"-x": face_uv})
+        disp = MeshB()
+        disp.box((x0 - 0.0, lo[1] + 30.0, hi[2] - 40.0), (x0 + 0.6, hi[1] - 30.0, hi[2] - 25.0), "rpp_display", planar(100.0))
+        for nm, mb in (("Body", body), ("Front", front), ("Display", disp)):
+            author_mesh(stage, f"{p}/{nm}", mb, mats)
+            tri += mb.triangles()
     return tri
 
 

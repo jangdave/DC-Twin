@@ -4,11 +4,16 @@ import * as THREE from 'three';
 // 카메라가 벽 밖이나 천장 위에 있을 때 그 면을 숨겨 안이 보이게 한다. 좌표는 웹 장면 좌표(m)다.
 // bounds: {minX, maxX, minZ, maxZ, height}. 반환: 각 이름이 보이는지.
 export function shellVisibility(cam, b, margin = 0.05) {
+  const north = !(cam.z < b.minZ - margin), south = !(cam.z > b.maxZ + margin);
+  const aboveCeil = b.ceilingZ != null && cam.y > b.ceilingZ - margin;
   return {
     wall_west: !(cam.x < b.minX - margin),
     wall_east: !(cam.x > b.maxX + margin),
-    wall_north: !(cam.z < b.minZ - margin), // 웹 Z는 -USD y라서 north(+y)가 작은 Z쪽이다
-    wall_south: !(cam.z > b.maxZ + margin),
+    wall_north: north, // 웹 Z는 -USD y라서 north(+y)가 작은 Z쪽이다
+    wall_south: south,
+    wall_north_door: north, // 홀 출입문은 붙어 있는 벽과 함께 숨긴다(docs/35)
+    wall_south_door: south,
+    detector: !aboveCeil, // 방 천장의 연기 감지기와 스프링클러 헤드(천장 위에서는 천장에 가려진다)
     ceiling: !(cam.y > b.height - margin),
     // 칸막이 천장이 있는 장면(docs/35, b.ceilingZ): 천장 판은 그리지 않으므로 카메라가 그보다 위면 천장에 붙은 조명도 숨긴다
     // (허공에 떠 보이지 않게). 천장 회수 그릴은 반투명으로 늘 보여 열기 통로 윗면이 막혀 있음을 보여 준다(prepareShell)

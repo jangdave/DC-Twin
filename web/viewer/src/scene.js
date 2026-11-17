@@ -153,6 +153,13 @@ export class HallScene {
       return mesh;
     };
     boxMesh(data.vents, new THREE.MeshBasicMaterial({ color: 0x1b5fb0 }));
+    // 줄 끝 분전반(RPP, docs/35): 회색 캐비닛, 줄 끝 통로 쪽(x가 작은 쪽) 앞판과 표시창
+    const rpp = (data.obstacles ?? []).filter((o) => o.kind === 'rpp');
+    if (rpp.length) {
+      boxMesh(rpp, new THREE.MeshStandardMaterial({ color: 0x858a92, metalness: 0.4, roughness: 0.5 }));
+      boxMesh(rpp.map((o) => ({ min: [o.min[0] - 0.4, o.min[1] + 3, 10], max: [o.min[0] + 0.2, o.max[1] - 3, o.max[2] - 4] })), new THREE.MeshStandardMaterial({ color: 0x33363b, metalness: 0.3, roughness: 0.5 }));
+      boxMesh(rpp.map((o) => ({ min: [o.min[0] - 0.8, o.min[1] + 30, o.max[2] - 40], max: [o.min[0] - 0.2, o.max[1] - 30, o.max[2] - 25] })), new THREE.MeshBasicMaterial({ color: 0x2fd6a0 }));
+    }
     this.containment = 'hot';
     this._buildContainment(data.panels);
   }

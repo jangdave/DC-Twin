@@ -31,7 +31,7 @@ def group_of(prim, mat_name: str | None) -> str:
     return {
         "M_HallWall": "wall", "M_HallCeiling": "ceiling", "M_HallSkirting": "skirting", "M_HallLine": "line",
         "M_HallHazard": "hazard", "M_LightFrame": "lightframe", "M_LightPanel": "lightpanel",
-        "M_CeilingGrille": "ceilinggrille",
+        "M_CeilingGrille": "ceilinggrille", "M_FirePipe": "firepipe", "M_Detector": "detector", "M_Grommet": "grommet",
     }.get(mat_name or "", "other")
 
 
@@ -104,6 +104,10 @@ LOOK = {
     "hazard": ((0.80, 0.60, 0.05), 0.0, 0.7, (0, 0, 0)),
     "lightframe": ((0.15, 0.16, 0.17), 0.5, 0.5, (0, 0, 0)),
     "ceilinggrille": ((0.05, 0.055, 0.06), 0.6, 0.5, (0, 0, 0)),
+    "firepipe": ((0.55, 0.04, 0.03), 0.3, 0.5, (0, 0, 0)),
+    "detector": ((0.80, 0.80, 0.78), 0.0, 0.6, (0, 0, 0)),
+    "grommet": ((0.02, 0.02, 0.025), 0.0, 0.9, (0, 0, 0)),
+    **{f"wall_{d}_door": ((0.14, 0.16, 0.19), 0.5, 0.5, (0, 0, 0)) for d in ("south", "north")},
     "lightpanel": ((0.9, 0.95, 1.0), 0.0, 0.4, (1.0, 1.0, 1.0)),
     "other": ((0.4, 0.4, 0.4), 0.0, 0.7, (0, 0, 0)),
 }

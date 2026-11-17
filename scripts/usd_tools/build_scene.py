@@ -162,6 +162,10 @@ def build(cfg: dict, out: Path, flat: bool = False) -> tuple[Usd.Stage, Layout]:
         vents = f"{hall_path}/Vents"
         UsdGeom.Xform.Define(stage, vents)
         tri["Vents"] = hi.build_vents(stage, vents, lay, cfg, mats)
+        if hi.rpp_boxes(lay, cfg):
+            power = f"{hall_path}/Power"
+            UsdGeom.Xform.Define(stage, power)
+            tri["Power"] = hi.build_power(stage, power, lay, cfg, mats)
     stage.GetPrimAtPath(hall_path).CreateAttribute("dct:hallSizeCm", Sdf.ValueTypeNames.Float3, custom=True).Set(Gf.Vec3f(W, L, H))
     # 이중 바닥과 바닥 아래 공간(raised_floor, 2026-11-11). 켜면 공조기가 바닥 아래로 찬 공기를 불어 넣고 급기구(천공 타일)로 올라온다.
     # 깊이와 타일 열린 비율은 근거 없는 가상 값이다(ADR-009에서 표준값을 찾지 못함). 시뮬레이션은 이 속성을 읽는다.
@@ -242,6 +246,11 @@ def _build_flat(stage: Usd.Stage, hall_path: str, cfg: dict, lay: Layout) -> Non
         add_box(stage, f"{cont}/{name}", lo, hi_, col["containment"], "containment")
     for name, lo, hi_ in hi.ceiling_boxes(lay, cfg):
         add_box(stage, f"{cont}/{name}", lo, hi_, col["containment"], "containment")
+    if hi.rpp_boxes(lay, cfg):
+        power = f"{hall_path}/Power"
+        UsdGeom.Xform.Define(stage, power)
+        for name, lo, hi_ in hi.rpp_boxes(lay, cfg):
+            add_box(stage, f"{power}/{name}", lo, hi_, (0.52, 0.54, 0.57), "rpp")
     vt = cfg["vent"]
     vents = f"{hall_path}/Vents"
     UsdGeom.Xform.Define(stage, vents)

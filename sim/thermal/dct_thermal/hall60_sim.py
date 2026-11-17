@@ -75,7 +75,7 @@ def read_hall(path: Path) -> dict:
 def read_hall_from_stage(stage) -> dict:
     """열린 USD 장면에서 홀 정보(랙, CRAC, 급기구, 격벽, 센서 앵커, 홀 크기)를 읽는다."""
     cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
-    hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "anchors": [], "size_cm": None, "plenum": None, "underfloor": []}
+    hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "obstacles": [], "anchors": [], "size_cm": None, "plenum": None, "underfloor": []}
     guide = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_, UsdGeom.Tokens.guide])
     for prim in stage.Traverse():
         if prim.GetName().startswith("Hall") and prim.GetAttribute("dct:hallSizeCm"):
@@ -97,6 +97,10 @@ def read_hall_from_stage(stage) -> dict:
         if not at or not at.Get():
             continue
         kind = at.Get()
+        if kind == "rpp":  # 줄 끝 분전반(docs/35): 막힌 상자. 열은 내지 않는다고 본다
+            r = cache.ComputeWorldBound(prim).ComputeAlignedRange()
+            hall["obstacles"].append({"kind": kind, "name": prim.GetName(), "path": str(prim.GetPath()), "min": tuple(r.GetMin()), "max": tuple(r.GetMax())})
+            continue
         if kind in ("rack", "crac", "vent", "containment"):
             r = cache.ComputeWorldBound(prim).ComputeAlignedRange()
             item = {"name": prim.GetName(), "path": str(prim.GetPath()), "min": tuple(r.GetMin()), "max": tuple(r.GetMax())}
@@ -120,7 +124,7 @@ def read_hall_from_stage(stage) -> dict:
                 "metric": prim.GetAttribute("dct:metric").Get(), "unit": prim.GetAttribute("dct:unit").Get(),
                 "pos_cm": (m[0], m[1], m[2]),
             })
-    for k in ("racks", "cracs", "vents"):
+    for k in ("racks", "cracs", "vents", "obstacles"):
         hall[k].sort(key=lambda d: d["name"])
     if hall["size_cm"] is None:
         raise RuntimeError("홀 크기(dct:hallSizeCm)를 장면에서 찾지 못했다")
@@ -132,7 +136,7 @@ def shift_hall_z(hall: dict, dz_cm: float) -> dict:
     import copy
 
     h = copy.deepcopy(hall)
-    for k in ("racks", "cracs", "vents", "panels", "underfloor"):
+    for k in ("racks", "cracs", "vents", "panels", "underfloor", "obstacles"):
         for it in h.get(k, []):
             it["min"] = (it["min"][0], it["min"][1], it["min"][2] + dz_cm)
             it["max"] = (it["max"][0], it["max"][1], it["max"][2] + dz_cm)
@@ -211,7 +215,7 @@ class Layout:
         # 격벽 방식: 이름이 ColdAisle_*이면 냉기 통로 격리(CAC). 지붕은 틈이 있는 판(통과 쉬움 CAC_ROOF_SIGMA), 끝 문은 막힘
         self.cac = any(p["name"].startswith("ColdAisle_") for p in hall["panels"])
         self.cac_roof = np.zeros(self.shape, dtype=bool)
-        for p in hall["panels"]:
+        for p in hall["panels"] + hall.get("obstacles", []):  # 격벽과 분전반(docs/35)은 막힌 칸
             (x0, y0, z0), (x1, y1, z1) = p["min"], p["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
             if self.cac and p["name"].endswith("_Roof"):
