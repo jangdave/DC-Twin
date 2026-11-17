@@ -20,40 +20,51 @@ SCENE = ROOT / "usd" / "scenes" / "hall01.usda"
 pytestmark = pytest.mark.skipif(not SCENE.exists(), reason="hall01.usda 없음")
 
 
-@pytest.fixture(scope="module")
-def sim_and_layout():
-    hall = hs.read_hall(SCENE)
-    lay = hs.Layout(hall)
+def _sim(hall, lay, off):
     sim = hs.Sim(hall, lay, 10.0, 1.0, device="cpu")
     fan = np.ones(lay.n_cracs, dtype=np.float32)
-    fan[1] = 0.0
-    fan[5] = 0.0  # 같은 통로(통로 1)의 CRAC 2대 정지: 이 통로가 새기 시작한다
+    fan[list(off)] = 0.0
     sim.set_fans(fan)
-    return sim, lay
+    return sim
 
 
-def test_leaking_aisle_is_marked(sim_and_layout):
-    sim, lay = sim_and_layout
-    on = sim.leak_on.numpy()
-    assert on[1] == 1.0
-    assert on[0] == 0.0 and on[2] == 0.0 and on[3] == 0.0
+@pytest.fixture(scope="module")
+def case():
+    """새는 경우와 새지 않는 경우. 옛 장면: 같은 통로(통로 1)의 CRAC 2대(2, 6번) 정지면 통로 1이 샌다.
+    천장 회수 장면(docs/35): 공통 회수 공간이라 3대(1~3번) 정지부터 새고, 새는 길은 하나(0번 자리)다."""
+    hall = hs.read_hall(SCENE)
+    lay = hs.Layout(hall)
+    if lay.ceiling:
+        leak, a = (0, 1, 2), 0
+        quiet_sim, qa = _sim(hall, lay, (1,)), 0  # 1대 정지: 새는 길(0번)이 있어도 새지 않는다
+    else:
+        leak, a = (1, 5), 1
+        quiet_sim, qa = None, 0  # 같은 계산에서 새지 않는 통로 0
+    sim = _sim(hall, lay, leak)
+    return {"sim": sim, "lay": lay, "a": a, "quiet": quiet_sim or sim, "qa": qa}
 
 
-def test_leaked_air_keeps_its_temperature(sim_and_layout):
-    sim, lay = sim_and_layout
+def test_leaking_aisle_is_marked(case):
+    on = case["sim"].leak_on.numpy()
+    assert on[case["a"]] == 1.0
+    assert all(on[i] == 0.0 for i in range(len(on)) if i != case["a"])
+
+
+def test_leaked_air_keeps_its_temperature(case):
+    sim, lay, a = case["sim"], case["lay"], case["a"]
     T = np.full(lay.shape, 20.0, dtype=np.float32)
-    T[lay.leak_sink[1]] = 40.0  # 통로 1의 지붕 틈 아래만 뜨겁다
+    T[lay.leak_sink[a]] = 40.0  # 새는 길의 빨려 들어가는 칸만 뜨겁다
     sim.T = wp.array(T, dtype=float, device="cpu")
     sim.step()
     out = sim.T.numpy()
-    assert out[lay.leak_src[1]] == pytest.approx(40.0, abs=1e-4)  # 위로 나오는 칸은 빨려 들어간 칸의 평균 온도
+    assert out[lay.leak_src[a]] == pytest.approx(40.0, abs=1e-4)  # 나오는 칸은 빨려 들어간 칸의 평균 온도
 
 
-def test_aisles_without_leak_are_not_touched(sim_and_layout):
-    sim, lay = sim_and_layout
+def test_aisles_without_leak_are_not_touched(case):
+    sim, lay, qa = case["quiet"], case["lay"], case["qa"]
     T = np.full(lay.shape, 20.0, dtype=np.float32)
-    T[lay.leak_sink[0]] = 40.0  # 새지 않는 통로 0의 틈 아래가 뜨거워도
+    T[lay.leak_sink[qa]] = 40.0  # 새지 않는 길의 빨려 들어가는 칸이 뜨거워도
     sim.T = wp.array(T, dtype=float, device="cpu")
     sim.step()
     out = sim.T.numpy()
-    assert out[lay.leak_src[0]].max() < 25.0  # 위쪽 칸의 온도를 강제로 올리지 않는다
+    assert out[lay.leak_src[qa]].max() < 25.0  # 나오는 칸의 온도를 강제로 올리지 않는다

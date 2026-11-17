@@ -16,6 +16,9 @@ const MAX_VISUAL_SPEED = 2.2; // m/s. 급기구 가까이의 큰 값은 화면�
 // 퍼텐셜 흐름은 질량이 모두 랙을 지나므로 그대로 두면 새는 공기가 하나도 없어 비현실적이다. 새는 입자는 속도장 대신 천천히 떠오른다.
 export const LEAK_FRACTION = 0.1;
 export const PLENUM_SPAWN = 0.3; // 이중 바닥일 때 바닥 아래(공조기 밑)에서 출발하는 입자 비율
+// 입자가 흐름 밖으로 나가거나 거의 멈추면 바로 지우지 않고 그 자리에 멈춘 채 이 시간(초) 동안 흐려진 뒤 다시 태어난다.
+// 예전에는 밝은 채로 바로 지워져서 입자 4,000개 중 초당 약 310개가 깜빡이는 점처럼 보였다(2026-11-17 사용자 지적 "반짝이는 느낌")
+export const FADE_OUT = 0.4;
 const LEAK_CEILING = 3.6; // m. 이 높이를 넘으면 사라진다(천장 근처에서 되돌아가는 공기에 섞인다고 본다)
 const LEAK_WARM = [1.0, 0.72, 0.38]; // 올라가며 뜨거운 공기와 섞여 따뜻해지는 색
 
@@ -91,6 +94,8 @@ export class Airflow {
     this.heat = new Int16Array(count).fill(-1); // -1: 차가운 공기, 0 이상: 지나온 랙 번호
     // 새는 입자 비율(0~1). 흐름장이 OpenFOAM이면(flow.json source) 격벽 위로 새고 도는 공기가 흐름장에 이미 들어 있어 흉내 입자를 쓰지 않는다
     this.leak = flow.meta.source === 'openfoam' ? 0 : LEAK_FRACTION;
+    this.dying = new Uint8Array(count); // 1: 흐려지는 중(움직이지 않음)
+    this.fadeFrom = new Float32Array(count); // 흐려지기 시작할 때의 밝기
     this.mode = new Uint8Array(count); // 0: 속도장을 따름, 1: 새는 공기(위로 떠오름)
     this.geo = new THREE.BufferGeometry();
     this.vel = new Float32Array(count * 3);
@@ -224,9 +229,22 @@ export class Airflow {
     for (let h = 0; h < SEG; h++) this.hist.set(this.pos.subarray(o, o + 3), (p * SEG + h) * 3);
     this.histAt[p] = 0;
     this.age[p] = 0;
+    this.dying[p] = 0;
+    this.fadeFrom[p] = 0;
     this.heat[p] = -1;
     this.mode[p] = this.rng() < this.leak ? 1 : 0;
     this.life[p] = this.mode[p] ? 6 + this.rng() * 5 : 12 + this.rng() * 18;
+  }
+
+  // 흐려지며 사라지기 시작한다: 지금 밝기에서 FADE_OUT초 동안 0으로(남은 수명이 그보다 짧으면 그대로 둔다)
+  _retire(p) {
+    this.dying[p] = 1;
+    this.vel[p * 3] = this.vel[p * 3 + 1] = this.vel[p * 3 + 2] = 0;
+    const left = this.life[p] - this.age[p];
+    if (left > FADE_OUT) {
+      this.fadeFrom[p] = Math.min(1, this.age[p] / 0.6, left / 1.5);
+      this.life[p] = this.age[p] + FADE_OUT;
+    }
   }
 
   _refreshColors() {
@@ -264,6 +282,10 @@ export class Airflow {
         this.hist[b + 2] = this.pos[o + 2];
         this.histAt[p] = 0;
       }
+      if (this.dying[p]) {
+        if (this.age[p] > this.life[p]) this._spawn(p);
+        continue;
+      }
       if (this.mode[p] === 1) {
         // 새는 공기: 속도장을 쓰지 않고 위로 0.5~0.9 m/s로 떠오르며 옆으로 조금 흔들린다
         const vz = 0.5 + 0.4 * this.rng();
@@ -273,7 +295,8 @@ export class Airflow {
         this.pos[o] += this.vel[o] * dt;
         this.pos[o + 1] += this.vel[o + 1] * dt;
         this.pos[o + 2] += vz * dt;
-        if (this.pos[o + 2] > LEAK_CEILING || this.age[p] > this.life[p]) this._spawn(p);
+        if (this.age[p] > this.life[p]) this._spawn(p);
+        else if (this.pos[o + 2] > LEAK_CEILING) this._retire(p);
         continue;
       }
       const sp = this.sample(this.pos[o], this.pos[o + 1], this.pos[o + 2], u);
@@ -286,8 +309,12 @@ export class Airflow {
       this.pos[o + 2] += (u[2] * k + (this.rng() - 0.5) * 0.08) * dt;
       const gi = Math.floor(this.pos[o] / this.cell), gj = Math.floor(this.pos[o + 1] / this.cell), gk = Math.floor((this.pos[o + 2] - this.z0) / this.cell);
       const out = gi < 0 || gj < 0 || gk < 0 || gi >= this.nx || gj >= this.ny || gk >= this.nz;
-      if (out || this.age[p] > this.life[p] || sp < 0.03) {
+      if (this.age[p] > this.life[p]) {
         this._spawn(p);
+        continue;
+      }
+      if (out || sp < 0.03) {
+        this._retire(p);
         continue;
       }
       const id = this.rackId[(gi * this.ny + gj) * this.nz + gk];
@@ -336,7 +363,9 @@ export class Airflow {
         const t = Math.min(Math.max((this.pos[o + 2] - 0.4) / 3, 0), 1) * 0.85; // 높이 올라갈수록 따뜻한 색
         c = [c[0] + (LEAK_WARM[0] - c[0]) * t, c[1] + (LEAK_WARM[1] - c[1]) * t, c[2] + (LEAK_WARM[2] - c[2]) * t];
       }
-      const fade = Math.min(1, this.age[p] / 0.6, (this.life[p] - this.age[p]) / 1.5);
+      const fade = this.dying[p] && this.fadeFrom[p] > 0
+        ? this.fadeFrom[p] * Math.max(0, this.life[p] - this.age[p]) / FADE_OUT
+        : Math.min(1, this.age[p] / 0.6, (this.life[p] - this.age[p]) / 1.5);
       // 마디마다 머리 쪽이 밝고 꼬리 끝으로 갈수록 어두워진다(가산 혼합이라 검정 = 안 보임)
       for (let h = 0; h < SEG; h++) {
         const w = q + h * 6;

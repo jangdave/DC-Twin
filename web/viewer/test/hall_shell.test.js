@@ -15,6 +15,12 @@ describe('shellVisibility', () => {
     expect(shellVisibility({ x: 5, y: 2, z: -20 }, B).wall_north).toBe(false);
     expect(shellVisibility({ x: 5, y: 2, z: 5 }, B).wall_south).toBe(false);
   });
+  it('칸막이 천장이 있으면 그보다 위에서 조명을 숨기고, 없으면 조명 규칙이 없다(docs/35)', () => {
+    const C = { ...B, ceilingZ: 3.2 };
+    expect(shellVisibility({ x: 5, y: 3.6, z: -6 }, C).lightpanel).toBe(false);
+    expect(shellVisibility({ x: 5, y: 2, z: -6 }, C).lightframe).toBe(true);
+    expect(shellVisibility({ x: 5, y: 9, z: -6 }, B).lightpanel).toBeUndefined();
+  });
   it('천장 위에서는 천장을 숨긴다', () => {
     expect(shellVisibility({ x: 5, y: 9, z: -6 }, B).ceiling).toBe(false);
   });

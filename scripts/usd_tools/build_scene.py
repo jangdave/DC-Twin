@@ -132,19 +132,18 @@ def build(cfg: dict, out: Path, flat: bool = False) -> tuple[Usd.Stage, Layout]:
     UsdGeom.Xform.Define(stage, cooling)
     crac_no = 0
     for side, (x, rot) in enumerate([(cr["depth"] / 2, 90.0), (lay.width - cr["depth"] / 2, -90.0)]):
-        for (ya, yb) in lay.hot_aisles:
+        for yc in hi.crac_ys(lay, cfg):
             crac_no += 1
             p = f"{cooling}/CRAC_{crac_no:02d}"
             xf = UsdGeom.Xform.Define(stage, p)
             xf.GetPrim().GetReferences().AddReference(cr["asset"])
-            _xform(xf, translate=(x, (ya + yb) / 2, 0.0), rotate_z=rot)  # 앞면(회수면)이 홀 안쪽을 향한다
+            _xform(xf, translate=(x, yc, 0.0), rotate_z=rot)  # 앞면(회수면)이 홀 안쪽을 향한다
             override_sensors(stage, p, hall, "CR", crac_no, ["supply_temp", "return_temp", "fan_speed"])
-            rz_ = hi.return_z(cfg)
-            if rz_:
-                # 회수 후드 앞면으로 회수(머리 위 덕트, docs/35). 계산(hall60_sim, gen_case)은 이 높이 범위에 앞면 회수구를 둔다
-                xf.GetPrim().CreateAttribute("dct:returnZ", Sdf.ValueTypeNames.Float2, custom=True).Set(Gf.Vec2f(*rz_))
-                a = stage.OverridePrim(f"{p}/Anchors/Sensor_RETURN_TEMP")  # 회수 온도 센서 표시 위치도 후드 앞면 가운데로
-                a.GetAttribute("xformOp:translate").Set(Gf.Vec3d(0, -55, (rz_[0] + rz_[1]) / 2))
+            ret = hi.crac_return(cfg)
+            if ret:
+                # 윗면 회수(docs/35). 천장 회수 방식이면 연장 덕트 끝(칸막이 천장 위). 계산(hall60_sim, gen_case)은 이 면과 높이를 읽는다
+                xf.GetPrim().CreateAttribute("dct:returnFace", Sdf.ValueTypeNames.Token, custom=True).Set(ret[0])
+                xf.GetPrim().CreateAttribute("dct:returnZ", Sdf.ValueTypeNames.Float2, custom=True).Set(Gf.Vec2f(*ret[1]))
 
     W, L, H = lay.width, lay.length, lay.height
     tri: dict = {}
@@ -240,6 +239,8 @@ def _build_flat(stage: Usd.Stage, hall_path: str, cfg: dict, lay: Layout) -> Non
             add_box(stage, f"{cont}/ColdAisle_{k:02d}_Door_W", (lay.rack_x0 - t, ya, 0), (lay.rack_x0, yb, rz + t), col["containment"], "containment")
             add_box(stage, f"{cont}/ColdAisle_{k:02d}_Door_E", (lay.rack_x1, ya, 0), (lay.rack_x1 + t, yb, rz + t), col["containment"], "containment")
     for name, lo, hi_, _axis, _pitch in ([] if hi.containment_type(cfg) == "cold" else hi.hot_aisle_boxes(lay, cfg)):
+        add_box(stage, f"{cont}/{name}", lo, hi_, col["containment"], "containment")
+    for name, lo, hi_ in hi.ceiling_boxes(lay, cfg):
         add_box(stage, f"{cont}/{name}", lo, hi_, col["containment"], "containment")
     vt = cfg["vent"]
     vents = f"{hall_path}/Vents"

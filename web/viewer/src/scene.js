@@ -174,15 +174,16 @@ export class HallScene {
       g.add(mesh);
       return mesh;
     };
-    // 줄 끝 문 + 머리 위 덕트 장면(docs/35): 덕트 바닥판은 지붕처럼, 공조기 위 회수 후드는 불투명한 금속 상자로 그린다
-    const kind = (p) => (p.name.includes('_Hood_') ? 'hood' : p.name.endsWith('_Roof') || p.name.includes('_DuctFloor_') ? 'roof' : 'side');
+    // 천장 회수 장면(docs/35): 칸막이 천장 판(Ceiling_*)은 위에서 내려다보면 홀을 가리므로 그리지 않고(천장 회수 그릴은 서버실 껍데기에 있다),
+    // 공조기 연장 덕트(Collar_*)는 불투명한 금속 상자로 그린다
+    const kind = (p) => (p.name.startsWith('Ceiling_') ? 'none' : p.name.startsWith('Collar_') ? 'hood' : p.name.endsWith('_Roof') ? 'roof' : 'side');
     const roofs = panelsData.filter((p) => kind(p) === 'roof');
     const sides = panelsData.filter((p) => kind(p) === 'side');
     const hoods = panelsData.filter((p) => kind(p) === 'hood');
     boxMesh(sides, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
     boxMesh(roofs, new THREE.MeshStandardMaterial({ color: 0x6fa8e0, transparent: true, opacity: 0.26, depthWrite: false, side: THREE.DoubleSide }));
     if (hoods.length) boxMesh(hoods, new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.3, roughness: 0.6 })).renderOrder = 0;
-    const framed = panelsData.filter((p) => kind(p) !== 'hood');
+    const framed = panelsData.filter((p) => kind(p) === 'roof' || kind(p) === 'side');
     if (framed.length) {
       const edgeGeos = framed.map((p) => new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)).applyMatrix4(this._boxMatrix(p)));
       const edges = new THREE.LineSegments(mergeGeometries(edgeGeos, false), new THREE.LineBasicMaterial({ color: 0x8fc0f0, transparent: true, opacity: 0.85 }));
@@ -566,7 +567,8 @@ export class HallScene {
     this.hall.add(this.shell);
     for (const o of this._plainHall ?? []) o.visible = false;
     const [sx, sy, sz] = this.data.size;
-    this._shellBounds = { minX: 0, maxX: sx * CM, minZ: -sy * CM, maxZ: 0, height: sz * CM };
+    const ceil = this.data.panels.filter((p) => p.name.startsWith('Ceiling_')).map((p) => p.min[2]); // 칸막이 천장 높이(천장 회수 장면, docs/35)
+    this._shellBounds = { minX: 0, maxX: sx * CM, minZ: -sy * CM, maxZ: 0, height: sz * CM, ...(ceil.length ? { ceilingZ: Math.min(...ceil) * CM } : {}) };
     this._dirty = true;
     // 껍데기를 받기 전에 CAC를 골랐으면 방금 붙인 HAC 껍데기를 CAC 껍데기로 바꾼다(HAC 조명이 섞이지 않게)
     if (this.containment === 'cold') await this._setContainment('cold', baseUrl);
@@ -588,7 +590,7 @@ export class HallScene {
   // 모델(cm 단위, 정면 +Z, 바닥 중앙이 원점)을 재질별로 합쳐 인스턴스로 그린다. 값 색 판(rackFront 등)은 반투명으로 겹친다.
   async loadModels(baseUrl) {
     const loader = new GLTFLoader();
-    const [rack, crac] = await Promise.all([loader.loadAsync(`${baseUrl}models/rack.glb`), loader.loadAsync(`${baseUrl}models/crac.glb`)]);
+    const [rack, crac] = await Promise.all([loader.loadAsync(`${baseUrl}models/rack.glb`), loader.loadAsync(`${baseUrl}models/crah.glb`)]);
     this.modelMeshes = [...this._instanceModel(rack.scene, this.data.racks), ...this._instanceModel(crac.scene, this.data.cracs)];
     for (const m of this.modelMeshes) this.hall.add(m);
     this.modelsReady = true;

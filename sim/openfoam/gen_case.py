@@ -132,7 +132,10 @@ mergePatchPairs ();
 
     open_roofs = [aisle for aisle in range(lay.n_aisles) if leak[aisle] > 1e-9]
     roofs = sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
-    open_names = {roofs[i]["name"] for i in open_roofs}  # 새는 통로의 지붕은 열어 둔다(우리 모델의 '지붕 틈' 대응)
+    open_names = {roofs[i]["name"] for i in open_roofs if i < len(roofs)}  # 새는 통로의 지붕은 열어 둔다(우리 모델의 '지붕 틈' 대응)
+    if getattr(lay, "ceiling", False) and leak.sum() > 1e-9:
+        # 천장 회수 방식(docs/35): 공조기가 모자라면 냉기 통로 위 천장 판을 열어 회수 공간이 방으로 넘치게 한다(우리 모델의 새는 길 대응)
+        open_names = {p["name"] for p in hall["panels"] if p["name"].startswith("Ceiling_Cold_")}
     # 냉기 통로 격리(CAC, docs/34): 냉기 통로 지붕은 틈이 있는 판(다공질 저항), 끝 문은 막힘
     cac = any(p["name"].startswith("ColdAisle_") for p in hall["panels"])
     cac_roofs = [p for p in hall_g["panels"] if cac and p["name"].startswith("ColdAisle_") and p["name"].endswith("_Roof")]
@@ -208,7 +211,10 @@ mergePatchPairs ();
         r0, r1 = c.get("return_z_cm", h.RETURN_Z_CM)  # 회수 후드가 있으면 그 앞면 높이(docs/35)
         zr0, zr1 = h.rng(r0 + z_off, r1 + z_off, nz)
         plane = (xe if sign > 0 else xs) * dx if axis == 0 else (ye if sign > 0 else ys) * dx
-        if axis == 0:
+        if c.get("return_face") == "top":  # 윗면 회수(docs/35): 우리 계산의 회수 칸 맨 아래 층의 밑면(공조기 또는 연장 덕트 윗면)
+            k0 = int(np.argwhere(lay.ret_id == i)[:, 2].min())
+            lo = (xs * dx + 0.01, ys * dx + 0.01, k0 * dx - 0.01); hi = (xe * dx - 0.01, ye * dx - 0.01, k0 * dx + 0.01)
+        elif axis == 0:
             lo = (plane - 0.01, ys * dx + 0.01, zr0 * dx + 0.01); hi = (plane + 0.01, ye * dx - 0.01, zr1 * dx - 0.01)
         else:
             lo = (xs * dx + 0.01, plane - 0.01, zr0 * dx + 0.01); hi = (xe * dx - 0.01, plane + 0.01, zr1 * dx - 0.01)

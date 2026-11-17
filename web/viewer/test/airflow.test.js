@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Airflow, SEG } from '../src/airflow.js';
+import { Airflow, FADE_OUT, SEG } from '../src/airflow.js';
 
 // 작은 가짜 속도장: 4x4x4 칸, 장 2개(정상, 1번 CRAC 멈춤). 정상은 +x 방향 1 m/s, 멈춘 장은 -x 방향 1 m/s.
 function fake(source) {
@@ -145,5 +145,20 @@ describe('Airflow', () => {
     const lum = (i) => col[i] + col[i + 1] + col[i + 2];
     expect(lum(q)).toBeGreaterThanOrEqual(lum(q + 3));
     expect(lum(q + (SEG - 1) * 6 + 3)).toBe(0);
+  });
+  it('흐름 밖으로 나가거나 멈춘 입자는 밝은 채로 지워지지 않고 흐려진 뒤 다시 태어난다(깜빡임 방지, 2026-11-17)', () => {
+    const a = fake(); // +x 1 m/s, 4 m 격자: 입자가 곧 격자 밖으로 나간다
+    a.setFans([]);
+    const orig = a._spawn.bind(a);
+    let n = 0, worst = 0;
+    a._spawn = (p) => {
+      const f = a.dying[p] && a.fadeFrom[p] > 0 ? (a.fadeFrom[p] * Math.max(0, a.life[p] - a.age[p])) / FADE_OUT : Math.min(1, a.age[p] / 0.6, (a.life[p] - a.age[p]) / 1.5);
+      worst = Math.max(worst, f);
+      n++;
+      orig(p);
+    };
+    for (let k = 0; k < 600; k++) a.step(1 / 60, k / 60);
+    expect(n).toBeGreaterThan(20); // 실제로 많이 나갔다
+    expect(worst).toBeLessThan(0.1);
   });
 });

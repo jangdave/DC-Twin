@@ -96,8 +96,12 @@ for c in hall["cracs"]:
     ys, ye = int(round(y0 / 100 / dx)), int(round(y1 / 100 / dx))
     xs, xe = int(round(x0 / 100 / dx)), int(round(x1 / 100 / dx))
     xi = xe if sign > 0 else xs - 1
-    r0, r1 = c.get("return_z_cm", (10.0, 190.0))  # 회수구 높이(cm, 바닥에서). 회수 후드가 있으면 그 앞면(docs/35)
-    tret = np.nanmean(Tg[xi, ys:ye, int((r0 + ZOFF) / 100 / dx):int((r1 + ZOFF) / 100 / dx)])
+    r0, r1 = c.get("return_z_cm", (10.0, 190.0))  # 회수구 높이(cm, 바닥에서, docs/35)
+    k0, k1 = int(round((r0 + ZOFF) / 100 / dx)), int(round((r1 + ZOFF) / 100 / dx))
+    if c.get("return_face") == "top":  # 윗면 회수: 공조기(또는 연장 덕트) 위 칸
+        tret = np.nanmean(Tg[xs:xe, ys:ye, k0:k1])
+    else:
+        tret = np.nanmean(Tg[xi, ys:ye, k0:k1])
     out_kw += 1.2 * q * (tret - 18.0)
 summary = {
     "result_time": tdir.name, "dx_m": dx,

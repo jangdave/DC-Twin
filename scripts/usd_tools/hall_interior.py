@@ -185,6 +185,7 @@ def define_materials(stage, looks: str, tex_dir: str) -> dict:
         "light_panel": M("M_LightPanel", color=(0.95, 0.95, 0.92), roughness=0.4, emissive=(4.0, 3.9, 3.6)),
         "light_frame": M("M_LightFrame", color=(0.75, 0.76, 0.78), roughness=0.4, metallic=0.6),
         "frame": M("M_ContainFrame", color=(0.55, 0.60, 0.66), roughness=0.35, metallic=0.85),
+        "grille": M("M_CeilingGrille", color=(0.20, 0.21, 0.23), roughness=0.5, metallic=0.6),
         "glass": M("M_ContainGlass", color=(0.35, 0.60, 0.85), roughness=0.08, opacity=0.22),
     }
 
@@ -244,18 +245,33 @@ def build_shell(stage, shell: str, lay, cfg: dict, mats: dict) -> dict:
             line.box((lay.rack_x0, y0, 0), (lay.rack_x1, y0 + 5.0, th), "line", planar(100.0), skip=("-z",))
     put("Floor_Markings_Line", line)
     haz = MeshB()
-    ca = cfg["crac"]["depth"]
-    for (ya, yb) in lay.hot_aisles:  # CRAC 앞 점검 공간 표시(노랑-검정 줄무늬, 깊이 12 cm)
+    ca, cw = cfg["crac"]["depth"], cfg["crac"]["width"]
+    for yc in crac_ys(lay, cfg):  # CRAC 앞 점검 공간 표시(노랑-검정 줄무늬, 깊이 12 cm)
         for x0 in (ca, W - ca - 12.0):
-            haz.box((x0, ya + 5.0, 0), (x0 + 12.0, yb - 5.0, th), "hazard", planar(HAZARD_TILE), skip=("-z",))
+            haz.box((x0, yc - cw / 2 + 5.0, 0), (x0 + 12.0, yc + cw / 2 - 5.0, th), "hazard", planar(HAZARD_TILE), skip=("-z",))
     put("Floor_Markings_Hazard", haz)
 
     # 조명: 발광 재질 패널(광원 prim 없음. 실제 빛은 Unreal이 따로 둔다). 냉기 통로 위(천장 아래)와 열기 통로 위(격벽 지붕 아래)
     lights = f"{shell}/Lights"
     UsdGeom.Xform.Define(stage, lights).GetPrim().CreateAttribute("dct:assetType", Sdf.ValueTypeNames.Token, custom=True).Set("shell")
     n = 0
-    xs = [175.0 + 150.0 * k for k in range(6)]
+    nl = int((W - 200.0) // 150.0) + 1  # 조명 줄 간격 150 cm, 홀 가운데에 맞춘다
+    xs = [(W - 150.0 * (nl - 1)) / 2 + 150.0 * k for k in range(nl)]
     rz = cfg["containment"]["roof_z"]
+    ceil = ceiling_mode(cfg)
+    if ceil:
+        # 천장 회수 방식: 조명은 칸막이 천장(Z)에 붙이고, 열기 통로 위 천장에는 회수 그릴을 둔다(계산에서는 열린 칸)
+        Z = ceiling_z(cfg)
+        rz, H = Z + LIGHT_GAP, Z
+        gr = MeshB()
+        for (ya, yb) in lay.hot_aisles:
+            gr.box((lay.rack_x0, ya, Z + 2.0), (lay.rack_x1, yb, Z + 2.6), "grille", planar(100.0))  # 뒤판
+            k = 0
+            while lay.rack_x0 + 15.0 * (k + 1) < lay.rack_x1:
+                xg = lay.rack_x0 + 15.0 * (k + 1)
+                gr.box((xg - 0.8, ya, Z), (xg + 0.8, yb, Z + 2.0), "grille", planar(100.0))
+                k += 1
+        put("Ceiling_ReturnGrille", gr)
     # 열기 통로 조명은 격벽 지붕 아래에 LIGHT_GAP만큼 띄워 매단다. 윗면이 지붕 아랫면과 같은 높이면 두 면이 겹쳐 깜빡인다(2026-11-11 사용자 보고).
     # 격벽 방식(containment.type): hot(열기 통로 격리, 기본)이면 열기 통로 조명이 격벽 지붕 아래, cold(냉기 통로 격리, CAC)이면 냉기 통로 조명이 격벽 지붕 아래다
     cold_cont = containment_type(cfg) == "cold"
@@ -286,25 +302,39 @@ def containment_type(cfg: dict) -> str:
 
 
 def hot_end(cfg: dict) -> str:
-    """열기 통로 끝 모양(HAC만). "full": 격벽이 공조기 앞면까지 바닥부터 막는다(2026-11-16 이전, 설정에 값이 없으면 이것).
-    "door_duct": 줄 끝에 문을 달고, 줄 끝 ~ 공조기 사이는 머리 위 덕트로만 잇는다. 그 아래는 사람이 다니는 통로이고
-    공조기는 위에 얹은 회수 후드의 앞면(높이 공조기 윗면 ~ 덕트 윗면)으로 빨아들인다(docs/35)."""
+    """열기 통로 끝과 회수 방식(HAC만).
+    "full": 격벽이 공조기 앞면까지 바닥부터 막는다(2026-11-16 이전, 설정에 값이 없으면 이것).
+    "ceiling": 칸막이 천장 위를 공통 회수 공간(천장 플레넘)으로 쓴다. 열기 통로는 줄 끝 문과 랙 위 ~ 천장 옆판으로 막고,
+    천장의 회수 그릴로 뜨거운 공기가 올라간다. 공조기는 윗면 흡입구에 붙인 연장 덕트로 회수 공간에서 빨아들인다(docs/35)."""
     t = cfg["containment"].get("hot_end", "full")
-    if t not in ("full", "door_duct"):
-        raise ValueError(f"containment.hot_end은 full 또는 door_duct: {t}")
+    if t not in ("full", "ceiling"):
+        raise ValueError(f"containment.hot_end은 full 또는 ceiling: {t}")
     return t
 
 
-def duct_top(cfg: dict) -> float:
-    """door_duct 방식에서 열기 통로와 덕트의 윗면 높이(cm, 바닥에서)."""
-    return float(cfg["containment"].get("duct", {}).get("top_z", 380))
+def ceiling_mode(cfg: dict) -> bool:
+    return containment_type(cfg) == "hot" and hot_end(cfg) == "ceiling"
 
 
-def return_z(cfg: dict) -> tuple[float, float] | None:
-    """공조기 회수구 높이 범위(cm, 바닥에서). door_duct이면 회수 후드 앞면(공조기 윗면 ~ 덕트 윗면), 아니면 None(계산의 기본값)."""
-    if containment_type(cfg) != "hot" or hot_end(cfg) != "door_duct":
+def ceiling_z(cfg: dict) -> float:
+    """칸막이 천장 아랫면 높이(cm, 바닥에서). 그 위 ~ 홀 천장(hall.ceiling_height)이 회수 공간이다."""
+    return float(cfg["containment"].get("ceiling", {}).get("z", 320))
+
+
+def crac_ys(lay, cfg: dict) -> list[float]:
+    """한쪽 벽의 공조기 가운데 y 위치(열기 통로마다 하나). 열기 통로 가운데에 두되, 공조기 폭이 벽을 넘지 않게 안쪽으로 민다."""
+    w = cfg["crac"]["width"]
+    return [min(max((ya + yb) / 2, w / 2), lay.length - w / 2) for (ya, yb) in lay.hot_aisles]
+
+
+def crac_return(cfg: dict) -> tuple[str, tuple[float, float]] | None:
+    """공조기 회수구: (면, 높이 범위 cm). 설정 crac.return_face가 top이면 윗면 바로 위 두 층(20 cm).
+    천장 회수 방식이면 연장 덕트 끝(칸막이 천장 윗면) 바로 위, 아니면 공조기 윗면 바로 위. front(기본)이면 None(계산 기본값)."""
+    cr = cfg["crac"]
+    if cr.get("return_face", "front") != "top":
         return None
-    return (float(cfg["crac"]["height"]), duct_top(cfg))
+    z0 = ceiling_z(cfg) + cfg["containment"]["panel_thickness"] if ceiling_mode(cfg) else float(cr["height"])
+    return ("top", (z0, z0 + 20.0))
 
 
 def hot_aisle_boxes(lay, cfg: dict) -> list[tuple[str, tuple, tuple, int, float]]:
@@ -315,31 +345,70 @@ def hot_aisle_boxes(lay, cfg: dict) -> list[tuple[str, tuple, tuple, int, float]
     xa, xb = cr["depth"], W - cr["depth"]
     n = len(lay.hot_aisles)
     out = []
-    duct = hot_end(cfg) == "door_duct"
-    dz1 = duct_top(cfg) if duct else 0.0
+    ceil = ceiling_mode(cfg)
+    Z = ceiling_z(cfg)
     for k, (ya, yb) in enumerate(lay.hot_aisles, start=1):
         sides = [(o, (ya - t, ya) if o == -1 else (yb, yb + t)) for o in (-1, 1) if not ((k == 1 and o == -1) or (k == n and o == 1))]
         tagn = lambda o: "N" if o == 1 else "S"  # noqa: E731
-        if not duct:
+        if not ceil:
             out.append((f"HotAisle_{k:02d}_Roof", (xa, ya, rz), (xb, yb, rz + t), 0, 120.0))
             for o, (lo_y, hi_y) in sides:
                 for tag, (x0, x1) in (("W", (xa, lay.rack_x0)), ("E", (lay.rack_x1, xb))):
                     out.append((f"HotAisle_{k:02d}_Side{tagn(o)}_{tag}", (x0, lo_y, 0), (x1, hi_y, rz), 0, 0.0))
             continue
-        # 열기 통로를 덕트 높이(dz1)까지 올리고 벽에서 벽까지 덮는다. 랙 위(rz ~ dz1)는 옆판으로 막아 통로 전체가 덕트와 한 공간이 된다.
-        # 처음에는 지붕을 줄 끝 60 cm만 비우고 덕트를 2.0 ~ 2.8 m로 두었는데, 입구와 덕트가 좁아 풍속이 20 m/s까지 올라갔다(docs/35 5장).
-        out.append((f"HotAisle_{k:02d}_Roof", (0.0, ya, dz1), (W, yb, dz1 + t), 0, 120.0))
+        # 천장 회수: 랙 위(rz) ~ 칸막이 천장(Z) 옆판, 줄 끝 문(바닥 ~ 천장, 위쪽은 고정 판). 지붕은 없고 천장 회수 그릴이 열려 있다
         for o, (lo_y, hi_y) in sides:
-            out.append((f"HotAisle_{k:02d}_Side{tagn(o)}", (0.0, lo_y, rz), (W, hi_y, dz1), 0, 0.0))
-        for tag, door, (fx0, fx1) in (("W", (lay.rack_x0 - t, lay.rack_x0), (0.0, lay.rack_x0)), ("E", (lay.rack_x1, lay.rack_x1 + t), (lay.rack_x1, W))):
-            # 줄 끝 문(미닫이): 통로 폭 전체, 바닥 ~ 랙 높이
-            out.append((f"HotAisle_{k:02d}_Door_{tag}", (door[0], ya, 0), (door[1], yb, rz), 1, 0.0))
-            # 덕트 바닥판: 줄 끝 ~ 벽(사람이 다니는 통로 위). 벽까지 덮어 공조기(폭 90)와 통로(120) 사이 틈을 막는다
-            out.append((f"HotAisle_{k:02d}_DuctFloor_{tag}", (fx0, ya, rz), (fx1, yb, rz + t), 0, 0.0))
-            # 회수 후드: 공조기 윗면 ~ 덕트 윗면, 공조기 폭. 앞면이 회수구다(윗면 0.9 m2만으로는 흡입구 둘레 풍속이 10 m/s를 넘었다)
-            hx0, hx1 = (0.0, xa) if tag == "W" else (xb, W)
-            ym = (ya + yb) / 2
-            out.append((f"HotAisle_{k:02d}_Hood_{tag}", (hx0, ym - cr["width"] / 2, cr["height"]), (hx1, ym + cr["width"] / 2, dz1), 0, 0.0))
+            out.append((f"HotAisle_{k:02d}_Side{tagn(o)}", (lay.rack_x0, lo_y, rz), (lay.rack_x1, hi_y, Z), 0, 0.0))
+        for tag, (d0, d1) in (("W", (lay.rack_x0 - t, lay.rack_x0)), ("E", (lay.rack_x1, lay.rack_x1 + t))):
+            out.append((f"HotAisle_{k:02d}_Door_{tag}", (d0, ya, 0), (d1, yb, Z), 1, 0.0))
+    return out
+
+
+def ceiling_boxes(lay, cfg: dict) -> list[tuple[str, tuple, tuple]]:
+    """천장 회수 방식의 칸막이 천장 판과 공조기 연장 덕트 [(이름, 아래, 위)]. 열기 통로 위(줄 길이만큼)와 연장 덕트 자리는 비운다.
+    냉기 통로 위 판은 Ceiling_Cold_k(공조기가 모자라 회수 공간이 넘칠 때 계산이 새는 길로 쓴다), 나머지는 Ceiling_n."""
+    if not ceiling_mode(cfg):
+        return []
+    cr, t = cfg["crac"], cfg["containment"]["panel_thickness"]
+    Z = ceiling_z(cfg)
+    W, L = lay.width, lay.length
+    cd, cw = cr["depth"], cr["width"]
+    ys = crac_ys(lay, cfg)
+    out = [(f"Collar_{s}{i + 1:02d}", ((0.0 if s == "W" else W - cd), y - cw / 2, cr["height"]), ((cd if s == "W" else W), y + cw / 2, Z + t))
+           for s in ("W", "E") for i, y in enumerate(ys)]
+    xb = sorted({0.0, cd, lay.rack_x0, lay.rack_x1, W - cd, W})
+    yb = sorted({0.0, L} | {v for a in lay.hot_aisles + lay.cold_aisles for v in a} | {v for y in ys for v in (y - cw / 2, y + cw / 2)})
+    rack = lambda x0, x1: x0 >= lay.rack_x0 - 1e-6 and x1 <= lay.rack_x1 + 1e-6  # noqa: E731
+    inside = lambda y0, y1, rngs: any(y0 >= a - 1e-6 and y1 <= b + 1e-6 for a, b in rngs)  # noqa: E731
+    collar = [(y - cw / 2, y + cw / 2) for y in ys]
+    n = 0
+    for x0, x1 in zip(xb[:-1], xb[1:]):
+        edge = x1 <= cd + 1e-6 or x0 >= W - cd - 1e-6
+        run = None  # 같은 이름으로 이어지는 y 구간을 하나로 합친다
+        cells = []
+        for y0, y1 in zip(yb[:-1], yb[1:]):
+            if rack(x0, x1) and inside(y0, y1, lay.hot_aisles):
+                name = None  # 회수 그릴(열림)
+            elif edge and inside(y0, y1, collar):
+                name = None  # 연장 덕트 자리
+            elif rack(x0, x1) and inside(y0, y1, lay.cold_aisles):
+                name = f"Ceiling_Cold_{[i for i, (a, b) in enumerate(lay.cold_aisles, 1) if y0 >= a - 1e-6 and y1 <= b + 1e-6][0]:02d}"
+            else:
+                name = "plain"
+            if run and run[0] == name:
+                run[2] = y1
+            else:
+                if run:
+                    cells.append(run)
+                run = [name, y0, y1]
+        cells.append(run)
+        for name, y0, y1 in cells:
+            if name is None:
+                continue
+            if name == "plain":
+                n += 1
+                name = f"Ceiling_{n:02d}"
+            out.append((name, (x0, y0, Z), (x1, y1, Z + t)))
     return out
 
 
@@ -353,17 +422,21 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
     tri = {"Frame": 0, "Glass": 0}
     bar = 4.0
 
+    def solid(path, lo, hi, mat):
+        """유리 없는 상자 하나(칸막이 천장 판, 공조기 연장 덕트)."""
+        x = UsdGeom.Xform.Define(stage, path)
+        x.GetPrim().CreateAttribute("dct:assetType", Sdf.ValueTypeNames.Token, custom=True).Set("containment")
+        mb = MeshB()
+        mb.box(lo, hi, mat, planar(100.0))
+        author_mesh(stage, f"{path}/Frame", mb, mats)
+        tri["Frame"] += mb.triangles()
+
     def panel(path, lo, hi, cross_axis, cross_pitch):
         """틀 + 유리 판 하나. cross_axis: 가로대를 놓을 축(0=x, 1=y), cross_pitch: 가로대 간격."""
         x = UsdGeom.Xform.Define(stage, path)
         x.GetPrim().CreateAttribute("dct:assetType", Sdf.ValueTypeNames.Token, custom=True).Set("containment")
         sz = [hi[i] - lo[i] for i in range(3)]
         fr = MeshB()
-        if "_Hood_" in path:  # 회수 후드: 유리 없이 금속 상자
-            fr.box(lo, hi, "frame")
-            author_mesh(stage, f"{path}/Frame", fr, mats)
-            tri["Frame"] += fr.triangles()
-            return
         flat = [i for i in range(3) if i != 2]  # 틀이 놓이는 평면: 수평(지붕)이면 (x, y), 수직(옆면)이면 (x, z)
         if sz[2] <= t + 1e-6:  # 지붕: 수평 판. 두께 t는 z
             fr.box((lo[0], lo[1], lo[2]), (hi[0], lo[1] + bar, hi[2]), "frame")
@@ -410,6 +483,8 @@ def build_containment(stage, cont: str, lay, cfg: dict, mats: dict, col=None) ->
         return tri
     for name, lo, hi, axis, pitch in hot_aisle_boxes(lay, cfg):
         panel(f"{cont}/{name}", lo, hi, axis, pitch)
+    for name, lo, hi in ceiling_boxes(lay, cfg):
+        solid(f"{cont}/{name}", lo, hi, "ceiling" if name.startswith("Ceiling") else "frame")
     return tri
 
 

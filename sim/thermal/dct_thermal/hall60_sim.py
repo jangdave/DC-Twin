@@ -109,6 +109,9 @@ def read_hall_from_stage(stage) -> dict:
                 rz = prim.GetAttribute("dct:returnZ")  # 회수구 높이 범위(cm, 바닥에서). 없으면 RETURN_Z_CM(회수 후드가 있으면 그 앞면, docs/35)
                 if rz and rz.HasAuthoredValue():
                     item["return_z_cm"] = [float(v) for v in rz.Get()]
+                rf = prim.GetAttribute("dct:returnFace")  # top: 윗면(천장 회수 방식이면 연장 덕트 끝) 회수
+                if rf and rf.HasAuthoredValue():
+                    item["return_face"] = str(rf.Get())
             hall[{"rack": "racks", "crac": "cracs", "vent": "vents", "containment": "panels"}[kind]].append(item)
         elif kind == "sensor":
             m = UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default()).ExtractTranslation()
@@ -189,6 +192,7 @@ class Layout:
             area = ((x1 - x0) / 100.0 if axis == 1 else (y1 - y0) / 100.0) * ((z1 - z0) / 100.0)
             self.rack_flux.append(V_RACK * area)
         self.crac_q = []
+        top_returns = []
         for idx, c in enumerate(hall["cracs"]):
             (x0, y0, z0), (x1, y1, z1) = c["min"], c["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
@@ -196,7 +200,9 @@ class Layout:
             axis, sign = c["front"]  # 회수면(앞면)이 향하는 방향
             r0, r1 = c.get("return_z_cm", RETURN_Z_CM)
             zr0, zr1 = rng(r0 + self.z_off_cm, r1 + self.z_off_cm, nz)  # 회수구 높이는 바닥(이중 바닥이면 그 윗면)에서 잰다
-            if axis == 0:
+            if c.get("return_face") == "top":
+                top_returns.append((idx, xs, xe, ys, ye, zr0, max(1, zr1 - zr0)))  # 격벽(연장 덕트, 천장 판)을 칸에 넣은 뒤 정한다
+            elif axis == 0:
                 xr = slice(xe, xe + 1) if sign > 0 else slice(xs - 1, xs)
                 self.ret_id[xr, ys:ye, zr0:zr1] = idx
             else:
@@ -212,6 +218,12 @@ class Layout:
                 self.cac_roof[xs:xe, ys:ye, zs:ze] = True
                 continue
             self.solid[xs:xe, ys:ye, zs:ze] = True
+        for idx, xs, xe, ys, ye, k, n in top_returns:
+            # 윗면 회수: return_z_cm 높이부터 위로 올라가며 처음 열린 층에서 n층. 천장 판(5 cm)이 칸(10 cm)보다 얇아
+            # 판 윗면 높이가 막힌 칸 안에 들어가는 일이 있다(2026-11-17, 이때 OpenFOAM 회수 면이 0개였다)
+            while k < nz and self.solid[xs:xe, ys:ye, k].all():
+                k += 1
+            self.ret_id[xs:xe, ys:ye, k:k + n] = idx
         for vi, v in enumerate(hall["vents"]):
             (x0, y0, z0), (x1, y1, z1) = v["min"], v["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny)
@@ -299,9 +311,19 @@ class Layout:
         # CRAC는 모두 같은 장비라고 보고, 용량은 가장 바쁜 통로를 정상 상태에서 감당하는 값으로 둔다
         self.q_cap = float(max(self.aisle_exhaust[a] / max(1, n_per_aisle[a]) for a in range(self.n_aisles)))
         # 격벽 지붕 틈: 용량을 넘는 뜨거운 공기가 새는 곳(지붕 바로 아래 칸 -> 지붕 바로 위 칸)
-        roofs = [] if self.cac else sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
+        # 천장 회수 방식(docs/35): 칸막이 천장 위가 모든 공조기의 공통 회수 공간이다. 공조기가 모자라 넘치는 공기는
+        # 냉기 통로 위 천장 판(Ceiling_Cold_*)을 거쳐 방으로 샌다(판 바로 위 칸 -> 바로 아래 칸). 새는 길은 통로 0번 자리 하나에 모은다
+        self.ceiling = any(p["name"].startswith("Ceiling_") for p in hall["panels"])
+        roofs = [] if (self.cac or self.ceiling) else sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
         self.leak_sink = [np.zeros(self.shape, dtype=bool) for _ in range(self.n_aisles)]
         self.leak_src = [np.zeros(self.shape, dtype=bool) for _ in range(self.n_aisles)]
+        if self.ceiling:
+            for p in hall["panels"]:
+                if p["name"].startswith("Ceiling_Cold_"):
+                    (x0, y0, z0), (x1, y1, z1) = p["min"], p["max"]
+                    xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
+                    self.leak_sink[0][xs:xe, ys:ye, ze] = True
+                    self.leak_src[0][xs:xe, ys:ye, zs - 1] = True
         for a, p in enumerate(roofs[: self.n_aisles]):
             (x0, y0, z0), (x1, y1, z1) = p["min"], p["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
@@ -326,6 +348,26 @@ def crac_returns(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             for i in idx:
                 q[i] = min(lay.q_cap * float(fan[i]), share)
         leak[a] = max(0.0, lay.aisle_exhaust[a] - q[[i for i in range(lay.n_cracs) if lay.crac_aisle[i] == a]].sum())
+    if getattr(lay, "ceiling", False):
+        # 공통 회수 공간: 켜진 공조기가 홀 전체 배기를 똑같이 나눠 맡고(용량까지), 남는 것은 한 길(leak[0])로 샌다
+        total = float(lay.aisle_exhaust.sum())
+        on = [i for i in range(lay.n_cracs) if fan[i] > 0]
+        q[:] = 0.0
+        left, free = total, list(on)
+        while free and left > 1e-9:  # 용량이 작은 공조기(팬을 줄인 것)가 다 차면 남는 양을 나머지가 나눈다
+            share = left / len(free)
+            full = [i for i in free if lay.q_cap * float(fan[i]) - q[i] <= share]
+            if not full:
+                for i in free:
+                    q[i] += share
+                left = 0.0
+                break
+            for i in full:
+                left -= lay.q_cap * float(fan[i]) - q[i]
+                q[i] = lay.q_cap * float(fan[i])
+            free = [i for i in free if i not in full]
+        leak[:] = 0.0
+        leak[0] = max(0.0, total - float(q.sum()))
     if getattr(lay, "cac", False):
         leak[:] = 0.0  # 냉기 통로 격리: 열기 통로가 방으로 열려 있어 남는 배기는 방으로 퍼진다(새는 길을 따로 두지 않는다)
     return q, leak
@@ -371,7 +413,7 @@ def source_field(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, dict]:
     for a in range(lay.n_aisles):
         if leak[a] > 1e-9:
             if not (lay.leak_sink[a].any() and lay.leak_src[a].any()):
-                raise RuntimeError(f"통로 {a}의 배기 {leak[a]:.2f} m3/s가 새야 하는데 격벽 지붕 틈 칸이 없다(장면에 `*_Roof` 격벽이 통로 수만큼 있어야 한다)")
+                raise RuntimeError(f"통로 {a}의 배기 {leak[a]:.2f} m3/s가 새야 하는데 격벽 지붕 틈 칸이 없다(장면에 `*_Roof` 격벽이 통로 수만큼, 천장 회수 방식이면 `Ceiling_Cold_*` 판이 있어야 한다)")
             s[lay.leak_sink[a]] -= leak[a] / (lay.leak_sink[a].sum() * vol)
             s[lay.leak_src[a]] += leak[a] / (lay.leak_src[a].sum() * vol)
     return s, {"crac_return_m3s": [round(float(x), 2) for x in q], "aisle_leak_m3s": [round(float(x), 2) for x in leak], "supply_m3s": round(float(q.sum()), 2), "rack_m3s": round(q_rack, 2)}

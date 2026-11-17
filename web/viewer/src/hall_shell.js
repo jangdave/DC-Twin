@@ -10,6 +10,9 @@ export function shellVisibility(cam, b, margin = 0.05) {
     wall_north: !(cam.z < b.minZ - margin), // 웹 Z는 -USD y라서 north(+y)가 작은 Z쪽이다
     wall_south: !(cam.z > b.maxZ + margin),
     ceiling: !(cam.y > b.height - margin),
+    // 칸막이 천장이 있는 장면(docs/35, b.ceilingZ): 천장 판은 그리지 않으므로 카메라가 그보다 위면 천장에 붙은 조명도 숨긴다
+    // (허공에 떠 보이지 않게). 천장 회수 그릴은 반투명으로 늘 보여 열기 통로 윗면이 막혀 있음을 보여 준다(prepareShell)
+    ...(b.ceilingZ != null ? { lightframe: !(cam.y > b.ceilingZ - margin), lightpanel: !(cam.y > b.ceilingZ - margin) } : {}),
   };
 }
 
@@ -58,6 +61,11 @@ export function prepareShell(root) {
     if (name === 'floor') {
       o.material.map = makeTileTexture(THREE, { base: '#4b515b', grout: '#262a31', n: 8 });
       o.material.color.set(0xffffff);
+    } else if (name === 'ceilinggrille') {
+      o.material.transparent = true;
+      o.material.opacity = 0.45;
+      o.material.depthWrite = false;
+      o.renderOrder = 3;
     } else if (name === 'ceiling') {
       o.material.map = makeTileTexture(THREE, { base: '#8c919b', grout: '#6b707a', n: 6 });
       o.material.color.set(0xffffff);
