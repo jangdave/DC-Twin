@@ -21,6 +21,9 @@ from export_web_flow import BLOCK, VMAX, downsample
 from dct_sensors.precise import OpenFOAMRunner
 
 
+DIFF_DROP = 2  # 정상과의 차이가 이 눈금 이하(약 0.13 m/s)면 0으로 둔다. 2026-11-18 1에서 2로: 새 홀 흐름 9장이 웹 용량 한도(3 MB)를 넘었다(docs/35)
+
+
 def encode_diff(fields: list[np.ndarray]) -> tuple[np.ndarray, float]:
     """웹 용량을 줄이는 저장 방식(encoding "diff", 2026-11-11): 눈금을 VMAX/63.5(약 0.063 m/s)로 두고,
     첫 장(정상)은 값 그대로, 나머지(CRAC 1대 정지)는 정상과의 차이만 저장한다. 차이가 눈금 1칸 이하면 0으로 둔다.
@@ -29,7 +32,7 @@ def encode_diff(fields: list[np.ndarray]) -> tuple[np.ndarray, float]:
     e = np.round(raw / 2.0).astype(np.int16)  # 눈금 두 배
     out = e.copy()
     out[1:] = e[1:] - e[0]
-    out[1:][np.abs(out[1:]) <= 1] = 0
+    out[1:][np.abs(out[1:]) <= DIFF_DROP] = 0
     return np.clip(out, -127, 127).astype(np.int8), 2.0 * VMAX / 127.0
 
 
