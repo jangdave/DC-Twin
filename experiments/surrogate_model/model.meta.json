@@ -1,13 +1,13 @@
 {
  "version": 1,
- "trained_at": "2026-11-16T02:16:07+00:00",
- "model_sha256": "862a3ec5b089f2cb60b883bdfab693ab8ed933ef1682a05ab7b1472e1af9e2ad",
+ "trained_at": "2026-11-20T17:06:31+00:00",
+ "model_sha256": "bb059d8bf2d17999c1cb34b6d16081a5062dc4db94f2ffc1f739eae364bdeb95",
  "samples_json_sha256": "56c756b1cf5585b79ac92b490635bcbb330628fdda173c9d13193a48cbc22983",
- "data_dir": "surrogate_rf",
+ "data_dir": "surrogate_ceil",
  "extra": [],
  "n_features": 25,
  "code": {
-  "git_commit": "cb789b48d056603ce36ce3786c4a93fe8e374910",
+  "git_commit": "8c42fa18d88cbc20516edb8faae05bc03b55df5d",
   "dirty": false,
   "python": "3.13.9",
   "scikit_learn": "1.9.1",
@@ -86,8 +86,7 @@
   "s68_same_aisle_two_off_low_load"
  ],
  "status_counts": {
-  "done": 39,
-  "not_converged": 29
+  "not_converged": 68
  },
  "excluded": {
   "holdout_A_normal": "보류(학습에서 제외)",
