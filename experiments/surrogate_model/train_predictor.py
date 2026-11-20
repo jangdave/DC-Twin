@@ -2,6 +2,7 @@
 
 사용 (이 폴더에서):
     uv run --python 3.13 python train_predictor.py [--only-converged] [--out model.pkl]
+    기본(HAC)은 --data-dir surrogate_ceil + residual_model.EXTRA_HAC(지금은 비어 있다, docs/35 5장 2026-11-21)
     CAC 장면용(docs/34 6장, E9): ... train_predictor.py --cac --out model_cac.pkl
         (= --data-dir ../openfoam_baseline/results/surrogate_cac + residual_model.EXTRA_CAC의 추가 18개)
 센서 생성기(L2)가 `ResidualPredictor.load("model.pkl")`로 읽어서 `predict(...)`를 부른다.
@@ -34,6 +35,8 @@ a = ap.parse_args()
 if a.cac:
     a.data_dir = rm.DATA_CAC
     a.extra = [[str(sj), str(dd)] for sj, dd in rm.EXTRA_CAC]
+elif not a.extra and a.data_dir.resolve() == rm.DATA.resolve():
+    a.extra = [[str(sj), str(dd)] for sj, dd in rm.EXTRA_HAC]  # 기본 HAC 모델의 추가 샘플(rm.EXTRA_HAC, 비어 있으면 더하지 않는다)
 DATA = a.data_dir.resolve()
 samples_json = rm.BASE / "surrogate" / "samples.json"
 specs = {s["id"]: s for s in json.loads(samples_json.read_text(encoding="utf-8"))["samples"]}
