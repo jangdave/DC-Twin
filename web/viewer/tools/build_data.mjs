@@ -36,6 +36,8 @@ export function buildScene(layout, cac = null) {
     panels: layout.panels.map(box),
     // 이중 바닥(docs/33): 바닥 아래 공간 설정과 장애물(케이블 트레이, 배관, 케이블 구멍). 없는 장면이면 넣지 않는다
     ...(layout.plenum ? { plenum: layout.plenum } : {}),
+    // 줄 끝 분전반 같은 막힌 상자(docs/35). 없는 장면이면 넣지 않는다
+    ...(layout.obstacles?.length ? { obstacles: layout.obstacles.map((o) => ({ ...box(o), kind: o.kind })) } : {}),
     ...(layout.underfloor?.length ? { underfloor: layout.underfloor.map((u) => ({ ...box(u), kind: u.kind })) } : {}),
     ...(cac ? { variants: { cac: { panels: cac.panels.map(box), shell: 'hall_shell_cac.glb', flow: 'flow_cac' } } } : {}),
   };

@@ -81,23 +81,35 @@ def mean_rack_power(manifest: Manifest, cfg: Config, cond: dict, seed: int = 1) 
     return {eq_name(r): round(g.base_power[r] * scale[r], 3) for r in manifest.rack_names}
 
 
+def _block(text: str, header: str) -> tuple[int, int] | None:
+    """`header`(예: 'def Xform "Shell"')로 시작하는 USD 묶음의 [시작, 끝) 위치(중괄호 짝까지). 없으면 None."""
+    k = text.find(header)
+    if k < 0:
+        return None
+    depth, e = 0, text.index("{", k)
+    for e in range(e, len(text)):
+        depth += {"{": 1, "}": -1}.get(text[e], 0)
+        if depth == 0:
+            break
+    return k, e + 1
+
+
 def scene_tag(scene: Path | None) -> str | None:
     """흐름 저장 키에 넣는 장면 표시. 이중 바닥이 없는 장면은 예전 키 그대로(기본 장면은 None, 다른 장면은 이름),
-    있으면 이름 + 바닥 아래 구성(깊이, 타일, 받침 기둥, 장애물 prim)의 지문. 기본 장면(hall01.usda)에 이중 바닥을 켠 뒤
-    (2026-11-11, docs/33 C단계) 예전(바닥 아래 공간 없음) 흐름을 잘못 쓰지 않게 한다. USD 라이브러리 없이 글자로 읽는다(서버 환경에 scipy·pxr이 없을 수 있음)."""
+    있으면 이름 + 장면 형상의 지문. USD 라이브러리 없이 글자로 읽는다(서버 환경에 scipy·pxr이 없을 수 있음).
+    지문에 넣는 줄: 서버실 껍데기(Shell)와 재질(Looks) 묶음을 뺀 나머지의 위치·회전(xformOp), 참조, dct: 속성, 경계 상자(extent).
+    예전에는 바닥 아래 구성(깊이, 타일, 받침 기둥, 장애물)만 넣어서 격벽, 공조기, 분전반을 바꿔도 키가 같았다(2026-11-17, docs/35).
+    화면용 부품(손잡이 등)이 바뀌어 extent가 달라지면 키도 바뀐다(다시 계산할 뿐 틀린 흐름을 쓰지는 않는다)."""
     sc = Path(scene or SCENE)
     text = sc.read_text(encoding="utf-8", errors="replace") if sc.suffix == ".usda" else ""
     if "dct:plenumDepthCm" not in text:
         return sc.stem if scene and sc.resolve() != SCENE.resolve() else None
-    lines = [ln.strip() for ln in text.splitlines() if re.search(r"dct:(plenumDepth|floorThickness|tileOpenRatio|pedestal)", ln)]
-    k = text.find('def "Underfloor"')
-    if k >= 0:  # 장애물 묶음(중괄호 짝까지)
-        depth, e = 0, text.index("{", k)
-        for e in range(e, len(text)):
-            depth += {"{": 1, "}": -1}.get(text[e], 0)
-            if depth == 0:
-                break
-        lines.append(re.sub(r"\s+", " ", text[k:e]))
+    for header in ('def Xform "Shell"', 'def Scope "Looks"', 'def Xform "Looks"'):
+        r = _block(text, header)
+        if r:
+            text = text[: r[0]] + text[r[1]:]
+    lines = [re.sub(r"\s+", " ", ln.strip()) for ln in text.splitlines()
+             if re.search(r"dct:|xformOp:(translate|rotate)|references|extent =", ln)]
     return f"{sc.stem}:{hashlib.sha256(chr(10).join(lines).encode()).hexdigest()[:8]}"
 
 

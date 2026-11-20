@@ -30,15 +30,17 @@ def inflows(sigma):
         u, info = hs.solve_flow(lay, s)
     finally:
         hs.SIGMA_COLD_TOP = old
-    cy = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
+    cy = hs.cold_aisle_centers(hall["vents"])  # 통로마다 급기구 두 줄이어도 통로 하나(docs/35)
     xa, xb = min(r["min"][0] for r in hall["racks"]), max(r["max"][0] for r in hall["racks"])
     ztop = max(r["max"][2] for r in hall["racks"])
-    kz = int(np.floor(ztop / 100.0 / hs.DX + 1e-6))
+    # 랙 윗면 칸. read_hall의 높이는 이중 바닥만큼 올리기 전 값이라 z_off_cm를 더한다(예전에는 빠져서 이중 바닥 장면에서
+    # 냉기 통로 중간 높이 1.2 m를 재고 있었다, 2026-11-17 발견)
+    kz = int(np.floor((ztop + lay.z_off_cm) / 100.0 / hs.DX + 1e-6))
     i0, i1 = hs.rng(xa, xb, lay.shape[0])
     top = ends = 0.0
     for y in cy:
-        j0, j1 = hs.rng(y - 60.0, y + 60.0, lay.shape[1])
-        top += float((-u[i0:i1, j0:j1, kz + 1, 2]).sum()) * hs.DX ** 2  # 아래로 들어오는 순 유량(부호 포함)
+        j0, j1 = hs.rng(y - 90.0, y + 90.0, lay.shape[1])  # 냉기 통로 폭 180 cm 전체(docs/35)
+        top += float(np.clip(-u[i0:i1, j0:j1, kz + 1, 2], 0, None).sum()) * hs.DX ** 2  # 위에서 아래로 들어오는 유량(나가는 칸은 빼고 들어오는 칸만)
         left = u[i0 - 1, j0:j1, :kz, 0]
         right = -u[i1, j0:j1, :kz, 0]
         ends += float(left.sum() + right.sum()) * hs.DX ** 2  # 양끝으로 들어오는 순 유량(부호 포함)
@@ -49,6 +51,7 @@ def test_screen_shifts_inflow_from_top_to_ends():
     top1, ends1, _, _ = inflows(1.0)
     top2, ends2, info, total = inflows(0.1)
     assert top2 < 0.95 * top1, f"윗면 유입이 충분히 줄지 않았다: {top1:.2f} -> {top2:.2f}"
+    # 2026-11-17: 차단막이 냉기 통로 폭 전체(180 cm)를 덮게 고친 뒤 천장 회수 장면에서도 양끝 유입이 다시 늘어난다(15.14 -> 15.48 m3/s, docs/35)
     assert ends2 > ends1, f"양끝 유입이 늘지 않았다: {ends1:.2f} -> {ends2:.2f}"
     assert info["cg_info"] == 0 and info["residual"] < 1e-4  # 여전히 수렴
     assert abs(total) < 1e-9  # 원천의 합은 0(질량 보존)

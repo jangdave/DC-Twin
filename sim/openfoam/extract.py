@@ -96,7 +96,12 @@ for c in hall["cracs"]:
     ys, ye = int(round(y0 / 100 / dx)), int(round(y1 / 100 / dx))
     xs, xe = int(round(x0 / 100 / dx)), int(round(x1 / 100 / dx))
     xi = xe if sign > 0 else xs - 1
-    tret = np.nanmean(Tg[xi, ys:ye, int((0.1 + ZOFF / 100) / dx):int((1.9 + ZOFF / 100) / dx)])
+    r0, r1 = c.get("return_z_cm", (10.0, 190.0))  # 회수구 높이(cm, 바닥에서, docs/35)
+    k0, k1 = int(round((r0 + ZOFF) / 100 / dx)), int(round((r1 + ZOFF) / 100 / dx))
+    if c.get("return_face") == "top":  # 윗면 회수: 공조기(또는 연장 덕트) 위 칸
+        tret = np.nanmean(Tg[xs:xe, ys:ye, k0:k1])
+    else:
+        tret = np.nanmean(Tg[xi, ys:ye, k0:k1])
     out_kw += 1.2 * q * (tret - 18.0)
 summary = {
     "result_time": tdir.name, "dx_m": dx,
@@ -105,7 +110,7 @@ summary = {
     "rack_inlet_front_layer_mean_C": {"min": round(float(t_front.min()), 2), "mean": round(float(t_front.mean()), 2), "max": round(float(t_front.max()), 2),
                                       "end_racks_mean": round(float(t_front[end].mean()), 2), "middle_racks_mean": round(float(t_front[mid].mean()), 2)},
     "hottest_inlet_racks": [ids[i] for i in np.argsort(-t_anchor)[:5]],
-    "rack_through_speed_ms": {"target": 0.8, "mean": round(float(v_rack.mean()), 3), "min": round(float(v_rack.min()), 3), "max": round(float(v_rack.max()), 3)},
+    "rack_through_speed_ms": {"target": meta.get("v_rack_ms", 0.8), "mean": round(float(v_rack.mean()), 3), "min": round(float(v_rack.min()), 3), "max": round(float(v_rack.max()), 3)},
     "rack_exhaust_front_to_back_rise_C_mean": round(float((t_back - t_front).mean()), 2),
     "energy_balance_kW": {"rack_heat_in": meta.get("total_power_kw", meta["power_kw"] * len(ids)), "carried_out_by_crac_returns": round(out_kw, 1)},
     "T_all_cells_C": {"min": round(float(np.nanmin(Tg)), 2), "max": round(float(np.nanmax(Tg)), 2)},

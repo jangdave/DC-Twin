@@ -22,7 +22,10 @@ pytestmark = pytest.mark.skipif(not (rm.DATA / "ours_progress.json").exists(), r
 def env():
     specs = {s["id"]: s for s in json.loads(SAMPLES.read_text(encoding="utf-8"))["samples"]}
     info = json.loads((rm.DATA / "ours_progress.json").read_text(encoding="utf-8"))
-    data = [d for d in rm.load_dataset(rm.DATA, SAMPLES, only_converged=True) if not d["holdout"]]
+    # 최종 장면(surrogate_ceil)은 90건 모두 반복 상한(3500회)에서 멈춰 수렴 판정을 받은 샘플이 없다(docs/35 5장 2026-11-21).
+    # 저장된 모델처럼(train_predictor 기본) 미수렴 샘플도 쓴다. 수렴한 샘플이 있으면 예전처럼 그것만 쓴다.
+    data = [d for d in rm.load_dataset(rm.DATA, SAMPLES, only_converged=True) if not d["holdout"]] \
+        or [d for d in rm.load_dataset(rm.DATA, SAMPLES, only_converged=False) if not d["holdout"]]
     p = pr.ResidualPredictor(n_estimators=60).fit(data, specs)
     d0 = data[0]
     return {"p": p, "specs": specs, "info": info, "data": data, "d0": d0, "ours0": dict(zip(d0["names"], d0["ours"]))}

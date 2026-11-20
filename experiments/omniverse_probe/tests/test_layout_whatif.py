@@ -99,7 +99,7 @@ def test_removing_a_rack_does_not_change_sources_of_other_cold_aisles(hall):
     lay2 = hs.Layout(hall2)
     s1, bal = hs.source_field(lay2, fans_all(lay2))
     assert abs(s1.sum()) / np.abs(s1).sum() < 1e-9  # 질량 보존은 그대로
-    assert bal["rack_m3s"] == pytest.approx(56.64, abs=0.1)
+    assert bal["rack_m3s"] == pytest.approx(59 * hs.V_RACK * 1.2, abs=0.1)  # 남은 59기 x 통과 속도 x 랙 면 1.2 m2(V_RACK 0.6이면 42.48, docs/35)
     cold_gone = lay.rack_cold[gone]
     # 다른 냉기 통로의 급기구 칸은 같다
     for c in range(lay.n_cold):

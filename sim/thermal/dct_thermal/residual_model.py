@@ -24,12 +24,15 @@ from sklearn.linear_model import Ridge
 HERE = Path(__file__).resolve().parents[3] / "experiments" / "surrogate_model"  # 모델 파일(model.pkl)과 학습 스크립트가 있는 폴더(코드는 docs/30 M12로 sim/thermal에 옮김)
 BASE = HERE.parent / "openfoam_baseline"
 RES = BASE / "results"
-# 학습 데이터 폴더. 기본 장면에 이중 바닥과 바닥 아래 장애물을 켠 뒤(2026-11-11, docs/33 C단계) 그 장면으로 다시 계산한 surrogate_rf를 쓴다.
-# 예전(바닥 아래 공간 없음) 데이터는 results/surrogate에 남아 있다.
-DATA = RES / "surrogate_rf"
-DATA_CAC = RES / "surrogate_cac"  # 냉기 통로 격리(CAC) 장면으로 같은 샘플을 계산한 결과(docs/34 6장)
-# CAC 모델에만 더하는 학습 샘플(랙 제거 + 공조기 두 대 정지 18개, experiments/results/E9_residual_features.md). (명세 파일, 결과 폴더)
-# HAC 모델에는 더하지 않는다: 더하면 HAC 보류 E가 나빠져 채택 기준을 넘지 못했다.
+# 학습 데이터 폴더. 홀 배치와 천장 회수 방식을 바꾼 최종 HAC 장면(2026-11-17, docs/35)으로 다시 계산한 surrogate_ceil을 쓴다.
+# 예전 데이터: 바닥 아래 공간 없음 results/surrogate, 이중 바닥 장면(2026-11-11, docs/33 C단계) results/surrogate_rf.
+DATA = RES / "surrogate_ceil"
+DATA_CAC = RES / "surrogate_cac"  # 냉기 통로 격리(CAC) 장면으로 같은 샘플을 계산한 결과(docs/34 6장). 옛 홀 배치 데이터다(docs/35 4장, 다시 계산은 나중)
+# 추가 학습 샘플(랙 제거 + 공조기 두 대 정지 18개, experiments/results/E9_residual_features.md). (명세 파일, 결과 폴더)
+# HAC에는 더하지 않는다. 이중 바닥 장면에서는 보류 E가 나빠졌고, 최종 장면(2026-11-21)에서는 하나씩 빼고 본 오차와 보류 E는 좋아지지만
+# 보류 A가 0.21 -> 0.23도로 나빠져 미리 정한 기준(보류 사례가 고르게 좋아질 때만 바꾼다)을 넘지 못했다(docs/35 5장).
+# 계산한 결과는 results/surrogate_ceil_v4, _v5에 있다. 넣으려면: [(BASE / "surrogate" / "samples_v4.json", RES / "surrogate_ceil_v4"), (... "samples_v5.json", RES / "surrogate_ceil_v5")]
+EXTRA_HAC: list = []
 EXTRA_CAC = [(BASE / "surrogate" / "samples_v4.json", RES / "surrogate_cac_v4"), (BASE / "surrogate" / "samples_v5.json", RES / "surrogate_cac_v5")]
 
 
@@ -73,7 +76,16 @@ def load_geometry(layout_json: Path | None = None) -> Geometry:
             pos_from_end[i] = min(k, L - 1 - k)
             row_len[i] = L
     hot_centers = sorted({round((c["min"][1] + c["max"][1]) / 2 / 10.0) * 10.0 for c in hall["cracs"]})
-    cold_centers = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
+    # 냉기 통로: 급기 그레이트가 통로마다 두 줄(랙 앞면에 붙여, 2026-11-17 e9ae4dd)이라 줄 중심을 그대로 쓰면 통로가 두 배로 잡힌다.
+    # 가까운 줄(사이 200 cm 미만: 같은 통로의 두 줄은 약 120 cm, 다른 통로는 랙 두 대와 열기 통로를 건너 300 cm 이상)을 한 통로로 묶는다.
+    vent_rows = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
+    clusters: list[list[float]] = []
+    for y in vent_rows:
+        if clusters and y - clusters[-1][-1] < 200.0:
+            clusters[-1].append(y)
+        else:
+            clusters.append([y])
+    cold_centers = [sum(c) / len(c) for c in clusters]
     hot = np.zeros(n, dtype=int)
     cold = np.zeros(n, dtype=int)
     for i, r in enumerate(racks):

@@ -5,16 +5,17 @@
   "rows": {
     "count": 6,
     "racks_per_row": 10,
-    "cold_aisle": 120,
-    "hot_aisle": 100,
-    "end_clearance": 150,
+    "cold_aisle": 180,
+    "hot_aisle": 120,
+    "end_clearance": 240,
     "_note": "줄 2개가 냉기 통로를 사이에 두고 마주 본다. 바깥쪽 두 통로 폭 포함, 열기 통로는 줄 사이와 양 바깥쪽에 모두 4개"
   },
-  "crac": { "asset": "../assets/crac.usda", "width": 90, "depth": 100, "height": 220, "per_side": 4 },
+  "crac": { "asset": "../assets/crah.usda", "width": 240, "depth": 90, "height": 220, "per_side": 4, "return_face": "top", "_note": "하향 송풍 공조기(폭 240, 깊이 90). 윗면으로 회수한다(2026-11-17, docs/35)" },
+  "power": { "rpp": { "width": 60, "height": 200, "_note": "줄 끝 분전반(RPP). 줄마다 서쪽 끝에 하나, 센서 없음(2026-11-17, docs/35)" } },
   "containment": { "type": "cold", "panel_thickness": 5, "roof_z": 200 },
   "raised_floor": {
-    "enabled": true, "plenum_depth": 60, "tile_open_ratio": 0.25,
-    "_note": "이중 바닥 아래 공간(가상 값: 깊이 60 cm, 타일 열린 비율 25 %). 공조기가 바닥 아래로 불어 넣는다. 2026-11-11 기본값으로 켬(docs/33 C단계)",
+    "enabled": true, "plenum_depth": 60, "tile_open_ratio": 0.56,
+    "_note": "이중 바닥 아래 공간(가상 값: 깊이 60 cm, 타일 열린 비율 56 %(그레이트, 2026-11-17 docs/35)). 공조기가 바닥 아래로 불어 넣는다. 2026-11-11 기본값으로 켬(docs/33 C단계)",
     "obstructions": {
       "_note": "바닥 아래 장애물(가상 값). 받침 기둥 60 cm 간격·폭 3 cm, 줄마다 랙 아래 케이블 트레이(폭 30, 높이 10, 바닥 아래 공간 바닥에서 30 cm), 공조기 앞 냉수 배관 2줄(20 cm). 케이블 구멍(cutouts)은 막아 둔 것으로 보고 넣지 않는다(docs/33 6장)",
       "pedestal_pitch": 60, "pedestal_width": 3,
@@ -22,7 +23,7 @@
       "pipes": { "size": 20, "offset": 40 }
     }
   },
-  "vent": { "width": 50, "depth": 100, "thickness": 1 },
+  "vent": { "width": 60, "depth": 60, "thickness": 1, "layout": "per_rack", "_note": "60 x 60 cm 급기 그레이트(열린 비율 56 %)를 랙마다 한 장, 랙 앞면에 붙여 냉기 통로마다 두 줄(2026-11-17, docs/35). 예전 50 x 100 cm 25 % 타일 한 줄은 한 장에 약 4,000 CFM으로 실제(최대 약 1,000)보다 컸다" },
   "colors": {
     "floor": [0.55, 0.55, 0.58], "wall": [0.85, 0.85, 0.87], "ceiling": [0.9, 0.9, 0.92],
     "containment": [0.35, 0.6, 0.85], "vent": [0.1, 0.35, 0.7]

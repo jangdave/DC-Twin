@@ -4,12 +4,20 @@ import * as THREE from 'three';
 // 카메라가 벽 밖이나 천장 위에 있을 때 그 면을 숨겨 안이 보이게 한다. 좌표는 웹 장면 좌표(m)다.
 // bounds: {minX, maxX, minZ, maxZ, height}. 반환: 각 이름이 보이는지.
 export function shellVisibility(cam, b, margin = 0.05) {
+  const north = !(cam.z < b.minZ - margin), south = !(cam.z > b.maxZ + margin);
+  const aboveCeil = b.ceilingZ != null && cam.y > b.ceilingZ - margin;
   return {
     wall_west: !(cam.x < b.minX - margin),
     wall_east: !(cam.x > b.maxX + margin),
-    wall_north: !(cam.z < b.minZ - margin), // 웹 Z는 -USD y라서 north(+y)가 작은 Z쪽이다
-    wall_south: !(cam.z > b.maxZ + margin),
+    wall_north: north, // 웹 Z는 -USD y라서 north(+y)가 작은 Z쪽이다
+    wall_south: south,
+    wall_north_door: north, // 홀 출입문은 붙어 있는 벽과 함께 숨긴다(docs/35)
+    wall_south_door: south,
+    detector: !aboveCeil, // 방 천장의 연기 감지기와 스프링클러 헤드(천장 위에서는 천장에 가려진다)
     ceiling: !(cam.y > b.height - margin),
+    // 칸막이 천장이 있는 장면(docs/35, b.ceilingZ): 천장 판은 그리지 않으므로 카메라가 그보다 위면 천장에 붙은 조명도 숨긴다
+    // (허공에 떠 보이지 않게). 천장 회수 그릴은 반투명으로 늘 보여 열기 통로 윗면이 막혀 있음을 보여 준다(prepareShell)
+    ...(b.ceilingZ != null ? { lightframe: !(cam.y > b.ceilingZ - margin), lightpanel: !(cam.y > b.ceilingZ - margin) } : {}),
   };
 }
 
@@ -46,6 +54,23 @@ export function makeTileTexture(THREE_, { size = 256, n = 4, base = '#4a4f58', g
   return t;
 }
 
+// 흡입 그릴 무늬(연장 덕트 윗면, docs/35): 밝은 알루미늄 테두리 안에 어두운 칸 n x n개. 코드로 그려 파일 용량이 늘지 않는다
+export function makeGrilleTexture(THREE_, { size = 128, n = 4, frame = '#9aa1aa', hole = '#121417', bar = 3 } = {}) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  g.fillStyle = frame;
+  g.fillRect(0, 0, size, size);
+  const step = size / n;
+  g.fillStyle = hole;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) g.fillRect(i * step + bar / 2, j * step + bar / 2, step - bar, step - bar);
+  const t = new THREE_.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE_.RepeatWrapping;
+  t.colorSpace = THREE_.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 // 받은 glb를 장면에 맞게 손본다: 바닥과 천장은 타일 무늬, 이름 목록을 돌려준다.
 export function prepareShell(root) {
   const parts = new Map();
@@ -58,6 +83,11 @@ export function prepareShell(root) {
     if (name === 'floor') {
       o.material.map = makeTileTexture(THREE, { base: '#4b515b', grout: '#262a31', n: 8 });
       o.material.color.set(0xffffff);
+    } else if (name === 'ceilinggrille') {
+      o.material.transparent = true;
+      o.material.opacity = 0.45;
+      o.material.depthWrite = false;
+      o.renderOrder = 3;
     } else if (name === 'ceiling') {
       o.material.map = makeTileTexture(THREE, { base: '#8c919b', grout: '#6b707a', n: 6 });
       o.material.color.set(0xffffff);
@@ -65,4 +95,23 @@ export function prepareShell(root) {
     if (o.material.map) o.material.needsUpdate = true;
   });
   return parts;
+}
+
+// 격벽 판을 화면용 조각으로 나눈다(docs/35). 계산은 판 하나를 막힌 상자로 쓰지만, 화면에서는 실제 격리 문처럼 보이게 한다.
+// - 천장까지 닿는 열기 통로 끝 문(이름에 _Door_, 높이 > doorH + 30): 미닫이 두 짝(바닥 ~ doorH), 고정 판(doorH ~ 위), 손잡이 2개
+// - 그 밖의 판은 그대로 한 조각
+// 반환: [{ kind: 'glass' | 'transom' | 'handle', min, max }] (cm, 장면 좌표)
+export function containmentParts(p, doorH = 210) {
+  const [x0, y0, z0] = p.min, [x1, y1, z1] = p.max;
+  if (!p.name.includes('_Door_') || z1 - z0 <= doorH + 30) return [{ kind: 'glass', min: p.min, max: p.max }];
+  const ym = (y0 + y1) / 2, zd = z0 + doorH, gap = 1;
+  const thinX = x1 - x0 <= y1 - y0; // 문 두께 방향이 x(열기 통로가 x로 뻗음)
+  if (!thinX) return [{ kind: 'glass', min: p.min, max: p.max }];
+  return [
+    { kind: 'glass', min: [x0, y0, z0], max: [x1, ym - gap, zd] },
+    { kind: 'glass', min: [x0, ym + gap, z0], max: [x1, y1, zd] },
+    { kind: 'transom', min: [x0, y0, zd], max: [x1, y1, z1] },
+    { kind: 'handle', min: [x0 - 1.5, ym - 8, z0 + 95], max: [x1 + 1.5, ym - 6, z0 + 125] },
+    { kind: 'handle', min: [x0 - 1.5, ym + 6, z0 + 95], max: [x1 + 1.5, ym + 8, z0 + 125] },
+  ];
 }

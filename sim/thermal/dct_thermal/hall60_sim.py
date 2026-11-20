@@ -41,7 +41,8 @@ DX = 0.10            # 격자 간격 (m)
 K_DIFF = 0.02        # 확산 계수 (m^2/s, 난류 혼합을 흉내 낸 값)
 SIGMA_COLD_TOP = 0.1  # 냉기 통로 윗면(랙 높이 바로 위 한 겹)의 통과 쉬움(0~1). 1이면 퍼텐셜 흐름 그대로, 작을수록 윗면으로 들어오는 공기가 줄고 양끝으로 더 들어온다
 RHO_CP = 1.2         # 공기의 밀도 x 비열 (kJ/(m^3 K))
-V_RACK = 0.8         # 랙 안 공기 속도 (m/s)
+V_RACK = 0.6         # 랙 안 공기 속도 (m/s). 랙 면 1.2 m2라 10 kW 랙에 0.72 m3/s(약 152 CFM/kW, 앞뒤 온도 차 약 11.5도).
+                     # 2026-11-17까지 0.8(약 203 CFM/kW, 8.6도)은 일반 서버(약 155 CFM/kW)보다 컸다(docs/35)
 T_SUPPLY = 18.0      # 급기 온도 (degC)
 T_INIT = 24.0        # 초기 공기 온도 (degC)
 VENT_LAYERS = 3      # 급기구 위 공기를 내보내는 층 수(30cm). 너무 얇으면 속도가 지나치게 커진다
@@ -49,6 +50,7 @@ RETURN_Z_CM = (10.0, 190.0)
 # 천공 타일의 통과 쉬움(퍼텐셜 흐름의 sigma). 열린 비율(25 %)을 그대로 쓰면 타일 저항이 너무 약해 타일마다 바람이 2배 차이 났다.
 # 실제 타일은 압력 손실이 커서(K≈30) 바닥 아래 압력이 고르다. OpenFOAM 이중 바닥 3개 사례의 타일별 바람에 맞춘 보정값(docs/33 5장).
 TILE_SIGMA = 0.002
+TILE_OPEN_REF = 0.25  # TILE_SIGMA를 맞춘 타일 열린 비율. 다른 비율이면 (열린 비율 / 0.25)^2배(구멍 속도 제곱에 비례하는 압력 손실, docs/35)
 # 냉기 통로 격리(CAC, docs/34): 지붕은 막힌 판이 아니라 틈이 있는 판으로 본다. 공급이 랙 흡입보다 모자라면 여기로 방 공기(뜨거운 공기)가 들어온다.
 # 통과 쉬움 값은 OpenFOAM CAC 결과 12개와 비교해 골랐다(docs/34 6.2: 0.0005~0.05를 비교, 랙을 뺀 자리의 지나친 온도가 가장 크게 줄고
 # 최고 온도를 낮춰 보지 않는 값. 0.02부터는 최고 온도를 OpenFOAM보다 낮게 낸다)
@@ -75,7 +77,7 @@ def read_hall(path: Path) -> dict:
 def read_hall_from_stage(stage) -> dict:
     """열린 USD 장면에서 홀 정보(랙, CRAC, 급기구, 격벽, 센서 앵커, 홀 크기)를 읽는다."""
     cache = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
-    hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "anchors": [], "size_cm": None, "plenum": None, "underfloor": []}
+    hall = {"racks": [], "cracs": [], "vents": [], "panels": [], "obstacles": [], "anchors": [], "size_cm": None, "plenum": None, "underfloor": []}
     guide = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_, UsdGeom.Tokens.guide])
     for prim in stage.Traverse():
         if prim.GetName().startswith("Hall") and prim.GetAttribute("dct:hallSizeCm"):
@@ -97,6 +99,10 @@ def read_hall_from_stage(stage) -> dict:
         if not at or not at.Get():
             continue
         kind = at.Get()
+        if kind == "rpp":  # 줄 끝 분전반(docs/35): 막힌 상자. 열은 내지 않는다고 본다
+            r = cache.ComputeWorldBound(prim).ComputeAlignedRange()
+            hall["obstacles"].append({"kind": kind, "name": prim.GetName(), "path": str(prim.GetPath()), "min": tuple(r.GetMin()), "max": tuple(r.GetMax())})
+            continue
         if kind in ("rack", "crac", "vent", "containment"):
             r = cache.ComputeWorldBound(prim).ComputeAlignedRange()
             item = {"name": prim.GetName(), "path": str(prim.GetPath()), "min": tuple(r.GetMin()), "max": tuple(r.GetMax())}
@@ -105,6 +111,13 @@ def read_hall_from_stage(stage) -> dict:
                 f = m.TransformDir(Gf.Vec3d(0, -1, 0))  # 에셋의 앞쪽은 로컬 -Y
                 axis = int(np.argmax([abs(f[0]), abs(f[1])]))
                 item["front"] = (axis, 1 if f[axis] > 0 else -1)  # (축, 부호): 앞면이 향하는 방향
+            if kind == "crac":
+                rz = prim.GetAttribute("dct:returnZ")  # 회수구 높이 범위(cm, 바닥에서). 없으면 RETURN_Z_CM(회수 후드가 있으면 그 앞면, docs/35)
+                if rz and rz.HasAuthoredValue():
+                    item["return_z_cm"] = [float(v) for v in rz.Get()]
+                rf = prim.GetAttribute("dct:returnFace")  # top: 윗면(천장 회수 방식이면 연장 덕트 끝) 회수
+                if rf and rf.HasAuthoredValue():
+                    item["return_face"] = str(rf.Get())
             hall[{"rack": "racks", "crac": "cracs", "vent": "vents", "containment": "panels"}[kind]].append(item)
         elif kind == "sensor":
             m = UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default()).ExtractTranslation()
@@ -113,7 +126,7 @@ def read_hall_from_stage(stage) -> dict:
                 "metric": prim.GetAttribute("dct:metric").Get(), "unit": prim.GetAttribute("dct:unit").Get(),
                 "pos_cm": (m[0], m[1], m[2]),
             })
-    for k in ("racks", "cracs", "vents"):
+    for k in ("racks", "cracs", "vents", "obstacles"):
         hall[k].sort(key=lambda d: d["name"])
     if hall["size_cm"] is None:
         raise RuntimeError("홀 크기(dct:hallSizeCm)를 장면에서 찾지 못했다")
@@ -125,7 +138,7 @@ def shift_hall_z(hall: dict, dz_cm: float) -> dict:
     import copy
 
     h = copy.deepcopy(hall)
-    for k in ("racks", "cracs", "vents", "panels", "underfloor"):
+    for k in ("racks", "cracs", "vents", "panels", "underfloor", "obstacles"):
         for it in h.get(k, []):
             it["min"] = (it["min"][0], it["min"][1], it["min"][2] + dz_cm)
             it["max"] = (it["max"][0], it["max"][1], it["max"][2] + dz_cm)
@@ -139,6 +152,19 @@ def rng(lo_cm: float, hi_cm: float, n: int) -> tuple[int, int]:
     i0 = int(np.floor(lo_cm / 100.0 / DX + 1e-6))
     i1 = max(i0 + 1, int(np.ceil(hi_cm / 100.0 / DX - 1e-6)))
     return max(0, i0), min(n, i1)
+
+
+def cold_aisle_centers(vents: list[dict], gap_cm: float = 150.0) -> list[float]:
+    """급기구 y 가운데로 냉기 통로 가운데 위치를 구한다. 통로마다 급기구가 여러 줄(랙 앞면마다 한 줄, docs/35)이어도
+    gap_cm보다 가까운 줄은 한 통로로 묶어 그 평균을 쓴다(예전에는 줄마다 통로 하나로 셌다)."""
+    ys = sorted(round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in vents)
+    groups: list[list[float]] = []
+    for y in ys:
+        if groups and y - groups[-1][-1] < gap_cm:
+            groups[-1].append(y)
+        else:
+            groups.append([y])
+    return [round(sum(g) / len(g) / 10.0) * 10.0 for g in groups]
 
 
 class Layout:
@@ -185,13 +211,17 @@ class Layout:
             area = ((x1 - x0) / 100.0 if axis == 1 else (y1 - y0) / 100.0) * ((z1 - z0) / 100.0)
             self.rack_flux.append(V_RACK * area)
         self.crac_q = []
+        top_returns = []
         for idx, c in enumerate(hall["cracs"]):
             (x0, y0, z0), (x1, y1, z1) = c["min"], c["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
             self.solid[xs:xe, ys:ye, zs:ze] = True
             axis, sign = c["front"]  # 회수면(앞면)이 향하는 방향
-            zr0, zr1 = rng(RETURN_Z_CM[0] + self.z_off_cm, RETURN_Z_CM[1] + self.z_off_cm, nz)  # 회수구 높이는 바닥(이중 바닥이면 그 윗면)에서 잰다
-            if axis == 0:
+            r0, r1 = c.get("return_z_cm", RETURN_Z_CM)
+            zr0, zr1 = rng(r0 + self.z_off_cm, r1 + self.z_off_cm, nz)  # 회수구 높이는 바닥(이중 바닥이면 그 윗면)에서 잰다
+            if c.get("return_face") == "top":
+                top_returns.append((idx, xs, xe, ys, ye, zr0, max(1, zr1 - zr0)))  # 격벽(연장 덕트, 천장 판)을 칸에 넣은 뒤 정한다
+            elif axis == 0:
                 xr = slice(xe, xe + 1) if sign > 0 else slice(xs - 1, xs)
                 self.ret_id[xr, ys:ye, zr0:zr1] = idx
             else:
@@ -200,13 +230,19 @@ class Layout:
         # 격벽 방식: 이름이 ColdAisle_*이면 냉기 통로 격리(CAC). 지붕은 틈이 있는 판(통과 쉬움 CAC_ROOF_SIGMA), 끝 문은 막힘
         self.cac = any(p["name"].startswith("ColdAisle_") for p in hall["panels"])
         self.cac_roof = np.zeros(self.shape, dtype=bool)
-        for p in hall["panels"]:
+        for p in hall["panels"] + hall.get("obstacles", []):  # 격벽과 분전반(docs/35)은 막힌 칸
             (x0, y0, z0), (x1, y1, z1) = p["min"], p["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
             if self.cac and p["name"].endswith("_Roof"):
                 self.cac_roof[xs:xe, ys:ye, zs:ze] = True
                 continue
             self.solid[xs:xe, ys:ye, zs:ze] = True
+        for idx, xs, xe, ys, ye, k, n in top_returns:
+            # 윗면 회수: return_z_cm 높이부터 위로 올라가며 처음 열린 층에서 n층. 천장 판(5 cm)이 칸(10 cm)보다 얇아
+            # 판 윗면 높이가 막힌 칸 안에 들어가는 일이 있다(2026-11-17, 이때 OpenFOAM 회수 면이 0개였다)
+            while k < nz and self.solid[xs:xe, ys:ye, k].all():
+                k += 1
+            self.ret_id[xs:xe, ys:ye, k:k + n] = idx
         for vi, v in enumerate(hall["vents"]):
             (x0, y0, z0), (x1, y1, z1) = v["min"], v["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny)
@@ -254,17 +290,20 @@ class Layout:
         # 냉기 통로 윗면 한 겹(랙 위): 통과 쉬움 sigma를 줄여 윗면으로 들어오는 공기를 줄인다(SIGMA_COLD_TOP). 퍼텐셜 흐름은 윗면과 양끝을 구분하지 못해서 윗면으로 너무 많이 들어온다.
         self.sigma = np.ones(self.shape)
         if SIGMA_COLD_TOP != 1.0 and hall["vents"] and hall["racks"] and not self.cac:
-            cy = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
+            cy = cold_aisle_centers(hall["vents"])
             xa, xb = min(r["min"][0] for r in hall["racks"]), max(r["max"][0] for r in hall["racks"])
             ztop = max(r["max"][2] for r in hall["racks"])
             kz = int(np.floor(ztop / 100.0 / DX + 1e-6))
+            fronts = [(r["max"][1] if r["front"][1] > 0 else r["min"][1]) for r in hall["racks"] if r["front"][0] == 1]
             for y in cy:
-                xs, xe = rng(xa, xb, nx); ys, ye = rng(y - 60.0, y + 60.0, ny)
+                # 통로 폭 전체(마주 보는 랙 앞면 사이). 예전에는 가운데 ±60 cm로 정해 두어 통로를 180 cm로 넓힌 뒤 양쪽 30 cm가 빠졌다
+                hw = min((abs(f - y) for f in fronts), default=60.0)
+                xs, xe = rng(xa, xb, nx); ys, ye = rng(y - hw, y + hw, ny)
                 if kz < nz:
                     self.sigma[xs:xe, ys:ye, kz] = SIGMA_COLD_TOP
         if self.plenum:
             # 천공 타일은 바람이 지나기 어렵다(통과 쉬움 TILE_SIGMA). 퍼텐셜 흐름에서는 이 저항으로 타일마다 나오는 양이 정해진다.
-            self.sigma[self.tile] = TILE_SIGMA
+            self.sigma[self.tile] = TILE_SIGMA * (float(self.plenum.get("open_ratio", TILE_OPEN_REF)) / TILE_OPEN_REF) ** 2
             if self.plenum.get("pedestal_pitch_cm"):
                 # 받침 기둥: 바닥 아래 공간 전체에 고르게 퍼진 작은 저항(가린 단면 비율만큼 통과 쉬움을 낮춘다)
                 block = self.plenum["pedestal_width_cm"] / self.plenum["pedestal_pitch_cm"]
@@ -282,7 +321,7 @@ class Layout:
             back_y = r["min"][1] if sign > 0 else r["max"][1]
             self.aisle_exhaust[near(back_y)] += q
         # 냉기 통로: 급기구가 놓인 y 위치(통로 가운데)로 나누고, 랙은 앞면이 닿는 통로, 급기구는 가장 가까운 통로에 배정한다.
-        cold_centers = sorted({round((v["min"][1] + v["max"][1]) / 2 / 10.0) * 10.0 for v in hall["vents"]})
+        cold_centers = cold_aisle_centers(hall["vents"])
         self.n_cold = len(cold_centers)
         near_cold = lambda y: int(np.argmin([abs(y - c) for c in cold_centers]))
         self.vent_cold = [near_cold((v["min"][1] + v["max"][1]) / 2) for v in hall["vents"]]
@@ -294,9 +333,19 @@ class Layout:
         # CRAC는 모두 같은 장비라고 보고, 용량은 가장 바쁜 통로를 정상 상태에서 감당하는 값으로 둔다
         self.q_cap = float(max(self.aisle_exhaust[a] / max(1, n_per_aisle[a]) for a in range(self.n_aisles)))
         # 격벽 지붕 틈: 용량을 넘는 뜨거운 공기가 새는 곳(지붕 바로 아래 칸 -> 지붕 바로 위 칸)
-        roofs = [] if self.cac else sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
+        # 천장 회수 방식(docs/35): 칸막이 천장 위가 모든 공조기의 공통 회수 공간이다. 공조기가 모자라 넘치는 공기는
+        # 냉기 통로 위 천장 판(Ceiling_Cold_*)을 거쳐 방으로 샌다(판 바로 위 칸 -> 바로 아래 칸). 새는 길은 통로 0번 자리 하나에 모은다
+        self.ceiling = any(p["name"].startswith("Ceiling_") for p in hall["panels"])
+        roofs = [] if (self.cac or self.ceiling) else sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
         self.leak_sink = [np.zeros(self.shape, dtype=bool) for _ in range(self.n_aisles)]
         self.leak_src = [np.zeros(self.shape, dtype=bool) for _ in range(self.n_aisles)]
+        if self.ceiling:
+            for p in hall["panels"]:
+                if p["name"].startswith("Ceiling_Cold_"):
+                    (x0, y0, z0), (x1, y1, z1) = p["min"], p["max"]
+                    xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
+                    self.leak_sink[0][xs:xe, ys:ye, ze] = True
+                    self.leak_src[0][xs:xe, ys:ye, zs - 1] = True
         for a, p in enumerate(roofs[: self.n_aisles]):
             (x0, y0, z0), (x1, y1, z1) = p["min"], p["max"]
             xs, xe = rng(x0, x1, nx); ys, ye = rng(y0, y1, ny); zs, ze = rng(z0, z1, nz)
@@ -321,6 +370,27 @@ def crac_returns(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             for i in idx:
                 q[i] = min(lay.q_cap * float(fan[i]), share)
         leak[a] = max(0.0, lay.aisle_exhaust[a] - q[[i for i in range(lay.n_cracs) if lay.crac_aisle[i] == a]].sum())
+    if getattr(lay, "ceiling", False) or getattr(lay, "cac", False):
+        # 공통 회수 공간(천장 회수 HAC의 천장 위, CAC의 방 전체, docs/35): 켜진 공조기가 홀 전체 배기를 똑같이 나눠 맡고(용량까지),
+        # 남는 것은 한 길(leak[0])로 샌다. CAC는 아래에서 새는 양을 0으로 둔다(남는 배기는 방에 퍼진다)
+        total = float(lay.aisle_exhaust.sum())
+        on = [i for i in range(lay.n_cracs) if fan[i] > 0]
+        q[:] = 0.0
+        left, free = total, list(on)
+        while free and left > 1e-9:  # 용량이 작은 공조기(팬을 줄인 것)가 다 차면 남는 양을 나머지가 나눈다
+            share = left / len(free)
+            full = [i for i in free if lay.q_cap * float(fan[i]) - q[i] <= share]
+            if not full:
+                for i in free:
+                    q[i] += share
+                left = 0.0
+                break
+            for i in full:
+                left -= lay.q_cap * float(fan[i]) - q[i]
+                q[i] = lay.q_cap * float(fan[i])
+            free = [i for i in free if i not in full]
+        leak[:] = 0.0
+        leak[0] = max(0.0, total - float(q.sum()))
     if getattr(lay, "cac", False):
         leak[:] = 0.0  # 냉기 통로 격리: 열기 통로가 방으로 열려 있어 남는 배기는 방으로 퍼진다(새는 길을 따로 두지 않는다)
     return q, leak
@@ -366,7 +436,7 @@ def source_field(lay: Layout, fan: np.ndarray) -> tuple[np.ndarray, dict]:
     for a in range(lay.n_aisles):
         if leak[a] > 1e-9:
             if not (lay.leak_sink[a].any() and lay.leak_src[a].any()):
-                raise RuntimeError(f"통로 {a}의 배기 {leak[a]:.2f} m3/s가 새야 하는데 격벽 지붕 틈 칸이 없다(장면에 `*_Roof` 격벽이 통로 수만큼 있어야 한다)")
+                raise RuntimeError(f"통로 {a}의 배기 {leak[a]:.2f} m3/s가 새야 하는데 격벽 지붕 틈 칸이 없다(장면에 `*_Roof` 격벽이 통로 수만큼, 천장 회수 방식이면 `Ceiling_Cold_*` 판이 있어야 한다)")
             s[lay.leak_sink[a]] -= leak[a] / (lay.leak_sink[a].sum() * vol)
             s[lay.leak_src[a]] += leak[a] / (lay.leak_src[a].sum() * vol)
     return s, {"crac_return_m3s": [round(float(x), 2) for x in q], "aisle_leak_m3s": [round(float(x), 2) for x in leak], "supply_m3s": round(float(q.sum()), 2), "rack_m3s": round(q_rack, 2)}

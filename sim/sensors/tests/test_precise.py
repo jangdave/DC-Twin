@@ -88,3 +88,32 @@ def test_steady_runs_needed_uses_scene_key(manifest, tmp_path):
     for _, fan in precise.fan_states(cond):
         (tmp_path / f"{precise.flow_key(fan, kw, precise.scene_tag(None))}.npz").write_bytes(b"")
     assert count(cond) == 0.0
+
+
+def test_scene_tag_changes_with_geometry_not_materials(tmp_path):
+    """흐름 저장 키의 장면 지문(docs/35): 재질(Looks)과 서버실 껍데기(Shell)만 바뀌면 같고, 격벽·장비 형상이 바뀌면 다르다.
+    예전에는 바닥 아래 구성만 보아서 격벽과 공조기를 바꿔도 키가 같았다."""
+    def scene(extent, rough):
+        return f'''#usda 1.0
+def Xform "DC" {{
+    def Xform "Hall01" {{
+        custom float dct:plenumDepthCm = 60
+        def Scope "Looks" {{
+            def Material "M" {{ float inputs:roughness = {rough} }}
+        }}
+        def Xform "Shell" {{
+            def Mesh "Floor" {{ float3[] extent = [(0, 0, 0), (1, 1, {rough})] }}
+        }}
+        def Xform "Containment" {{
+            def Mesh "HotAisle_01_SideN" {{ float3[] extent = [(0, 0, 200), ({extent}, 5, 320)] }}
+        }}
+    }}
+}}
+'''
+    paths = []
+    for i, (ext, r) in enumerate([(600, 0.4), (600, 0.5), (700, 0.4)]):
+        p = tmp_path / f"s{i}.usda"
+        p.write_text(scene(ext, r), encoding="utf-8")
+        paths.append(precise.scene_tag(p).split(":")[1])
+    assert paths[0] == paths[1]  # 재질과 껍데기만 다름
+    assert paths[0] != paths[2]  # 격벽 형상이 다름

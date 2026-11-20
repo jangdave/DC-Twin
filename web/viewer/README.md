@@ -45,7 +45,7 @@ npm run data
 
 ## 장비 모양(glb) 다시 만들기
 
-`public/models/rack.glb`, `crac.glb`는 직접 제작한 `blender/rack.blend`, `crac.blend`에서 내보낸 것이다(텍스처 없음, 재질 색은 스크립트의 표). 모델을 고치면 다시 만든다. 주소 `?models=0`이나 화면의 "장비 모양" 단추로 단순 상자로 볼 수 있다.
+`public/models/rack.glb`, `crah.glb`(하향 송풍 공조기, docs/35)는 직접 제작한 `blender/rack.blend`, `crah.blend`에서 내보낸 것이다(텍스처 없음, 재질 색은 스크립트의 표). 모델을 고치면 다시 만든다. 주소 `?models=0`이나 화면의 "장비 모양" 단추로 단순 상자로 볼 수 있다.
 
 ```
 blender -b blender/rack.blend --python blender/scripts/export_glb.py -- --out web/viewer/public/models

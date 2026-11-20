@@ -11,6 +11,7 @@
 | `sim/out/sensor_manifest.json`(있으면, gitignore) | 생성기, 서버 실행 | `build_manifest`와 같음 |
 | `web/viewer/public/data/scene.json` | 웹 화면 | 랙, CRAC 이름과 상자가 layout.json과 같음 |
 | `web/viewer/public/data/sensors.json` | 웹 화면 | 센서 ID 목록과 기준값이 매니페스트와 같음 |
+| `experiments/openfoam_baseline/layout_cac.json` | CAC 웹 격벽, CAC 사례 | 장비 자리가 layout.json과 같음, CAC 장면이 있으면 그것과 같음, 웹 CAC 격벽과 같음 |
 
 사용 (sim/thermal 폴더에서, usd-core가 있는 환경):
     uv run --python 3.13 python ../../scripts/check_geometry.py
@@ -29,6 +30,8 @@ sys.path.insert(0, str(ROOT / "scripts" / "usd_tools"))
 
 SCENE = ROOT / "usd" / "scenes" / "hall01.usda"
 LAYOUT = ROOT / "experiments" / "openfoam_baseline" / "layout.json"
+LAYOUT_CAC = ROOT / "experiments" / "openfoam_baseline" / "layout_cac.json"
+SCENE_CAC = ROOT / "usd" / "scenes" / "_hall01_cac.usda"
 ANCHORS = ROOT / "server" / "data" / "anchors.json"
 MANIFESTS = [ROOT / "server" / "data" / "sensor_manifest.json", ROOT / "sim" / "out" / "sensor_manifest.json"]
 WEB = ROOT / "web" / "viewer" / "public" / "data"
@@ -106,6 +109,29 @@ def check() -> list[str]:
             bad = [n for n in want if not _close([list(map(float, want[n][0])), list(map(float, want[n][1]))], [list(map(float, got[n][0])), list(map(float, got[n][1]))], 1e-3)]
             if bad:
                 problems.append(f"웹 scene.json의 {kind} 위치가 layout.json과 다르다: {bad[:3]}. 다시 만들기: cd web/viewer && npm run data")
+
+    # CAC 형상 사본(docs/34): 장비 자리는 HAC와 같아야 한다(격벽만 다르다). CAC 장면(_hall01_cac.usda, gitignore)이 있으면 그것과도 비교한다.
+    # 2026-11-17: 홀 배치를 바꾼 뒤 이 사본을 다시 만들지 않아 웹 CAC 격벽이 옛 홀 좌표로 엉뚱한 통로 위에 그려졌다(docs/35)
+    if LAYOUT_CAC.exists():
+        cac = json.loads(LAYOUT_CAC.read_text(encoding="utf-8"))
+        redo = "다시 만들기: cd experiments/omniverse_probe && uv run --python 3.13 python ../openfoam_baseline/export_layout.py ../../usd/scenes/_hall01_cac.usda layout_cac.json"
+        for kind in ("racks", "cracs", "vents", "obstacles"):
+            box = lambda ds: _norm([(d["name"], d["min"], d["max"]) for d in ds])  # noqa: E731  (회수 높이처럼 격벽 방식에 따라 다른 속성은 보지 않는다)
+            if not _close(box(layout.get(kind, [])), box(cac.get(kind, []))):
+                problems.append(f"layout_cac.json의 {kind}가 layout.json과 다르다(CAC는 격벽만 달라야 한다). {redo}")
+        if SCENE_CAC.exists():
+            hall_cac = _norm(hs.read_hall(SCENE_CAC))
+            if not _close(hall_cac, cac):
+                problems.append(f"layout_cac.json이 CAC 장면과 다르다({_first_diff(hall_cac, cac)}). {redo}")
+        web_cac = scene.get("variants", {}).get("cac", {}).get("panels", [])
+        want = [(p["name"], p["min"], p["max"]) for p in cac["panels"]]
+        got = [(p["name"], p["min"], p["max"]) for p in web_cac]
+        if not _close(_norm(want), _norm(got), 1e-3):
+            problems.append("웹 scene.json의 CAC 격벽(variants.cac.panels)이 layout_cac.json과 다르다. 다시 만들기: cd web/viewer && npm run data")
+    want = [(d["name"], d["min"], d["max"]) for d in layout.get("obstacles", [])]
+    got = [(d["name"], d["min"], d["max"]) for d in scene.get("obstacles", [])]
+    if not _close(_norm(want), _norm(got), 1e-3):
+        problems.append("웹 scene.json의 분전반(obstacles)이 layout.json과 다르다. 다시 만들기: cd web/viewer && npm run data")
 
     web_sensors = json.loads((WEB / "sensors.json").read_text(encoding="utf-8"))
     pick = lambda s: {k: s.get(k, "high" if k == "direction" else None) for k in THRESH_KEYS}  # 방향이 없으면 high(매니페스트 규칙, 웹 자료는 채워 둔다)

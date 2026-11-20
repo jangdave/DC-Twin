@@ -132,13 +132,18 @@ def build(cfg: dict, out: Path, flat: bool = False) -> tuple[Usd.Stage, Layout]:
     UsdGeom.Xform.Define(stage, cooling)
     crac_no = 0
     for side, (x, rot) in enumerate([(cr["depth"] / 2, 90.0), (lay.width - cr["depth"] / 2, -90.0)]):
-        for (ya, yb) in lay.hot_aisles:
+        for yc in hi.crac_ys(lay, cfg):
             crac_no += 1
             p = f"{cooling}/CRAC_{crac_no:02d}"
             xf = UsdGeom.Xform.Define(stage, p)
             xf.GetPrim().GetReferences().AddReference(cr["asset"])
-            _xform(xf, translate=(x, (ya + yb) / 2, 0.0), rotate_z=rot)  # 앞면(회수면)이 홀 안쪽을 향한다
+            _xform(xf, translate=(x, yc, 0.0), rotate_z=rot)  # 앞면(회수면)이 홀 안쪽을 향한다
             override_sensors(stage, p, hall, "CR", crac_no, ["supply_temp", "return_temp", "fan_speed"])
+            ret = hi.crac_return(cfg)
+            if ret:
+                # 윗면 회수(docs/35). 천장 회수 방식이면 연장 덕트 끝(칸막이 천장 위). 계산(hall60_sim, gen_case)은 이 면과 높이를 읽는다
+                xf.GetPrim().CreateAttribute("dct:returnFace", Sdf.ValueTypeNames.Token, custom=True).Set(ret[0])
+                xf.GetPrim().CreateAttribute("dct:returnZ", Sdf.ValueTypeNames.Float2, custom=True).Set(Gf.Vec2f(*ret[1]))
 
     W, L, H = lay.width, lay.length, lay.height
     tri: dict = {}
@@ -157,6 +162,10 @@ def build(cfg: dict, out: Path, flat: bool = False) -> tuple[Usd.Stage, Layout]:
         vents = f"{hall_path}/Vents"
         UsdGeom.Xform.Define(stage, vents)
         tri["Vents"] = hi.build_vents(stage, vents, lay, cfg, mats)
+        if hi.rpp_boxes(lay, cfg):
+            power = f"{hall_path}/Power"
+            UsdGeom.Xform.Define(stage, power)
+            tri["Power"] = hi.build_power(stage, power, lay, cfg, mats)
     stage.GetPrimAtPath(hall_path).CreateAttribute("dct:hallSizeCm", Sdf.ValueTypeNames.Float3, custom=True).Set(Gf.Vec3f(W, L, H))
     # 이중 바닥과 바닥 아래 공간(raised_floor, 2026-11-11). 켜면 공조기가 바닥 아래로 찬 공기를 불어 넣고 급기구(천공 타일)로 올라온다.
     # 깊이와 타일 열린 비율은 근거 없는 가상 값이다(ADR-009에서 표준값을 찾지 못함). 시뮬레이션은 이 속성을 읽는다.
@@ -233,24 +242,19 @@ def _build_flat(stage: Usd.Stage, hall_path: str, cfg: dict, lay: Layout) -> Non
             add_box(stage, f"{cont}/ColdAisle_{k:02d}_Roof", (lay.rack_x0, ya, rz), (lay.rack_x1, yb, rz + t), col["containment"], "containment")
             add_box(stage, f"{cont}/ColdAisle_{k:02d}_Door_W", (lay.rack_x0 - t, ya, 0), (lay.rack_x0, yb, rz + t), col["containment"], "containment")
             add_box(stage, f"{cont}/ColdAisle_{k:02d}_Door_E", (lay.rack_x1, ya, 0), (lay.rack_x1 + t, yb, rz + t), col["containment"], "containment")
-    for k, (ya, yb) in enumerate([] if hi.containment_type(cfg) == "cold" else lay.hot_aisles, start=1):
-        add_box(stage, f"{cont}/HotAisle_{k:02d}_Roof", (xa, ya, rz), (xb, yb, rz + t), col["containment"], "containment")
-        for edge, outward in ((ya, -1), (yb, 1)):
-            if (k == 1 and outward == -1) or (k == len(lay.hot_aisles) and outward == 1):
-                continue
-            lo_y, hi_y = (edge - t, edge) if outward == -1 else (edge, edge + t)
-            for tag, (x0, x1) in (("W", (xa, lay.rack_x0)), ("E", (lay.rack_x1, xb))):
-                add_box(stage, f"{cont}/HotAisle_{k:02d}_Side{'N' if outward == 1 else 'S'}_{tag}", (x0, lo_y, 0), (x1, hi_y, rz), col["containment"], "containment")
-    vt = cfg["vent"]
+    for name, lo, hi_, _axis, _pitch in ([] if hi.containment_type(cfg) == "cold" else hi.hot_aisle_boxes(lay, cfg)):
+        add_box(stage, f"{cont}/{name}", lo, hi_, col["containment"], "containment")
+    for name, lo, hi_ in hi.ceiling_boxes(lay, cfg):
+        add_box(stage, f"{cont}/{name}", lo, hi_, col["containment"], "containment")
+    if hi.rpp_boxes(lay, cfg):
+        power = f"{hall_path}/Power"
+        UsdGeom.Xform.Define(stage, power)
+        for name, lo, hi_ in hi.rpp_boxes(lay, cfg):
+            add_box(stage, f"{power}/{name}", lo, hi_, (0.52, 0.54, 0.57), "rpp")
     vents = f"{hall_path}/Vents"
     UsdGeom.Xform.Define(stage, vents)
-    vn = 0
-    for (ya, yb) in lay.cold_aisles:
-        yc = (ya + yb) / 2
-        for i in range(cfg["rows"]["racks_per_row"]):
-            vn += 1
-            xc = lay.rack_x0 + rk["width"] * (i + 0.5)
-            add_box(stage, f"{vents}/Vent_{vn:02d}", (xc - vt["width"] / 2, yc - vt["depth"] / 2, 0), (xc + vt["width"] / 2, yc + vt["depth"] / 2, vt["thickness"]), col["vent"], "vent")
+    for vn, (lo, hi_) in enumerate(hi.vent_boxes(lay, cfg), start=1):
+        add_box(stage, f"{vents}/Vent_{vn:02d}", lo, hi_, col["vent"], "vent")
 
 
 def main(argv: list[str] | None = None) -> int:

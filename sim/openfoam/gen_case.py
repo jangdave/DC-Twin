@@ -132,11 +132,14 @@ mergePatchPairs ();
 
     open_roofs = [aisle for aisle in range(lay.n_aisles) if leak[aisle] > 1e-9]
     roofs = sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
-    open_names = {roofs[i]["name"] for i in open_roofs}  # 새는 통로의 지붕은 열어 둔다(우리 모델의 '지붕 틈' 대응)
+    open_names = {roofs[i]["name"] for i in open_roofs if i < len(roofs)}  # 새는 통로의 지붕은 열어 둔다(우리 모델의 '지붕 틈' 대응)
+    if getattr(lay, "ceiling", False) and leak.sum() > 1e-9:
+        # 천장 회수 방식(docs/35): 공조기가 모자라면 냉기 통로 위 천장 판을 열어 회수 공간이 방으로 넘치게 한다(우리 모델의 새는 길 대응)
+        open_names = {p["name"] for p in hall["panels"] if p["name"].startswith("Ceiling_Cold_")}
     # 냉기 통로 격리(CAC, docs/34): 냉기 통로 지붕은 틈이 있는 판(다공질 저항), 끝 문은 막힘
     cac = any(p["name"].startswith("ColdAisle_") for p in hall["panels"])
     cac_roofs = [p for p in hall_g["panels"] if cac and p["name"].startswith("ColdAisle_") and p["name"].endswith("_Roof")]
-    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names and p not in cac_roofs]
+    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names and p not in cac_roofs] + list(hall_g.get("obstacles", []))  # 분전반(docs/35)
     # 바닥 아래 장애물(docs/33 6장): 케이블 트레이와 배관은 막힌 칸, 케이블 구멍은 바닥판에서 저항 없이 열린 칸
     under = hall_g.get("underfloor", []) if plenum else []
     solids += [u for u in under if u["kind"] != "cutout"]
@@ -205,9 +208,13 @@ mergePatchPairs ();
             nm_s = f"crac_sup_{i+1:02d}"
             s += f"    {{ name {nm_s}_f; type faceSet; action new; source boxToFace; sourceInfo {{ box {vec((xs * dx + 0.01, ys * dx + 0.01, zb - 0.01))} {vec((xe * dx - 0.01, ye * dx - 0.01, zb + 0.01))}; }} }}\n"
             crac_sup.append((nm_s, float(q[i])))
-        zr0, zr1 = h.rng(h.RETURN_Z_CM[0] + z_off, h.RETURN_Z_CM[1] + z_off, nz)
+        r0, r1 = c.get("return_z_cm", h.RETURN_Z_CM)  # 회수 후드가 있으면 그 앞면 높이(docs/35)
+        zr0, zr1 = h.rng(r0 + z_off, r1 + z_off, nz)
         plane = (xe if sign > 0 else xs) * dx if axis == 0 else (ye if sign > 0 else ys) * dx
-        if axis == 0:
+        if c.get("return_face") == "top":  # 윗면 회수(docs/35): 우리 계산의 회수 칸 맨 아래 층의 밑면(공조기 또는 연장 덕트 윗면)
+            k0 = int(np.argwhere(lay.ret_id == i)[:, 2].min())
+            lo = (xs * dx + 0.01, ys * dx + 0.01, k0 * dx - 0.01); hi = (xe * dx - 0.01, ye * dx - 0.01, k0 * dx + 0.01)
+        elif axis == 0:
             lo = (plane - 0.01, ys * dx + 0.01, zr0 * dx + 0.01); hi = (plane + 0.01, ye * dx - 0.01, zr1 * dx - 0.01)
         else:
             lo = (xs * dx + 0.01, plane - 0.01, zr0 * dx + 0.01); hi = (xe * dx - 0.01, plane + 0.01, zr1 * dx - 0.01)
@@ -469,7 +476,7 @@ runTimeModifiable false;
     meta = {
         "scenario": a.scenario or fail, "fail": fail, "scene": str(scene), "racks": len(hall["racks"]), "vent_supply_m3s_per_cold_aisle": [round(x, 3) for x in vent_q], "dx": dx, "cells_total": int(np.prod(lay.shape)), "cells_fluid": int(lay.fluid.sum()),
         "crac_return_m3s": {n: round(float(x), 3) for n, x in zip(names, q)}, "supply_m3s": round(supply, 3),
-        "open_roofs": sorted(open_names), "power_kw": a.power, "total_power_kw": float(sum(rack_kw)), "fan": {n: float(v) for n, v in zip(names, fan)}, "sample": spec["id"] if spec else None, "buoyancy": not a.no_buoyancy, "conservative_relaxation": a.conservative, "scheme": a.scheme,
+        "open_roofs": sorted(open_names), "power_kw": a.power, "total_power_kw": float(sum(rack_kw)), "fan": {n: float(v) for n, v in zip(names, fan)}, "sample": spec["id"] if spec else None, "buoyancy": not a.no_buoyancy, "conservative_relaxation": a.conservative, "scheme": a.scheme, "v_rack_ms": h.V_RACK,
         "darcy_d_flow_1_m2": D_FLOW, "darcy_d_cross_1_m2": D_CROSS,
         "plenum": plenum, "z_off_cm": z_off, "crac_supply_m3s": dict(crac_sup) if plenum else None,
     }
