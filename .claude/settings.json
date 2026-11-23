@@ -1,4 +1,5 @@
 {
+  "language": "korean",
   "permissions": {
     "allow": [
       "Bash(git status:*)",
