@@ -4,7 +4,7 @@
     uv run --python 3.13 python train_predictor.py [--only-converged] [--out model.pkl]
     기본(HAC)은 --data-dir surrogate_ceil + residual_model.EXTRA_HAC(지금은 비어 있다, docs/35 5장 2026-11-21)
     CAC 장면용(docs/34 6장, E9): ... train_predictor.py --cac --out model_cac.pkl
-        (= --data-dir ../openfoam_baseline/results/surrogate_cac + residual_model.EXTRA_CAC의 추가 18개)
+        (= --data-dir ../openfoam_baseline/results/surrogate_cac_final + residual_model.EXTRA_CAC의 추가 18개)
 센서 생성기(L2)가 `ResidualPredictor.load("model.pkl")`로 읽어서 `predict(...)`를 부른다.
 """
 from __future__ import annotations
@@ -27,10 +27,10 @@ HERE = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()
 ap.add_argument("--only-converged", action="store_true", help="수렴한 샘플만 학습에 쓴다(기본은 미수렴 9개 포함)")
 ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parent / "model.pkl")
-ap.add_argument("--data-dir", type=Path, default=rm.DATA, help="OpenFOAM 결과 폴더(기본 HAC surrogate_rf, CAC는 surrogate_cac)")
+ap.add_argument("--data-dir", type=Path, default=rm.DATA, help="OpenFOAM 결과 폴더(기본 HAC surrogate_ceil, CAC는 surrogate_cac_final)")
 ap.add_argument("--extra", nargs=2, action="append", default=[], metavar=("SAMPLES_JSON", "DATA_DIR"),
                 help="추가 학습 샘플(명세 파일과 결과 폴더). 여러 번 줄 수 있다. CAC 모델은 4·5차 랙 제거 + 두 대 정지 18개를 더한다(E9)")
-ap.add_argument("--cac", action="store_true", help="CAC 모델: --data-dir surrogate_cac와 rm.EXTRA_CAC(추가 18개)를 쓴다")
+ap.add_argument("--cac", action="store_true", help="CAC 모델: --data-dir surrogate_cac_final과 rm.EXTRA_CAC(추가 18개)를 쓴다")
 a = ap.parse_args()
 if a.cac:
     a.data_dir = rm.DATA_CAC

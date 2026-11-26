@@ -55,8 +55,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--report", type=Path, default=None)
     args = ap.parse_args()
-    for name, d0, d4, d5 in (("HAC (기본 장면)", rm.DATA, rm.RES / "surrogate_rf_v4", rm.RES / "surrogate_rf_v5"),
-                             ("CAC", rm.DATA_CAC, rm.RES / "surrogate_cac_v4", rm.RES / "surrogate_cac_v5")):
+    for name, d0, d4, d5 in (("HAC (기본 장면)", rm.DATA, rm.RES / "surrogate_ceil_v4", rm.RES / "surrogate_ceil_v5"),
+                             ("CAC", rm.DATA_CAC, rm.RES / "surrogate_cac_final_v4", rm.RES / "surrogate_cac_final_v5")):
         base = rm.load_dataset(d0, SPEC0)
         v4, v5 = rm.load_dataset(d4, SPEC4), rm.load_dataset(d5, SPEC5)
         info = {}

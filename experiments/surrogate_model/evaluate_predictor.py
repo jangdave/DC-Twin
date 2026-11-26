@@ -20,7 +20,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only-converged", action="store_true")
     ap.add_argument("--report", type=Path, default=None)
-    ap.add_argument("--data-dir", type=Path, default=rm.DATA, help="OpenFOAM 결과 폴더(CAC는 surrogate_cac)")
+    ap.add_argument("--data-dir", type=Path, default=rm.DATA, help="OpenFOAM 결과 폴더(CAC는 surrogate_cac_final)")
     ap.add_argument("--extra", nargs=2, action="append", default=[], metavar=("SAMPLES_JSON", "DATA_DIR"), help="추가 학습 샘플(train_predictor.py와 같다)")
     args = ap.parse_args()
 

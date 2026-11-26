@@ -69,7 +69,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--only", nargs="*", default=None)
-    ap.add_argument("--res", type=Path, required=True, help="결과 폴더(필수. 장면마다 폴더가 다르다: 이중 바닥 전 surrogate, 기본 장면 surrogate_rf, CAC surrogate_cac. 기본값을 두면 옛 장면 폴더에 섞여 2026-11-13 재검토에서 없앴다)")
+    ap.add_argument("--res", type=Path, required=True, help="결과 폴더(필수. 장면마다 폴더가 다르다: 이중 바닥 전 surrogate, 기본 장면 surrogate_rf, CAC surrogate_cac, 최종 장면 HAC surrogate_ceil, 최종 장면 CAC surrogate_cac_final. 기본값을 두면 옛 장면 폴더에 섞여 2026-11-13 재검토에서 없앴다)")
     ap.add_argument("--scene", type=Path, default=None, help="장면 USD(기본 hall01.usda, CAC는 _hall01_cac.usda, docs/34 6장)")
     ap.add_argument("--spec", type=Path, default=HERE / "samples.json", help="샘플 명세(기본 samples.json, 4차 샘플은 samples_v4.json)")
     a = ap.parse_args()

@@ -45,7 +45,7 @@ def _sha256(path: Path) -> str:
 def load_default_predictor(cac: bool = False):
     """model.pkl을 읽거나, 없으면 저장소의 학습 결과로 학습한다. 읽은 모델에는 출처(`provenance`)를 붙인다.
 
-    cac=True(냉기 통로 격리 장면, docs/34 6장)면 CAC 결과(`surrogate_cac`)로 만든 `model_cac.pkl`을 쓴다. 장면마다 학습 데이터가 다르다.
+    cac=True(냉기 통로 격리 장면, docs/34 6장)면 CAC 결과(`surrogate_cac_final`, 최종 장면 2026-11-26)로 만든 `model_cac.pkl`을 쓴다. 장면마다 학습 데이터가 다르다.
 
     model.pkl은 저장소에 없다(gitignore). 학습 이력(`model.meta.json`, 저장소에 있음)의 samples.json 해시가 지금 samples.json과 다르면
     모델이 지금 데이터와 맞지 않으므로 거부한다(다시 학습한다: `cd experiments/surrogate_model && uv run python train_predictor.py`).
