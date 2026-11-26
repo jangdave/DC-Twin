@@ -27,13 +27,13 @@ RES = BASE / "results"
 # 학습 데이터 폴더. 홀 배치와 천장 회수 방식을 바꾼 최종 HAC 장면(2026-11-17, docs/35)으로 다시 계산한 surrogate_ceil을 쓴다.
 # 예전 데이터: 바닥 아래 공간 없음 results/surrogate, 이중 바닥 장면(2026-11-11, docs/33 C단계) results/surrogate_rf.
 DATA = RES / "surrogate_ceil"
-DATA_CAC = RES / "surrogate_cac"  # 냉기 통로 격리(CAC) 장면으로 같은 샘플을 계산한 결과(docs/34 6장). 옛 홀 배치 데이터다(docs/35 4장, 다시 계산은 나중)
+DATA_CAC = RES / "surrogate_cac_final"  # 냉기 통로 격리(CAC) 장면으로 같은 샘플을 계산한 결과(docs/34 6장). 최종 홀 장면으로 다시 계산했다(2026-11-26, E10 5장). 옛 홀 배치 데이터는 results/surrogate_cac
 # 추가 학습 샘플(랙 제거 + 공조기 두 대 정지 18개, experiments/results/E9_residual_features.md). (명세 파일, 결과 폴더)
 # HAC에는 더하지 않는다. 이중 바닥 장면에서는 보류 E가 나빠졌고, 최종 장면(2026-11-21)에서는 하나씩 빼고 본 오차와 보류 E는 좋아지지만
 # 보류 A가 0.21 -> 0.23도로 나빠져 미리 정한 기준(보류 사례가 고르게 좋아질 때만 바꾼다)을 넘지 못했다(docs/35 5장).
 # 계산한 결과는 results/surrogate_ceil_v4, _v5에 있다. 넣으려면: [(BASE / "surrogate" / "samples_v4.json", RES / "surrogate_ceil_v4"), (... "samples_v5.json", RES / "surrogate_ceil_v5")]
 EXTRA_HAC: list = []
-EXTRA_CAC = [(BASE / "surrogate" / "samples_v4.json", RES / "surrogate_cac_v4"), (BASE / "surrogate" / "samples_v5.json", RES / "surrogate_cac_v5")]
+EXTRA_CAC = [(BASE / "surrogate" / "samples_v4.json", RES / "surrogate_cac_final_v4"), (BASE / "surrogate" / "samples_v5.json", RES / "surrogate_cac_final_v5")]
 
 
 def read_csv(path: Path) -> dict[str, float]:

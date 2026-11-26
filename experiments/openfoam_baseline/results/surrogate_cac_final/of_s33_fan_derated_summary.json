@@ -1,0 +1,40 @@
+{
+ "result_time": "2336",
+ "dx_m": 0.1,
+ "rack_inlet_anchor_C": {
+  "min": 18.24,
+  "mean": 18.58,
+  "max": 18.98,
+  "end_racks_mean": 18.77,
+  "middle_racks_mean": 18.53
+ },
+ "rack_inlet_front_layer_mean_C": {
+  "min": 18.39,
+  "mean": 18.86,
+  "max": 19.45,
+  "end_racks_mean": 19.14,
+  "middle_racks_mean": 18.79
+ },
+ "hottest_inlet_racks": [
+  "Rack_30",
+  "Rack_29",
+  "Rack_31",
+  "Rack_21",
+  "Rack_35"
+ ],
+ "rack_through_speed_ms": {
+  "target": 0.6,
+  "mean": 0.594,
+  "min": 0.591,
+  "max": 0.598
+ },
+ "rack_exhaust_front_to_back_rise_C_mean": 10.71,
+ "energy_balance_kW": {
+  "rack_heat_in": 576.0,
+  "carried_out_by_crac_returns": 577.3
+ },
+ "T_all_cells_C": {
+  "min": 18.0,
+  "max": 36.93
+ }
+}

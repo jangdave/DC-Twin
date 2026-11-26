@@ -1,25 +1,25 @@
 {
  "version": 1,
- "trained_at": "2026-11-16T02:16:09+00:00",
- "model_sha256": "ae06c99dd170668ab2deb1b62c728cdec02322010a8c7effc4393ba4de77d0bd",
+ "trained_at": "2026-11-26T04:21:10+00:00",
+ "model_sha256": "6d1ee97a5e3040939d19733e7aafac10d78c3dc12a8eca5ce1470da2eaf4d651",
  "samples_json_sha256": "56c756b1cf5585b79ac92b490635bcbb330628fdda173c9d13193a48cbc22983",
- "data_dir": "surrogate_cac",
+ "data_dir": "surrogate_cac_final",
  "extra": [
   {
    "samples_json": "samples_v4.json",
    "samples_json_sha256": "1d60c6a5aaa149615207250ea1f74535911f8442dfea878b277853327e357f18",
-   "data_dir": "surrogate_cac_v4"
+   "data_dir": "surrogate_cac_final_v4"
   },
   {
    "samples_json": "samples_v5.json",
    "samples_json_sha256": "6808c97f9da737becb7899652d66fa182f01dcdbcba14342384b269638bb85e9",
-   "data_dir": "surrogate_cac_v5"
+   "data_dir": "surrogate_cac_final_v5"
   }
  ],
  "n_features": 25,
  "code": {
-  "git_commit": "cb789b48d056603ce36ce3786c4a93fe8e374910",
-  "dirty": false,
+  "git_commit": "622cebd0aa3396a77e0ff10149124a71c815c4e9",
+  "dirty": true,
   "python": "3.13.9",
   "scikit_learn": "1.9.1",
   "numpy": "2.5.4"
@@ -115,8 +115,8 @@
   "s86_remove_diff_two_off"
  ],
  "status_counts": {
-  "done": 64,
-  "not_converged": 22
+  "done": 45,
+  "not_converged": 41
  },
  "excluded": {
   "holdout_A_normal": "보류(학습에서 제외)",
