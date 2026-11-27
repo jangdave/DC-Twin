@@ -31,7 +31,8 @@
  "rack_exhaust_front_to_back_rise_C_mean": 12.25,
  "energy_balance_kW": {
   "rack_heat_in": 673.0,
-  "carried_out_by_crac_returns": 984.0
+  "carried_out_by_crac_returns": 673.0,
+  "note": "2026-11-27 바로잡음: 꺼낼 때 급기 18도를 기준으로 계산해 984.0이 나왔다. 급기 24도 기준으로 1.2 x 43.2 x 6.0 kW를 뺐다(extract.py 수정, 계산 필드는 지워져 다시 꺼내지 못함)"
  },
  "T_all_cells_C": {
   "min": 24.0,

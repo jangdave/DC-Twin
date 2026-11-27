@@ -102,7 +102,7 @@ for c in hall["cracs"]:
         tret = np.nanmean(Tg[xs:xe, ys:ye, k0:k1])
     else:
         tret = np.nanmean(Tg[xi, ys:ye, k0:k1])
-    out_kw += 1.2 * q * (tret - 18.0)
+    out_kw += 1.2 * q * (tret - float(meta.get("t_supply_c", 18.0)))  # 급기 온도 기준(사례마다 다를 수 있다, docs/32 V2)
 summary = {
     "result_time": tdir.name, "dx_m": dx,
     "rack_inlet_anchor_C": {"min": round(float(t_anchor.min()), 2), "mean": round(float(t_anchor.mean()), 2), "max": round(float(t_anchor.max()), 2),
