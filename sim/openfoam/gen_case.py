@@ -17,6 +17,10 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 CAC_ROOF_OPEN = 0.02  # 냉기 통로 격리 지붕의 틈 비율(가상 값, docs/34)
+# 천장 회수 HAC의 냉기 통로 위 천장 판(Ceiling_Cold_*)을 틈 판(다공질 저항)으로 둘 때의 틈 비율(가상 값, CAC 지붕과 같다).
+# 기본은 예전 방식(막힌 판, 급기가 모자라면 통째로 엶)이고, 샘플 명세에 "ceil_porous": true가 있을 때만 쓴다.
+# 시험 결과(V2 3.3): 급기가 모자라지 않은 사례도 1~3도 바뀌므로 학습 사례 전체를 다시 계산하기 전에는 기본으로 바꾸지 않는다
+CEIL_COLD_OPEN = 0.02
 sys.path.insert(0, str(REPO / "sim" / "thermal"))
 from dct_thermal import hall60_sim as h  # noqa: E402
 
@@ -136,13 +140,18 @@ mergePatchPairs ();
     open_roofs = [aisle for aisle in range(lay.n_aisles) if leak[aisle] > 1e-9]
     roofs = sorted([p for p in hall["panels"] if p["name"].endswith("_Roof")], key=lambda p: p["min"][1])
     open_names = {roofs[i]["name"] for i in open_roofs if i < len(roofs)}  # 새는 통로의 지붕은 열어 둔다(우리 모델의 '지붕 틈' 대응)
-    if getattr(lay, "ceiling", False) and leak.sum() > 1e-9:
+    ceil_porous = bool(spec.get("ceil_porous", False)) if spec else False
+    ceil_cold = [p for p in hall_g["panels"] if ceil_porous and getattr(lay, "ceiling", False) and p["name"].startswith("Ceiling_Cold_")]
+    if ceil_cold:
+        # 틈 판 방식(선택): 냉기 통로 위 천장 판은 늘 틈이 있는 판(CEIL_COLD_OPEN). 공조기가 모자라면 넘치는 공기가 이 틈으로 샌다
+        open_names = set()
+    elif getattr(lay, "ceiling", False) and leak.sum() > 1e-9:
         # 천장 회수 방식(docs/35): 공조기가 모자라면 냉기 통로 위 천장 판을 열어 회수 공간이 방으로 넘치게 한다(우리 모델의 새는 길 대응)
         open_names = {p["name"] for p in hall["panels"] if p["name"].startswith("Ceiling_Cold_")}
     # 냉기 통로 격리(CAC, docs/34): 냉기 통로 지붕은 틈이 있는 판(다공질 저항), 끝 문은 막힘
     cac = any(p["name"].startswith("ColdAisle_") for p in hall["panels"])
     cac_roofs = [p for p in hall_g["panels"] if cac and p["name"].startswith("ColdAisle_") and p["name"].endswith("_Roof")]
-    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names and p not in cac_roofs] + list(hall_g.get("obstacles", []))  # 분전반(docs/35)
+    solids = [c for c in hall_g["cracs"]] + [p for p in hall_g["panels"] if p["name"] not in open_names and p not in cac_roofs and p not in ceil_cold] + list(hall_g.get("obstacles", []))  # 분전반(docs/35)
     # 바닥 아래 장애물(docs/33 6장): 케이블 트레이와 배관은 막힌 칸, 케이블 구멍은 바닥판에서 저항 없이 열린 칸
     under = hall_g.get("underfloor", []) if plenum else []
     solids += [u for u in under if u["kind"] != "cutout"]
@@ -179,6 +188,8 @@ mergePatchPairs ();
             s += cell_action("pedestals", "cellZoneSet", "new", Box(0, nx, 0, ny, 0, kd0, dx))
     for i, rf in enumerate(cac_roofs):
         s += cell_action("cac_roof", "cellZoneSet", "new" if i == 0 else "add", Box(*voxel(rf, dx, lay.shape), dx))
+    for i, rf in enumerate(ceil_cold):
+        s += cell_action("ceil_cold", "cellZoneSet", "new" if i == 0 else "add", Box(*voxel(rf, dx, lay.shape), dx))
     n_cold = lay.n_cold
     first = [True] * n_cold
     for vi, v in enumerate([] if plenum else hall["vents"]):
@@ -311,17 +322,18 @@ RAS { RASModel kEpsilon; turbulence on; printCoeffs on; }
     }}
 }}
 """
-    if cac_roofs:
-        # 냉기 통로 지붕 틈: 열린 비율 2 %(가상 값)인 판의 손실 계수 K를 칸 두께로 나눈 Forchheimer 계수. 모든 방향으로 같게
-        sg = CAC_ROOF_OPEN
+    for zone, plates, sg in (("cac_roof", cac_roofs, CAC_ROOF_OPEN), ("ceil_cold", ceil_cold, CEIL_COLD_OPEN)):
+        if not plates:
+            continue
+        # 틈 있는 판(CAC 지붕, 천장 회수 HAC의 냉기 통로 천장): 열린 비율 sg(가상 값)인 판의 손실 계수 K를 칸 두께로 나눈 Forchheimer 계수. 모든 방향으로 같게
         k_roof = ((1.0 / sg) * (1.0 + 0.707 * (1.0 - sg) ** 0.5) - 1.0) ** 2
         f_roof = k_roof / dx
-        fo += f"""cac_roof_por
+        fo += f"""{zone}_por
 {{
     type explicitPorositySource; active yes;
     explicitPorositySourceCoeffs
     {{
-        selectionMode cellZone; cellZone cac_roof; type DarcyForchheimer;
+        selectionMode cellZone; cellZone {zone}; type DarcyForchheimer;
         DarcyForchheimerCoeffs
         {{
             d d [0 -2 0 0 0 0 0] (0 0 0);
@@ -479,7 +491,7 @@ runTimeModifiable false;
     meta = {
         "scenario": a.scenario or fail, "fail": fail, "scene": str(scene), "racks": len(hall["racks"]), "vent_supply_m3s_per_cold_aisle": [round(x, 3) for x in vent_q], "dx": dx, "cells_total": int(np.prod(lay.shape)), "cells_fluid": int(lay.fluid.sum()),
         "crac_return_m3s": {n: round(float(x), 3) for n, x in zip(names, q)}, "supply_m3s": round(supply, 3),
-        "open_roofs": sorted(open_names), "power_kw": a.power, "total_power_kw": float(sum(rack_kw)), "fan": {n: float(v) for n, v in zip(names, fan)}, "sample": spec["id"] if spec else None, "buoyancy": not a.no_buoyancy, "conservative_relaxation": a.conservative, "scheme": a.scheme, "v_rack_ms": h.V_RACK,
+        "open_roofs": sorted(open_names), "ceil_cold_open": CEIL_COLD_OPEN if ceil_cold else None, "power_kw": a.power, "total_power_kw": float(sum(rack_kw)), "fan": {n: float(v) for n, v in zip(names, fan)}, "sample": spec["id"] if spec else None, "buoyancy": not a.no_buoyancy, "conservative_relaxation": a.conservative, "scheme": a.scheme, "v_rack_ms": h.V_RACK,
         "darcy_d_flow_1_m2": D_FLOW, "darcy_d_cross_1_m2": D_CROSS,
         "plenum": plenum, "z_off_cm": z_off, "t_supply_c": t_sup, "crac_supply_m3s": dict(crac_sup) if plenum else None,
     }

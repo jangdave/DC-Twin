@@ -1,0 +1,171 @@
+{
+ "_comment": "냉기 통로 천장을 늘 틈 판(열린 비율 2 %)으로 둔 OpenFOAM 확인(V2 3.2, 2026-11-27). 급기 부족 3개(s37, s38, u09)와 부족하지 않은 대조 1개(u10). 명세는 samples.json, samples_unseen.json에서 그대로 옮김",
+ "samples": [
+  {
+   "id": "s37_remove_and_fail",
+   "group": "remove_and_fail",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 0.0,
+    "CRAC_05": 0.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    13.0,
+    6.3,
+    7.0,
+    12.8,
+    12.5,
+    7.0
+   ],
+   "remove": [
+    "Rack_19",
+    "Rack_31"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 58,
+    "supply_m3s": 54.72,
+    "leak_m3s": [
+     0.48,
+     0.0,
+     0.0,
+     0.48
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     18.24,
+     18.24,
+     9.6
+    ],
+    "total_power_kw": 566.9,
+    "ok": true
+   },
+   "ceil_porous": true
+  },
+  {
+   "id": "s38_remove_and_fail",
+   "group": "remove_and_fail",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 1.0,
+    "CRAC_06": 0.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 0.0
+   },
+   "row_power_kw": [
+    10.8,
+    10.4,
+    13.4,
+    9.0,
+    12.2,
+    8.1
+   ],
+   "remove": [
+    "Rack_19",
+    "Rack_32"
+   ],
+   "holdout": false,
+   "check": {
+    "racks": 58,
+    "supply_m3s": 46.08,
+    "leak_m3s": [
+     0.0,
+     9.12,
+     0.0,
+     0.48
+    ],
+    "aisle_exhaust_m3s": [
+     9.6,
+     18.24,
+     18.24,
+     9.6
+    ],
+    "total_power_kw": 619.6,
+    "ok": true
+   },
+   "ceil_porous": true
+  },
+  {
+   "id": "u09_fan_derated",
+   "group": "fan_derated",
+   "fan": {
+    "CRAC_01": 1.0,
+    "CRAC_02": 0.38,
+    "CRAC_03": 1.0,
+    "CRAC_04": 1.0,
+    "CRAC_05": 0.46,
+    "CRAC_06": 0.34,
+    "CRAC_07": 0.73,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    6.5,
+    10.2,
+    8.2,
+    6.6,
+    9.2,
+    9.2
+   ],
+   "remove": [],
+   "holdout": false,
+   "check": {
+    "racks": 60,
+    "supply_m3s": 42.55,
+    "leak_m3s": [
+     0.65,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "total_power_kw": 499.0,
+    "ok": true
+   },
+   "ceil_porous": true
+  },
+  {
+   "id": "u10_fan_derated_deep",
+   "group": "fan_derated_deep",
+   "fan": {
+    "CRAC_01": 0.43,
+    "CRAC_02": 1.0,
+    "CRAC_03": 1.0,
+    "CRAC_04": 0.25,
+    "CRAC_05": 1.0,
+    "CRAC_06": 1.0,
+    "CRAC_07": 1.0,
+    "CRAC_08": 1.0
+   },
+   "row_power_kw": [
+    13.3,
+    9.0,
+    7.2,
+    11.3,
+    11.4,
+    10.4
+   ],
+   "remove": [],
+   "holdout": false,
+   "check": {
+    "racks": 60,
+    "supply_m3s": 43.2,
+    "leak_m3s": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "total_power_kw": 626.0,
+    "ok": true
+   },
+   "ceil_porous": true
+  }
+ ]
+}
