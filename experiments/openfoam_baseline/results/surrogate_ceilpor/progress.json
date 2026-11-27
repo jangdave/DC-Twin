@@ -1,0 +1,46 @@
+{
+ "s37_remove_and_fail": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2405.9,
+  "total_wall_s": 2441.1,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-27 11:55:31"
+ },
+ "s38_remove_and_fail": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 22797.5,
+  "total_wall_s": 22830.7,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-27 18:16:02"
+ },
+ "u09_fan_derated": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2319.0,
+  "total_wall_s": 2351.9,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-27 18:55:14"
+ },
+ "u10_fan_derated_deep": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2301.3,
+  "total_wall_s": 2333.3,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-27 19:34:08"
+ }
+}
