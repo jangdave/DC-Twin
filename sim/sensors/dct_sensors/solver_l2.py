@@ -29,6 +29,11 @@ REPO = Path(__file__).resolve().parents[3]
 # 줄 안에서 랙 하나가 줄 평균과 이만큼(kW) 넘게 다르면 그 줄의 신뢰 등급을 ok에서 caution으로 내린다(docs/30 H3).
 # 학습 샘플은 줄 안의 랙 전력이 같다. 평소 랙마다 다른 기본 전력(6~8.5 kW)과 흔들림은 평균에서 약 1.5 kW 안이므로 그보다 넉넉히 잡는다.
 RACK_SPREAD_KW = 4.0
+# 천장 회수 HAC에서 급기가 랙이 빨아들이는 양보다 모자라면(새는 양이 이만큼(m3/s) 넘으면) 홀 전체의 신뢰 등급을 ok에서 caution으로 내린다.
+# OpenFOAM 기준 사례는 이때 냉기 통로 천장 판을 열어 뜨거운 공기가 크게 오가고(u09: 순 0.65인데 약 8 m3/s가 27~29도로 내려옴),
+# 우리 계산은 순 새는 양만 고르게 내보내 이 뜨거운 곳을 내지 못한다. 최종 장면 학습 사례 90개 중 이런 사례는 2개뿐이다
+# (experiments/results/V2_unseen_conditions.md 3장). 0보다 조금 크게 잡아 계산 오차로 생기는 아주 작은 값은 무시한다.
+LEAK_CAUTION_M3S = 0.01
 SURROGATE_DIR = REPO / "experiments" / "surrogate_model"
 
 
@@ -116,6 +121,8 @@ class L2Solver:
         self.base, self.m, self.cfg = base, manifest, cfg
         # 장면이 냉기 통로 격리(CAC)면 CAC 결과로 배운 보정 모델을 쓴다(L1이 장면에서 판단한 값, docs/34 6장)
         self.cac = bool(getattr(getattr(base, "lay", None), "cac", False))
+        # 천장 회수 HAC 장면(칸막이 천장 위가 공통 회수 공간, docs/35)인지. 급기 부족 등급 규칙(LEAK_CAUTION_M3S)에 쓴다
+        self.ceiling = bool(getattr(getattr(base, "lay", None), "ceiling", False)) and not self.cac
         self.predictor = predictor if predictor is not None else load_default_predictor(self.cac)
         self.estimates: dict[str, dict] = {}
         self._corr: dict[str, float] = {}   # 센서 키 -> 지연을 거친 보정량
@@ -166,6 +173,7 @@ class L2Solver:
         sample = self.sample_of(controls)
         r = self.predictor.predict(sample, ours, info)
         uneven = self.uneven_rows(sample)
+        short_supply = self.ceiling and sum(info["aisle_leak_m3s"]) > LEAK_CAUTION_M3S
         self.last_reason = r.reason
         self.estimates = {}
         if r.fallback:
@@ -190,6 +198,8 @@ class L2Solver:
                 level = "caution"
             if level == "ok" and self.m.racks[n][0] in uneven:
                 level = "caution"  # 줄 안의 전력이 고르지 않다: 학습한 적 없는 조건(RACK_SPREAD_KW)
+            if level == "ok" and short_supply:
+                level = "caution"  # 급기 부족: 기준 계산은 천장으로 뜨거운 공기가 내려오는데 우리 계산은 내지 못한다(LEAK_CAUTION_M3S)
             self.estimates[key] = {"lower": round(val - (float(r.corrected[t]) - float(r.lower90[t])), 3),
                                    "upper": round(val + (float(r.upper90[t]) - float(r.corrected[t])), 3), "confidence": level}
         return out

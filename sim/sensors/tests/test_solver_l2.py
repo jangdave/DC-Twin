@@ -246,6 +246,23 @@ def test_shifted_supply_temperature_never_gets_the_top_confidence(manifest):
     assert levels(22.0) == {"caution"} and levels(14.0) == {"caution"}
 
 
+def test_short_supply_in_ceiling_hac_caps_confidence(manifest):
+    """천장 회수 HAC에서 급기가 모자라면(새는 양 > 0) 홀 전체를 ok -> caution(V2 3장, u09). 새는 양이 없거나 천장 회수가 아니면 그대로."""
+    def levels(leak, ceiling=True, cac=False):
+        cfg = Config()
+        base = FakeBase(manifest, cfg)
+        base.flow_info = {"supply_m3s": 42.55, "aisle_leak_m3s": [leak, 0.0]}
+        base.lay = SimpleNamespace(ceiling=ceiling, cac=cac)
+        l2 = L2Solver(manifest, cfg, base=base, predictor=OkPredictor())
+        l2.step(1.0, Controls({c: 1.0 for c in manifest.cracs}, {n: 7.0 for n in manifest.rack_names}))
+        return {e["confidence"] for e in l2.estimates.values()}
+
+    assert levels(0.65) == {"caution"}
+    assert levels(0.0) == {"ok"} and levels(0.005) == {"ok"}  # 계산 오차 수준은 무시
+    assert levels(0.65, ceiling=False) == {"ok"}  # 예전 격벽 지붕 장면은 이 규칙과 무관
+    assert levels(0.65, cac=True) == {"ok"}  # CAC는 남는 배기가 방으로 퍼지는 것이 정상
+
+
 def test_shifted_supply_keeps_lower_levels_as_they_are(manifest):
     cfg = Config(t_supply=22.0)
     pred = FakePredictor()  # 등급 caution을 낸다

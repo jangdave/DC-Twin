@@ -59,7 +59,9 @@ def main() -> None:
         lo = np.array([r.lower90[n] + shift for n in names])
         hi = np.array([r.upper90[n] + shift for n in names])
         y = np.array([of[n] for n in names])
-        lvl = [("caution" if (abs(shift) > 1e-9 and r.level[n] == "ok") else r.level[n]) for n in names]
+        # L2와 같은 등급 제한: 급기 온도가 18도가 아니거나, 천장 회수 HAC에서 급기가 모자라면(새는 양 > 0.01, solver_l2.LEAK_CAUTION_M3S) ok -> caution
+        short = (not a.cac) and sum(ours_info[sid].get("aisle_leak_m3s", [0.0])) > 0.01
+        lvl = [("caution" if ((abs(shift) > 1e-9 or short) and r.level[n] == "ok") else r.level[n]) for n in names]
         inside = (lo <= y) & (y <= hi)
         all_o += list(y - o)
         all_c += list(y - c)
