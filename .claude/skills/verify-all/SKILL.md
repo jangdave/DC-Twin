@@ -12,7 +12,8 @@ description: PR 전에 이 프로젝트의 시험과 점검을 순서대로 돌�
 |---|---|---|---|---|
 | 1 | 웹 단위 | `npx vitest run` (`web/viewer`) | 몇 초 | 웹 코드, 데이터를 바꿨을 때 |
 | 2 | 파이썬(센서, 서버, 외부 변환) | `uv run --python 3.13 --extra serve python -m pytest tests` (`sim/sensors`) | 1분 | `sim/sensors`, `server/`를 바꿨을 때 |
-| 3 | Warp 열 계산 | `uv run --python 3.13 python -m pytest tests` (`sim/thermal`, GPU) | 2~3분 | `hall60_sim.py`를 바꿨을 때, 장면(`hall01.config.json`)이나 형상 사본을 바꿨을 때(`test_check_geometry.py`, docs/30 M11) |
+| 3 | Warp 열 계산 | `uv run --python 3.13 python -m pytest tests` (`sim/thermal`, GPU) | 약 6분(2026-11-27 측정 357초. 도구 제한을 넘으니 timeout을 늘리거나 백그라운드로) | `hall60_sim.py`를 바꿨을 때, 장면(`hall01.config.json`)이나 형상 사본을 바꿨을 때(`test_check_geometry.py`, docs/30 M11) |
+| 3b | 보정 모델, 실험 스크립트 | `uv run --python 3.13 python -m pytest tests` (`experiments/surrogate_model`, `experiments/omniverse_probe`) | 몇 초 | `residual_model.py`, `predictor.py`, 실험 스크립트, 학습 데이터 폴더를 바꿨을 때 |
 | 4 | 웹 빌드와 용량 | `npm run build` (`web/viewer`) | 1분 | 화면 시험 앞에 항상 |
 | 5 | 데이터 정합성 | `node tools/check_data.mjs` | 몇 초 | 녹화, 라이브러리, 센서 정의를 바꿨을 때. 원본에서 다시 만들어 같은지도 본다 |
 | 6 | 화면 시험 | `node tools/ui_check.mjs` | 2~3분 | 화면을 바꿨을 때. **도구의 120초 제한을 넘으니 백그라운드로 돌리고 끝나면 읽는다** |
@@ -22,9 +23,10 @@ description: PR 전에 이 프로젝트의 시험과 점검을 순서대로 돌�
 
 화면 시험 결과는 `통과`와 `실패`로 시작하는 줄이다. `grep -c '^통과'`로 개수를 세고 `grep '^실패'`로 실패를 본다.
 
-## 앞으로 붙일 점검 (`docs/31` 구현 중)
-- Kit 서버(2a 이후): Kit 앱으로 서버를 띄워 실제 연결로 확인한다. 끝나면 `kit.exe` 프로세스를 반드시 끝낸다.
-- OpenFOAM 단계(2c 이후): 한 번에 하나만 돌린다(동시에 돌리면 20배 넘게 느려짐). 약 10분 걸리므로 백그라운드로 돌리고, WSL의 `~/foam_runs/` 결과 폴더를 정리한다.
+## Kit 서버와 OpenFOAM
+- Kit 서버(`server/run_local.ps1 -Kit`): 실제 연결로 확인한다. 끝나면 `kit.exe` 프로세스를 반드시 끝낸다.
+- OpenFOAM: 한 번에 하나만 돌린다(동시에 돌리면 20배 넘게 느려짐). 최종 장면(칸 10 cm, 16코어)은 사례당 HAC 약 37분, CAC 약 29분이다. 여러 사례는 `experiments/openfoam_baseline/surrogate/keepalive.py`로 돌린다(사용법은 그 파일 머리말, WSL이 유휴로 내려가는 것을 막는다). WSL의 `~/foam_runs/` 결과 폴더를 정리한다.
+- 결과 요약의 열 수지(`of_<id>_summary.json`의 `energy_balance_kW`)에서 랙 발열과 회수 열이 맞는지 본다.
 
 ## 데이터를 다시 만들 때
 - 웹 자료: `node tools/build_data.mjs`(원본: `sim/out`, 정의: `sim/library.json`). 만든 뒤 반드시 5번.
