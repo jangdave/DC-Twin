@@ -3,7 +3,7 @@
 ## 목적
 Omniverse(OpenUSD 기반 저작·시뮬레이션)와 Unreal Engine 5.8(운영자용 클라이언트)을 역할 분리해 연결한 **공개 가능한 소형 디지털 트윈**을 만든다.
 목표 직군은 UE 클라이언트 개발자이며, 시뮬레이션/데이터 직군으로의 확장 가능성을 함께 보여준다.
-설계 개요는 `docs/01_architecture.md`, 일정은 `docs/02_roadmap.md`, 비교 실험은 `docs/03_experiments.md`.
+설계 개요는 `docs/01_architecture.md`, 일정은 `docs/02_roadmap.md`, 비교 실험은 `docs/03_experiments.md`. 문서 전체 목록은 `docs/README.md`.
 
 ## 절대 규칙 (회사 자산 분리)
 - 이 저장소는 **공개 포트폴리오용**이다. 재직 회사 프로젝트(`D:\UnrealProject\` 아래 업무 프로젝트)의 **코드·에셋·데이터·고객사/내부 명칭을 복사하거나 붙이지 않는다.** 금지어 목록은 저장소에 두지 않고 로컬 파일 `.claude/cleanroom-terms.local.txt`(gitignore)에 둔다.
@@ -18,11 +18,12 @@ Omniverse(OpenUSD 기반 저작·시뮬레이션)와 Unreal Engine 5.8(운영자
 
 ## 구조 요약
 ```
-Blender → USD(prim 경로 + dct: 메타데이터) → Omniverse(ovrtx/ovphysx, 데이터 생성)
-   ↘ 센서 시나리오 생성기(Python) → MQTT(Mosquitto) → Gateway(Node) → WebSocket
-UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + PixelStreaming2(웹)
+hall01.config.json → build_scene.py → 장면 USD(prim 경로 + dct: 메타데이터)
+   → 열 계산: Warp(hall60_sim, L1) + 보정 모델(L2), 기준 답: OpenFOAM(WSL)
+   → 서버(sim/sensors, Omniverse Kit 안에서 실행 가능) → WebSocket → 웹 보기 화면(web/viewer)
+   → (나중) UE 5.8 클라이언트: USD 임포트 + WebSocket 수신
 ```
-데이터 경로 3종: ① 정적 USD ② 미리 계산한 데이터(VDB/애니메이션) ③ 실시간 MQTT. 상세는 설계 문서 참조.
+데이터 경로 3종: ① 정적 USD ② 미리 계산한 데이터(녹화, 흐름장) ③ 서버 실시간 값. MQTT와 `gateway/`는 처음 설계의 예제 경로로 남아 있다. 상세는 설계 문서 참조.
 
 ## 디렉터리
 | 경로 | 내용 |
@@ -32,13 +33,13 @@ UE 5.8 클라이언트: USD 임포트 + WebSocket 수신 + CommonUI 패널 + Pix
 | `usd/` | 내보낸 USD 에셋/씬 (`assets/`, `scenes/`) |
 | `sim/` | 센서 시나리오 생성기(`sensors/`), 서버. `thermal/dct_thermal/`에 열 계산(Warp, `hall60_sim.py`)과 보정 모델(`predictor.py`, `residual_model.py`)이 있다(2026-11-13 `experiments/`에서 옮김, 옛 위치에는 같은 모듈을 가리키는 연결 파일만 남음, `docs/30` M12). 시험(`sim/thermal/tests`)과 uv 환경(`sim/thermal/pyproject.toml`)도 여기 있다. OpenFOAM 도구(사례 만들기, 실행, 결과 꺼내기)는 `sim/openfoam/`(2026-11-15 이동, 옛 위치는 연결 파일). 실험 스크립트는 그대로 `experiments/omniverse_probe` 환경 |
 | `scripts/usd_tools/` | USD 검증(`validate_usd.py`), 에셋 마무리(`finalize_asset.py`), 장면 생성(`build_scene.py`) |
-| `usd/scenes/hall01.config.json` | 홀 배치 원본(랙 6줄 x 10기, CRAC 8기). 장면은 이 파일에서만 만든다 |
+| `usd/scenes/hall01.config.json` | 홀 배치 원본(랙 6줄 x 10기, CRAC 8기, 열기 통로 격리 HAC + 천장 회수, 작업자 동선이 있는 최종 구조 `docs/35`). 냉기 통로 격리 장면은 `hall01_cac.config.json`(`docs/34`). 장면은 이 파일들에서만 만든다. `_hall01_rf*`는 예전 시험용 |
 | `gateway/` | MQTT → WebSocket/REST 게이트웨이 (Node). 예제로만 두고 손대지 않는다(운영 경로는 `server/`, `docs/30` 6절) |
 | `unreal/` | UE 5.8 프로젝트 `unreal/DataCenter_DT/DataCenter_DT.uproject` (C++, 모듈 `DataCenter_DT`) |
-| `web/viewer/` | 웹 보기 화면(Three.js, Vite). GitHub Pages에 자동 배포. 메뉴: 모니터링 / 시뮬레이션(미리 계산한 값 12개) / 간이 계산(브라우저 L0) / CCTV. 설명은 `web/viewer/README.md`, 설계는 `docs/27`. **세 메뉴의 역할 개편 중**(`docs/31`: 모니터링=서버 실시간, 시뮬레이션=조건을 정해 서버에서 정확하게 계산, 간이 계산=모니터링 상태에서 팬·급기만 빠르게) |
-| `server/` | 시뮬레이션 서버 실행 구성(Docker, compose, `run_local.ps1`, 센서 매니페스트·앵커 사본). 코드는 `sim/sensors/dct_sensors/serve.py`, `api.py`. 인증, 안전, 한계는 `server/README.md`. **계획: Omniverse Kit 안에서 도는 로컬 서버**(장면 USD, 센서 생성기, 작업 실행기. 정확한 계산은 Warp 시간 변화 + OpenFOAM 정상 상태, `docs/31` 4.1, 8장) |
+| `web/viewer/` | 웹 보기 화면(Three.js, Vite). GitHub Pages에 자동 배포. 메뉴: 모니터링 / 시뮬레이션(미리 계산한 값 12개, 서버에 붙으면 조건을 정해 계산) / 간이 계산(브라우저 L0) / CCTV. 녹화는 HAC(`public/data/rec/`)와 CAC(`rec/cac/`) 각 10개. 설명은 `web/viewer/README.md`, 설계는 `docs/27`, 세 메뉴의 역할은 `docs/31`(모니터링=서버 실시간, 시뮬레이션=조건을 정해 서버에서 정확하게, 간이 계산=모니터링 상태에서 팬·급기만 빠르게) |
+| `server/` | 시뮬레이션 서버 실행 구성(Docker, compose, `run_local.ps1`, 센서 매니페스트·앵커 사본). 코드는 `sim/sensors/dct_sensors/serve.py`, `api.py`. 인증, 안전, 한계는 `server/README.md`. **Omniverse Kit 안에서 도는 로컬 서버**는 `run_local.ps1 -Kit`(`server/kit_server.py`, 실시간 센서 값과 시뮬레이션 작업. 정확한 계산은 팬 상태별 OpenFOAM 흐름 + Warp 온도 계산, `docs/31`). 배포는 나중 |
 | `sim/library.json` | 미리 계산해 두는 상태와 시나리오 정의(이상 상황 4, 급기 온도 5, 부하 3). 생성은 `scripts/make_sim_library.py` |
-| `experiments/` | 비교 실험 코드와 측정 결과 |
+| `experiments/` | 비교 실험 코드와 측정 결과. `results/`(E·V 결과 문서), `openfoam_baseline/`(OpenFOAM 학습·검증 사례와 결과, `README.md`), `surrogate_model/`(보정 모델 학습·평가, `model*.pkl`은 저장소에 올리지 않음), `omniverse_probe/`(실험 스크립트 환경) |
 | `scripts/` | 환경 점검, 실행 보조 스크립트 |
 
 ## 컨벤션
@@ -67,15 +68,16 @@ PR 전에 해당하는 것을 돌린다. 하나라도 실패하면 이유를 밝
 | 파이썬 시험 | `uv run --python 3.13 --extra serve python -m pytest tests` (`sim/sensors`) | 1분 |
 | Warp 열 계산 시험 | `uv run --python 3.13 python -m pytest tests` (`sim/thermal`, GPU) | 약 6분(도구 제한 120초를 넘으므로 timeout을 늘리거나 백그라운드로) |
 | 형상 사본 일치 | `uv run --python 3.13 python ../../scripts/check_geometry.py` (`sim/thermal`, Warp 시험에도 포함) | 몇 초 |
-| 실험 스크립트 시험, 보정 모델 시험 | `uv run --python 3.13 python -m pytest tests` (`experiments/omniverse_probe`), `... -m pytest ../../experiments/surrogate_model/tests` (`sim/thermal`) | 몇 초 |
+| 실험 스크립트 시험 | `uv run --python 3.13 python -m pytest tests` (`experiments/omniverse_probe`) | 몇 초 |
+| 보정 모델 시험 | `uv run --python 3.13 python -m pytest tests` (`experiments/surrogate_model`) | 몇 초 |
 | 서버 | `server/run_local.ps1`(GPU L2 또는 `-Solver l0`), Docker는 `server/README.md` | |
-주의: 점검용으로 띄운 서버와 브라우저, Kit(`kit.exe`) 프로세스는 끝내고 정리한다. Kit 스크립트는 파일이 있는 상태에서 실행한다(없으면 종료되지 않는다).
+주의: 점검용으로 띄운 서버와 브라우저, Kit(`kit.exe`) 프로세스는 끝내고 정리한다. Kit 스크립트는 파일이 있는 상태에서 실행한다(없으면 종료되지 않는다). OpenFOAM은 한 번에 하나만, 여러 사례는 `keepalive.py`로 돌린다(사례당 HAC 약 37분, CAC 약 29분, `verify-all`).
 
 ## 작업 방식
 - **지금 진행 중인 일**: Kit으로 시뮬레이션 정확도 검증(`docs/32`: V1 물리 점검 → V2 처음 보는 조건 → V3 OpenFOAM 격자 → V4 모델 개선). V1, V2(HAC, 2026-11-27)는 끝났다.
   - **다음 작업(2026-11-27 사용자 결정)**: V2에서 찾은 약한 곳의 원인 확인. 같은 통로 CRAC_02·06이 함께 깊이 저하된 조건(u09)에서 OpenFOAM은 1번 줄 가운데(Rack_06, 07)가 21.5~22.3도인데 우리 계산은 18.0도로 놓치고, 보정 뒤에도 `ok` 등급인 채 3.1~3.7도 틀린다. 우리 계산(흐름 모델, 새는 공기 모델 등)이 왜 이 뜨거운 곳을 못 내는지 찾고, 고치기 전까지 이 조합을 `caution`으로 낮출지 정한다. 자료: `experiments/results/V2_unseen_conditions.md` 3장, `results/surrogate_unseen`(of/ours CSV), `samples_unseen.json`.
   - 그 뒤 후보(사용자가 고를 것): 급기 온도가 18도가 아닐 때 `ok`→`caution` 규칙 풀기(V2 2장 근거), CAC 장면 V2(약 6시간), V3 격자. 그 다음 `docs/31`의 화면 연결. 서버는 Kit 안에서 도는 로컬만(배포는 나중).
-- **우선순위**: 가장 중요한 것은 Omniverse 시뮬레이션과 센서 데이터의 Unreal 연동·표현이다(`docs/14_sim_to_unreal_core.md`). 외관과 둘러보기는 보조다. 진행 순서는 ① 내부 구조 모델링 → ② 그 구조로 시뮬레이션 → ③ Unreal에서 확인이며, 외부 솔버 연동은 이 구조가 동작한 뒤에 붙인다.
+- **우선순위**: 가장 중요한 것은 시뮬레이션과 센서 데이터의 연동·표현이다(`docs/14_sim_to_unreal_core.md`). 외관과 둘러보기는 보조다. 진행 순서는 ① 내부 구조 모델링 → ② 그 구조로 시뮬레이션 → ③ 화면에서 확인이다. **2026-11-16부터 Unreal은 후순위다**(사용자: 웹으로 먼저 다 만든다). Unreal 작업(`unreal/.../Content/UsdAssets` 정리 포함)은 사용자가 다시 말할 때 시작한다.
 - 단계는 `docs/02_roadmap.md`의 Phase 순서를 따른다. 각 Phase 끝에 산출물과 측정값을 `experiments/` 또는 `docs/`에 남긴다.
 - 설계 결정은 `docs/decisions/ADR-XXX-*.md`에 한 장씩 기록한다(결정, 근거, 대안, 한계).
 - 외부 도구(Omniverse, UE 플러그인)의 지원 상태는 시기별로 변하므로 **공식 문서로 확인한 날짜와 버전**을 기록한다.
