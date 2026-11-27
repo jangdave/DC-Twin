@@ -65,14 +65,16 @@ PR 전에 해당하는 것을 돌린다. 하나라도 실패하면 이유를 밝
 | 글자 대비 | `node tools/contrast_check.mjs` | 1분 |
 | 데이터 정합성 | `node tools/check_data.mjs` | 몇 초 |
 | 파이썬 시험 | `uv run --python 3.13 --extra serve python -m pytest tests` (`sim/sensors`) | 1분 |
-| Warp 열 계산 시험 | `uv run --python 3.13 python -m pytest tests` (`sim/thermal`, GPU) | 2~3분 |
+| Warp 열 계산 시험 | `uv run --python 3.13 python -m pytest tests` (`sim/thermal`, GPU) | 약 6분(도구 제한 120초를 넘으므로 timeout을 늘리거나 백그라운드로) |
 | 형상 사본 일치 | `uv run --python 3.13 python ../../scripts/check_geometry.py` (`sim/thermal`, Warp 시험에도 포함) | 몇 초 |
 | 실험 스크립트 시험, 보정 모델 시험 | `uv run --python 3.13 python -m pytest tests` (`experiments/omniverse_probe`), `... -m pytest ../../experiments/surrogate_model/tests` (`sim/thermal`) | 몇 초 |
 | 서버 | `server/run_local.ps1`(GPU L2 또는 `-Solver l0`), Docker는 `server/README.md` | |
 주의: 점검용으로 띄운 서버와 브라우저, Kit(`kit.exe`) 프로세스는 끝내고 정리한다. Kit 스크립트는 파일이 있는 상태에서 실행한다(없으면 종료되지 않는다).
 
 ## 작업 방식
-- **지금 진행 중인 일**: Kit으로 시뮬레이션 정확도 검증(`docs/32`: V1 물리 점검 → V2 처음 보는 조건 → V3 OpenFOAM 격자 → V4 모델 개선). 그 뒤 `docs/31`의 화면 연결(시뮬레이션, 모니터링, 간이 계산). 서버는 Kit 안에서 도는 로컬만(배포는 나중).
+- **지금 진행 중인 일**: Kit으로 시뮬레이션 정확도 검증(`docs/32`: V1 물리 점검 → V2 처음 보는 조건 → V3 OpenFOAM 격자 → V4 모델 개선). V1, V2(HAC, 2026-11-27)는 끝났다.
+  - **다음 작업(2026-11-27 사용자 결정)**: V2에서 찾은 약한 곳의 원인 확인. 같은 통로 CRAC_02·06이 함께 깊이 저하된 조건(u09)에서 OpenFOAM은 1번 줄 가운데(Rack_06, 07)가 21.5~22.3도인데 우리 계산은 18.0도로 놓치고, 보정 뒤에도 `ok` 등급인 채 3.1~3.7도 틀린다. 우리 계산(흐름 모델, 새는 공기 모델 등)이 왜 이 뜨거운 곳을 못 내는지 찾고, 고치기 전까지 이 조합을 `caution`으로 낮출지 정한다. 자료: `experiments/results/V2_unseen_conditions.md` 3장, `results/surrogate_unseen`(of/ours CSV), `samples_unseen.json`.
+  - 그 뒤 후보(사용자가 고를 것): 급기 온도가 18도가 아닐 때 `ok`→`caution` 규칙 풀기(V2 2장 근거), CAC 장면 V2(약 6시간), V3 격자. 그 다음 `docs/31`의 화면 연결. 서버는 Kit 안에서 도는 로컬만(배포는 나중).
 - **우선순위**: 가장 중요한 것은 Omniverse 시뮬레이션과 센서 데이터의 Unreal 연동·표현이다(`docs/14_sim_to_unreal_core.md`). 외관과 둘러보기는 보조다. 진행 순서는 ① 내부 구조 모델링 → ② 그 구조로 시뮬레이션 → ③ Unreal에서 확인이며, 외부 솔버 연동은 이 구조가 동작한 뒤에 붙인다.
 - 단계는 `docs/02_roadmap.md`의 Phase 순서를 따른다. 각 Phase 끝에 산출물과 측정값을 `experiments/` 또는 `docs/`에 남긴다.
 - 설계 결정은 `docs/decisions/ADR-XXX-*.md`에 한 장씩 기록한다(결정, 근거, 대안, 한계).
