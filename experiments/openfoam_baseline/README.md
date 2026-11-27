@@ -189,6 +189,7 @@ uv run --python 3.13 python ../openfoam_baseline/compare.py --rerun-ours --scena
 | `surrogate/keepalive.py` | Windows 쪽 감독 프로그램. WSL2 가상 머신이 유휴로 내려가 계산이 죽는 것을 막고, 죽으면 다시 시작 |
 | `surrogate/ours_batch.py` | 학습 샘플과 보류 4개를 우리 솔버로 계산(`--res` 폴더의 `ours_<id>.csv`, `--scene`으로 장면). 결과 폴더: 이중 바닥 전 `results/surrogate`, 기본 장면 `results/surrogate_rf`, CAC `results/surrogate_cac`, 최종 장면 HAC `results/surrogate_ceil`, 최종 장면 CAC `results/surrogate_cac_final`(추가 샘플은 폴더 이름 뒤 `_v4`, `_v5`) |
 | `surrogate/design_samples_unseen.py`, `samples_unseen.json`, `results/surrogate_unseen` | V2 검증용 처음 보는 조건 12개 + 급기 24도 1개(시험 전용, 학습에 넣지 않음). 평가는 `experiments/surrogate_model/evaluate_unseen.py`, 결과는 `experiments/results/V2_unseen_conditions.md` |
+| `surrogate/cases_cac_unseen`, `results/surrogate_cac_unseen` | V2 처음 보는 조건 13개를 CAC 장면(`--scene _hall01_cac.usda`)에서 계산(사례 폴더는 올리지 않음). 평가 `evaluate_unseen.py --cac`, 결과는 V2 문서 5장 |
 | `surrogate/samples_ceilpor.json`, `results/surrogate_ceilpor` | 냉기 통로 천장을 틈 판(`"ceil_porous": true`)으로 둔 시험 4개(s37, s38, u09, u10). 우리 계산 `ours_*.csv`는 틈 판 시험판(지금 `hall60_sim.py`에는 없음) 결과. 결과는 V2 문서 3.3 |
 | `results/surrogate/of_<id>.csv`, `progress.json`, `log_<id>.txt` | OpenFOAM 랙 입구 온도(제거한 랙은 행 없음), 진행 상황(상태, 반복, 시간, converged), 로그 일부 |
 

@@ -90,12 +90,12 @@ def main() -> None:
             eo, ec = np.array(eo), np.array(ec)
             L.append(f"| {g} | {len(eo)} | {np.sqrt((eo ** 2).mean()):.2f} | {np.sqrt((ec ** 2).mean()):.2f} |")
         L.append("\n### 신뢰 등급별\n")
-        L.append("| 등급 | 랙 수 | 보정 RMSE | 구간 포함 |")
-        L.append("|---|---|---|---|")
+        L.append("| 등급 | 랙 수 | 보정 RMSE | 보정 최대 | 구간 포함 |")
+        L.append("|---|---|---|---|---|")
         for k in ("ok", "caution", "low", "fallback"):
             m = all_lvl == k
             if m.any():
-                L.append(f"| {k} | {int(m.sum())} | {np.sqrt((all_c[m] ** 2).mean()):.2f} | {all_in[m].mean():.2f} |")
+                L.append(f"| {k} | {int(m.sum())} | {np.sqrt((all_c[m] ** 2).mean()):.2f} | {np.max(np.abs(all_c[m])):.2f} | {all_in[m].mean():.2f} |")
     pairs = [s for s in specs if s.get("pair") and s["id"] in raw and s["pair"] in raw]
     if pairs:
         L.append("\n### 급기 온도 선형 확인(같은 조건, 급기만 다름)\n")
