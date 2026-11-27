@@ -1,0 +1,145 @@
+{
+ "u01_normal": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2395.7,
+  "total_wall_s": 2430.1,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 18:53:10"
+ },
+ "u02_one_crac_off": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2257.9,
+  "total_wall_s": 2290.5,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 19:31:20"
+ },
+ "u03_one_crac_off": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2257.6,
+  "total_wall_s": 2289.8,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 20:09:31"
+ },
+ "u04_same_aisle_two_off": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2248.3,
+  "total_wall_s": 2280.6,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 20:47:31"
+ },
+ "u05_same_aisle_two_off": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2241.6,
+  "total_wall_s": 2273.9,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 21:25:26"
+ },
+ "u06_diff_aisle_two_off": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2230.9,
+  "total_wall_s": 2261.5,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 22:03:08"
+ },
+ "u07_diff_aisle_two_off": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2255.8,
+  "total_wall_s": 2288.3,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 22:41:16"
+ },
+ "u08_fan_derated": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2252.7,
+  "total_wall_s": 2283.1,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 23:19:20"
+ },
+ "u09_fan_derated": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2265.1,
+  "total_wall_s": 2299.3,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-26 23:57:39"
+ },
+ "u10_fan_derated_deep": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2259.7,
+  "total_wall_s": 2292.2,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-27 00:35:52"
+ },
+ "u11_remove_and_fail": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2233.8,
+  "total_wall_s": 2266.1,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-27 01:13:38"
+ },
+ "u12_one_crac_off_low_load": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2249.1,
+  "total_wall_s": 2279.2,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-27 01:51:38"
+ },
+ "u13_supply_24": {
+  "status": "not_converged",
+  "converged": false,
+  "iterations": 3500,
+  "solve_wall_s": 2244.2,
+  "total_wall_s": 2276.5,
+  "cores": 16,
+  "nice": 5,
+  "warm_start": true,
+  "finished": "2026-11-27 02:29:35"
+ }
+}

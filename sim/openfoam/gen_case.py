@@ -87,6 +87,9 @@ def main() -> None:
             tmp_scene = Path(tempfile.gettempdir()) / f"dct_gen_{spec['id']}.usda"
             lw.apply_edits(scene, tmp_scene, {"remove": list(spec["remove"])})
             scene = tmp_scene
+    # 급기 온도(명세의 t_supply, 기본 hall60_sim.T_SUPPLY). 처음 공기 온도도 같은 만큼 옮긴다. TRef(부력 기준)는 그대로 둔다(docs/32 V2)
+    t_sup = float(spec.get("t_supply", h.T_SUPPLY)) if spec else h.T_SUPPLY
+    t_init = h.T_INIT + (t_sup - h.T_SUPPLY)
     hall = h.read_hall(scene)
     lay = h.Layout(hall)
     nx, ny, nz = lay.shape
@@ -373,10 +376,10 @@ RAS { RASModel kEpsilon; turbulence on; printCoeffs on; }
 
     tv = {w: "        type zeroGradient;" for w in walls}
     for nm in inlets:
-        tv[nm] = f"        type fixedValue;\n        value uniform {h.T_SUPPLY + 273.15};"
+        tv[nm] = f"        type fixedValue;\n        value uniform {t_sup + 273.15};"
     for n in outs:
         tv[n] = "        type zeroGradient;"
-    (out / "0.orig/T").write_text(field("volScalarField", "T", "[0 0 0 1 0 0 0]", f"uniform {h.T_INIT + 273.15}", tv), encoding="utf-8")
+    (out / "0.orig/T").write_text(field("volScalarField", "T", "[0 0 0 1 0 0 0]", f"uniform {t_init + 273.15}", tv), encoding="utf-8")
 
     kv = {w: "        type kqRWallFunction;\n        value uniform 0.05;" for w in walls}
     for nm in inlets:
@@ -478,7 +481,7 @@ runTimeModifiable false;
         "crac_return_m3s": {n: round(float(x), 3) for n, x in zip(names, q)}, "supply_m3s": round(supply, 3),
         "open_roofs": sorted(open_names), "power_kw": a.power, "total_power_kw": float(sum(rack_kw)), "fan": {n: float(v) for n, v in zip(names, fan)}, "sample": spec["id"] if spec else None, "buoyancy": not a.no_buoyancy, "conservative_relaxation": a.conservative, "scheme": a.scheme, "v_rack_ms": h.V_RACK,
         "darcy_d_flow_1_m2": D_FLOW, "darcy_d_cross_1_m2": D_CROSS,
-        "plenum": plenum, "z_off_cm": z_off, "crac_supply_m3s": dict(crac_sup) if plenum else None,
+        "plenum": plenum, "z_off_cm": z_off, "t_supply_c": t_sup, "crac_supply_m3s": dict(crac_sup) if plenum else None,
     }
     import json
     (out / "case_layout.json").write_text(json.dumps(hall, ensure_ascii=False, default=float), encoding="utf-8")

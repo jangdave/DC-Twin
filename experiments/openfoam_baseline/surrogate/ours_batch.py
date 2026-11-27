@@ -40,7 +40,8 @@ def run_sample(smp: dict, base: Path | None = None) -> dict:
     hall = h.read_hall(scene)
     lay = h.Layout(hall)
     names = [c["name"] for c in hall["cracs"]]
-    sim = h.Sim(hall, lay, 10.0, 10.0, advection="fv" if hall.get("plenum") else "maccormack")  # 센서 생성기(solver_l1)와 같은 선택
+    sim = h.Sim(hall, lay, 10.0, 10.0, advection="fv" if hall.get("plenum") else "maccormack",  # 센서 생성기(solver_l1)와 같은 선택
+                t_supply=float(smp.get("t_supply", h.T_SUPPLY)))  # 급기 온도(명세에 없으면 기본 18도, docs/32 V2)
     fan = np.ones(len(names), dtype=np.float32)
     sim.set_fans(fan)
     target_fan = np.array([smp["fan"][n] for n in names], dtype=np.float32)
